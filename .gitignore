@@ -1,0 +1,39 @@
+# Deploy
+deploy/deploy.log
+deploy/backups/
+!deploy/backups/.gitkeep
+
+# Окружение
+.env
+config.local.php
+vapid.php
+mail_config.php
+mail_state.json
+
+# Системные
+.DS_Store
+Thumbs.db
+*.log
+
+# Временные
+/tmp/
+*.zip
+
+# Бэкапы БД — дампы базы, КОНФИДЕНЦИАЛЬНО
+backups_db/
+*.sql.gz
+
+# Бэкдор выгрузки сайта (захардкоженный ключ) — НЕ в репозиторий
+download-backup.php
+
+# Прочие логи деплоя
+deploy/php-error.log
+deploy/*.log
+
+# IDE / редакторы
+.vscode/
+.idea/
+*.code-workspace
+
+# Локальная конфигурация Claude / отладки (пути конкретной машины)
+.claude/

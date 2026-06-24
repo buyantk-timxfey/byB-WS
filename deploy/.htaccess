@@ -1,0 +1,13 @@
+# Доступ запрещён ко всему содержимому, включая backups/
+Order deny,allow
+Deny from all
+
+# Разрешён только сам обработчик деплоя
+<Files "deploy.php">
+    Order allow,deny
+    Allow from all
+</Files>
+
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>

@@ -1,0 +1,193 @@
+/* ===== GLOBAL SEARCH BAR ===== */
+#global-searchbar {
+    position: fixed;
+    top: 18px;
+    right: 24px;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* padding-right убран — кнопки страниц перенесены в #gs-page-actions */
+
+/* Search input */
+.gs-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.gs-icon {
+    position: absolute;
+    left: 10px;
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+    pointer-events: none;
+    flex-shrink: 0;
+    display: block;
+}
+
+#gs-input {
+    width: 200px;
+    height: 32px;
+    padding: 0 12px 0 32px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color var(--transition), width var(--transition);
+}
+#gs-input:focus {
+    border-color: var(--accent);
+    width: 260px;
+}
+#gs-input::placeholder { color: var(--text-muted); }
+
+/* Period picker */
+.gs-period {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0 10px;
+    height: 32px;
+    transition: border-color var(--transition);
+    white-space: nowrap;
+}
+.gs-period:hover { border-color: var(--border-strong); }
+
+.gs-period-icon {
+    width: 13px;
+    height: 13px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.gs-period select {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 500;
+    outline: none;
+    cursor: pointer;
+    padding: 0;
+}
+.gs-period select option { background: var(--card-bg); color: var(--text); }
+
+.gs-period-sep {
+    color: var(--border-strong);
+    font-size: 11px;
+}
+
+.gs-period-all {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+    transition: color var(--transition);
+    white-space: nowrap;
+}
+.gs-period-all:hover { color: var(--accent); }
+
+/* Search dropdown */
+#gs-dropdown {
+    display: none;
+    position: fixed;
+    top: 58px;
+    right: 24px;
+    width: 380px;
+    max-height: 480px;
+    overflow-y: auto;
+    background: var(--card-bg);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    z-index: 600;
+}
+#gs-dropdown.open { display: block; }
+
+.gs-drop-group {
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+}
+.gs-drop-group:last-child { border-bottom: none; }
+
+.gs-drop-group-label {
+    padding: 8px 14px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+}
+
+.gs-drop-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+.gs-drop-item:hover { background: var(--card-bg-hover); }
+
+.gs-drop-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.gs-drop-icon svg { width: 13px; height: 13px; }
+
+.gs-drop-icon--shipment   { background: var(--info-subtle);    color: var(--info); }
+.gs-drop-icon--sale       { background: var(--success-subtle); color: var(--success); }
+.gs-drop-icon--warehouse  { background: var(--warning-subtle); color: var(--warning); }
+.gs-drop-icon--counterparty { background: var(--accent-subtle); color: var(--accent); }
+.gs-drop-icon--carrier    { background: rgba(148,163,184,0.1); color: #94a3b8; }
+.gs-drop-icon--expense    { background: var(--danger-subtle);  color: var(--danger); }
+.gs-drop-icon--bank       { background: rgba(139,92,246,0.1);  color: #8b5cf6; }
+
+.gs-drop-body {
+    flex: 1;
+    min-width: 0;
+}
+.gs-drop-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gs-drop-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gs-drop-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.gs-drop-empty {
+    padding: 24px 14px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+}

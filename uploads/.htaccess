@@ -1,0 +1,8 @@
+# Прямой доступ к загруженным файлам запрещён.
+# Файлы отдаются через api/shipment_docs.php?download=ID с проверкой сессии.
+Order deny,allow
+Deny from all
+
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>

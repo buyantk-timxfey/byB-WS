@@ -1,0 +1,528 @@
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+
+    /* ── Предотвращаем зум при фокусе на input ── */
+    input, select, textarea, .form-control {
+        font-size: 16px !important;
+    }
+
+    .layout {
+        flex-direction: column !important;
+        height: 100dvh !important;
+        overflow: hidden !important;
+    }
+
+    .sidebar {
+        width: 100% !important;
+        min-width: 100% !important;
+        /* Высота = 58px навбар + safe area снизу (home indicator) */
+        height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+        min-height: unset !important;
+        border-right: none !important;
+        border-top: 1px solid var(--sidebar-border) !important;
+        flex-direction: row !important;
+        align-items: flex-start !important;
+        padding: 0 !important;
+        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+        order: 2 !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 50 !important;
+    }
+
+    .sidebar-logo { display: none !important; }
+    .sidebar > div:last-child { display: none !important; }
+
+    .sidebar-nav {
+        flex-direction: row !important;
+        flex: 1 !important;
+        padding: 0 !important;
+        gap: 0 !important;
+        justify-content: space-around !important;
+        overflow: visible !important;
+    }
+
+    .sidebar-bottom {
+        flex-direction: row !important;
+        border-top: none !important;
+        border-left: 1px solid var(--sidebar-border) !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        gap: 0 !important;
+    }
+
+    .nav-item {
+        flex-direction: column !important;
+        gap: 3px !important;
+        padding: 10px 4px 10px !important;
+        border-radius: 0 !important;
+        flex: 1 !important;
+        justify-content: center !important;
+        align-items: center !important;
+        min-width: 0 !important;
+        min-height: 44px !important;
+        position: relative !important;
+    }
+
+    /* Active pill indicator */
+    .nav-item.active {
+        background: transparent !important;
+        color: var(--accent) !important;
+    }
+    .nav-item.active::before {
+        content: '' !important;
+        position: absolute !important;
+        bottom: 5px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 18px !important;
+        height: 2.5px !important;
+        background: var(--accent) !important;
+        border-radius: 2px !important;
+        box-shadow: 0 0 6px var(--accent-glow) !important;
+        top: auto !important;
+        right: auto !important;
+        width: 18px !important;
+    }
+
+    .nav-icon { width: 20px !important; height: 20px !important; }
+    .nav-label {
+        font-size: 10px !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 52px !important;
+        color: inherit !important;
+    }
+
+    .nav-bell-badge { right: 6px !important; top: 6px !important; transform: none !important; }
+
+    .main-content {
+        flex: 1 !important;
+        order: 1 !important;
+        padding: 16px !important;
+        /* 58px навбар + safe area + 14px отступ от контента */
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        height: calc(100dvh - 58px - env(safe-area-inset-bottom, 0px)) !important;
+        max-height: calc(100dvh - 58px - env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    .page-header { flex-wrap: wrap !important; gap: 10px !important; margin-bottom: 16px !important; }
+    .page-title { font-size: 20px !important; }
+
+    .stats-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        margin-bottom: 14px !important;
+    }
+
+    .dashboard-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+
+    .table-wrapper { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+    table { min-width: 600px !important; }
+
+    .row-actions { opacity: 1 !important; }
+
+    .drawer {
+        width: 100% !important;
+        right: -100% !important;
+        border-radius: 0 !important;
+        max-height: 92dvh !important;
+    }
+    .drawer.active { right: 0 !important; }
+
+    .gf-toggle {
+        bottom: calc(66px + env(safe-area-inset-bottom, 0px)) !important;
+        right: 14px !important;
+        padding: 8px 14px !important;
+        font-size: 12px !important;
+    }
+
+    .notif-dropdown {
+        bottom: calc(66px + env(safe-area-inset-bottom, 0px)) !important;
+        left: 6px !important;
+        right: 6px !important;
+        width: auto !important;
+    }
+
+    .gf-panel {
+        bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important;
+        right: 14px !important;
+        left: 14px !important;
+        width: auto !important;
+    }
+
+    /* ── Кнопки закрытия/действий — минимум 44×44 для пальца ── */
+    .btn-icon {
+        width: 44px !important;
+        height: 44px !important;
+    }
+
+    /* ── Кнопка dismiss уведомления — видна без hover ── */
+    .notif-dismiss-btn {
+        opacity: 1 !important;
+    }
+
+    /* ── Momentum scroll в drawer и modal ── */
+    .drawer-body, .modal-body, .notif-list {
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    .tabs { overflow-x: auto !important; flex-wrap: nowrap !important; scrollbar-width: none !important; }
+    .tabs::-webkit-scrollbar { display: none !important; }
+    .tab { white-space: nowrap !important; flex-shrink: 0 !important; }
+
+    .detail-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 375px) {
+    .nav-label { display: none !important; }
+    .nav-item  { padding: 12px 4px !important; }
+    .stats-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ═══════════ Сайдбар на iPad — обе ориентации (769–1366px) ═══════════
+   Свёрнут в иконочную рейку и НЕ толкает контент. Покрывает и портрет,
+   и ландшафт (вкл. iPad Pro 11"/12.9"). Кнопка сворачивания скрыта —
+   на этой ширине меню не разворачивается, чтобы не сжимать дашборд/календарь. */
+@media (min-width: 769px) and (max-width: 1366px) {
+    .sidebar { width: 64px; min-width: 64px; }
+    .sidebar-logo { padding: 14px 6px 10px; align-items: center; }
+    .sidebar-logo-img { width: 36px; height: 36px; }
+    .nav-section-label { display: none; }
+    .sidebar-nav { padding: 4px 8px; }
+    .sidebar-bottom { padding: 8px 8px 14px; }
+    .nav-item, .sidebar-logout { justify-content: center; padding: 12px 0; gap: 0; }
+    .nav-label { display: none; }
+    .nav-icon { width: 20px; height: 20px; }
+    .sidebar-logout .nav-icon { width: 18px; height: 18px; }
+    .nav-bell-badge { position: absolute; top: 4px; right: 8px; }
+    /* Меню и так свёрнуто — кнопка-стрелка не нужна и сбивала с толку */
+    .sidebar-collapse-btn { display: none !important; }
+}
+
+/* ═══════════ iPad / планшет: сетки дашборда и P&L (769–1100px) ═══════════ */
+@media (min-width: 769px) and (max-width: 1100px) {
+
+    .main-content { padding: 22px 20px; }
+
+    /* ── Дашборд: однопоточная раскладка ── */
+    .dashboard-layout { grid-template-columns: 1fr; }
+    .dashboard-kpi,
+    .dashboard-notes-row,
+    .dashboard-left-col,
+    .dashboard-right-bottom { grid-column: 1 / -1; }
+
+    /* Просроченные и календарь — рядом */
+    .dashboard-left-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        align-items: start;
+    }
+
+    /* Банк-карты 3 в ряд, трекер 4 в ряд */
+    .dashboard-right-bottom { grid-template-columns: repeat(4, 1fr); }
+
+    .tracker-card__counterparty, .tracker-card__title { font-size: 10px; }
+
+    /* ── P&L ── */
+    .pnl-body { grid-template-columns: 1fr; }
+    .calc-cards-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ═══════════ iPhone: дашборд и P&L (≤768px) ═══════════
+   Исправление: основной класс дашборда — .dashboard-layout
+   (старое правило .dashboard-grid било мимо). */
+@media (max-width: 768px) {
+
+    /* ── Дашборд: всё в одну колонку ── */
+    .dashboard-layout { grid-template-columns: 1fr !important; gap: 12px !important; }
+    .dashboard-kpi,
+    .dashboard-notes-row,
+    .dashboard-left-col,
+    .dashboard-right-bottom { grid-column: 1 / -1 !important; }
+
+    .dashboard-greeting h1 { font-size: 22px !important; }
+
+    /* Заметки и план — друг под другом */
+    .dashboard-notes-row { grid-template-columns: 1fr !important; }
+
+    /* Банк-карты — во всю ширину, трекер — по 2 в ряд */
+    .dashboard-right-bottom { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+    .dashboard-right-bottom .bank-cards-row { grid-template-columns: 1fr !important; gap: 10px !important; }
+    .bank-card { aspect-ratio: 2.2 !important; }
+
+    .tracker-card { padding: 10px 8px !important; gap: 4px !important; }
+    .tracker-card__counterparty, .tracker-card__title { font-size: 11px !important; }
+
+    /* Календарь крупнее под палец */
+    .cal-day { font-size: 14px !important; border-radius: 8px !important; }
+
+    /* ── P&L ── */
+    .pnl-body { grid-template-columns: 1fr !important; }
+    .pnl-cards-row,
+    .calc-cards-row { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+    .pnl-cards-row .stat-value { font-size: 17px !important; }
+
+    .pnl-hero { padding: 20px 16px 16px !important; }
+    .pnl-hero-metrics { grid-template-columns: 1fr !important; gap: 16px !important; margin-bottom: 18px !important; }
+    .pnl-hero-divider { display: none !important; }
+    .pnl-big-value { font-size: 30px !important; letter-spacing: -1px !important; }
+
+    .pnl-formula-row { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+    .pnl-formula-op { display: none !important; }
+
+    /* Помесячная сводка-формула (вкладка «Итоги»): 9 колонок с nowrap-суммами
+       вылезали за карточку. Делаем сетку 2×, итог — на всю ширину. */
+    .pnl-month-formula { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+    .pnl-mf-op { display: none !important; }
+    .pnl-mf-result { grid-column: 1 / -1 !important; }
+    .pnl-mf-val { font-size: 14px !important; }
+
+    /* Помесячная таблица и калькулятор — горизонтальный скролл,
+       фиксированная сетка калькулятора на узком экране отключается */
+    .pnl-monthly-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+    .pnl-monthly-table { min-width: 640px !important; }
+    .calc-shipment table { table-layout: auto !important; min-width: 640px !important; }
+    .calc-shipment th { width: auto !important; }
+    .calc-shipment .calc-plan { min-width: 90px !important; }
+}
+
+/* ═══════════ iPhone: карточный вид таблиц (≤768px) ═══════════
+   Таблицы с tbody.m-cards превращаются в стопку карточек:
+   без горизонтального скролла, второстепенные колонки скрыты,
+   карточка кликабельна как и строка. */
+@media (max-width: 768px) {
+
+    .table-wrapper:has(.m-cards) {
+        background: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+    }
+    .table-wrapper:has(.m-cards) table {
+        min-width: 0 !important;
+        display: block !important;
+    }
+    .table-wrapper:has(.m-cards) thead { display: none !important; }
+
+    tbody.m-cards { display: flex !important; flex-direction: column; gap: 10px; }
+    tbody.m-cards tr {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 12px;
+        row-gap: 4px;
+        align-items: center;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 12px 14px;
+    }
+    tbody.m-cards tr:hover { background: var(--card-bg-hover); }
+    tbody.m-cards td {
+        display: block !important;
+        padding: 0 !important;
+        border: none !important;
+        background: none !important;
+        min-width: 0;
+    }
+
+    /* Подписи значений там, где без заголовка непонятно */
+    .m-cell-label::before {
+        content: attr(data-l);
+        font-size: 10px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        display: block;
+        margin-bottom: 1px;
+    }
+
+    /* ── Поставки: №/имя + статус, поставщик, товары, даты + дни, сумма ── */
+    .m-cards-ship td:nth-child(1) { grid-column: 1; grid-row: 1; font-size: 14px; }
+    .m-cards-ship td:nth-child(7) { grid-column: 2; grid-row: 1; justify-self: end; }
+    .m-cards-ship td:nth-child(4) { grid-column: 1 / -1; grid-row: 2; font-size: 12px; color: var(--text-muted); }
+    .m-cards-ship td:nth-child(5) { grid-column: 1 / -1; grid-row: 3; margin-top: 4px !important; }
+    .m-cards-ship td:nth-child(2) { grid-column: 1; grid-row: 4; font-size: 12px; margin-top: 6px !important; }
+    .m-cards-ship td:nth-child(3) { grid-column: 2; grid-row: 4; justify-self: end; margin-top: 6px !important; }
+    .m-cards-ship td:nth-child(8) {
+        grid-column: 1 / -1; grid-row: 5;
+        font-size: 16px; font-weight: 700;
+        margin-top: 8px !important;
+        padding-top: 8px !important;
+        border-top: 1px solid var(--border) !important;
+    }
+    .m-cards-ship td:nth-child(6),
+    .m-cards-ship td:nth-child(9),
+    .m-cards-ship td:nth-child(10) { display: none !important; }
+
+    /* ── Продажи: покупатель + статус, товары, дата + кол-во, сумма ── */
+    .m-cards-sale td:nth-child(3) { grid-column: 1; grid-row: 1; font-size: 14px; font-weight: 500; }
+    .m-cards-sale td:nth-child(5) { grid-column: 2; grid-row: 1; justify-self: end; }
+    .m-cards-sale td:nth-child(2) { grid-column: 1 / -1; grid-row: 2; margin-top: 4px !important; }
+    .m-cards-sale td:nth-child(1) { grid-column: 1; grid-row: 3; font-size: 12px; color: var(--text-muted); margin-top: 6px !important; }
+    .m-cards-sale td:nth-child(4) { grid-column: 2; grid-row: 3; justify-self: end; font-size: 12px; color: var(--text-muted); margin-top: 6px !important; }
+    .m-cards-sale td:nth-child(6) {
+        grid-column: 1 / -1; grid-row: 4;
+        font-size: 16px; font-weight: 700;
+        margin-top: 8px !important;
+        padding-top: 8px !important;
+        border-top: 1px solid var(--border) !important;
+    }
+    .m-cards-sale td:nth-child(7) { display: none !important; }
+
+    /* ── Склад, предпродажа: товар + статус, поставка/ETA, поставщик, продано + цена ── */
+    .m-cards-resv td:nth-child(1) { grid-column: 1; grid-row: 1; font-size: 14px; }
+    .m-cards-resv td:nth-child(6) { grid-column: 2; grid-row: 1; justify-self: end; }
+    .m-cards-resv td:nth-child(2) { grid-column: 1 / -1; grid-row: 2; font-size: 12px; }
+    .m-cards-resv td:nth-child(3) { grid-column: 1 / -1; grid-row: 3; font-size: 12px; }
+    .m-cards-resv td:nth-child(4) { grid-column: 1; grid-row: 4; margin-top: 6px !important; }
+    .m-cards-resv td:nth-child(5) { grid-column: 2; grid-row: 4; justify-self: end; margin-top: 6px !important; }
+
+    /* ── Склад, номенклатура: товар + статус, остаток + партии, цены, маржа ── */
+    .m-cards-wh td:nth-child(1) { grid-column: 1; grid-row: 1; font-size: 14px; }
+    .m-cards-wh td:nth-child(7) { grid-column: 2; grid-row: 1; justify-self: end; }
+    .m-cards-wh td:nth-child(2) { grid-column: 1; grid-row: 2; margin-top: 6px !important; }
+    .m-cards-wh td:nth-child(3) { grid-column: 2; grid-row: 2; justify-self: end; margin-top: 6px !important; }
+    .m-cards-wh td:nth-child(4) { grid-column: 1; grid-row: 3; margin-top: 6px !important; }
+    .m-cards-wh td:nth-child(5) { grid-column: 2; grid-row: 3; justify-self: end; text-align: right; margin-top: 6px !important; }
+    .m-cards-wh td:nth-child(6) { grid-column: 1 / -1; grid-row: 4; margin-top: 6px !important; }
+    .m-cards-wh td:nth-child(8) { display: none !important; }
+}
+
+/* ═══════════ iPhone: формы и drawer'ы (≤768px) ═══════════ */
+@media (max-width: 768px) {
+
+    /* Строки товаров в формах поставки: название на всю ширину,
+       кол-во / цена / удалить — строкой ниже */
+    .sf-items-header { display: none !important; }
+    .sf-items .item-row,
+    .items-table .item-row {
+        grid-template-columns: 1fr 1fr 36px !important;
+        gap: 6px !important;
+        margin-bottom: 12px !important;
+    }
+    .sf-items .item-row > :first-child,
+    .items-table .item-row > :first-child { grid-column: 1 / -1; }
+
+    /* Чековая форма продажи: товар на всю ширину, остальное ниже */
+    .sale-receipt-items-header { display: none !important; }
+    .sale-receipt-item-row {
+        grid-template-columns: 1fr 1fr 1fr 32px !important;
+        row-gap: 6px !important;
+        margin-bottom: 12px !important;
+    }
+    .sale-receipt-item-row > :first-child { grid-column: 1 / -1; }
+
+    /* Тач-таргеты: кнопки в подвалах форм и кнопка добавления товара */
+    .drawer-footer .btn,
+    .modal-footer .btn { min-height: 44px; }
+    .btn-add-item { min-height: 40px; padding: 8px 12px; }
+    .btn-remove-item { width: 36px; height: 36px; }
+
+    /* Поля форм — комфортная высота под палец */
+    .form-control { min-height: 42px; }
+    select.form-control { min-height: 42px; }
+}
+
+/* ═══════════ iPhone: карточные таблицы — второстепенные страницы (≤768px) ═══════════ */
+@media (max-width: 768px) {
+
+    /* По умолчанию ячейка карточки занимает всю ширину (простые таблицы) */
+    tbody.m-cards tr > td { grid-column: 1 / -1; }
+
+    /* ── Банк: тип + сумма, описание, дата + счёт, статус ── */
+    .m-cards-bank td:nth-child(2) { grid-column: 1; grid-row: 1; }
+    .m-cards-bank td:nth-child(5) { grid-column: 2; grid-row: 1; justify-self: end; font-size: 15px; }
+    .m-cards-bank td:nth-child(3) { grid-column: 1 / -1; grid-row: 2; font-size: 13px; margin-top: 2px !important; }
+    .m-cards-bank td:nth-child(1) { grid-column: 1; grid-row: 3; font-size: 12px; color: var(--text-muted); }
+    .m-cards-bank td:nth-child(4) { grid-column: 2; grid-row: 3; justify-self: end; }
+    .m-cards-bank td:nth-child(6) { grid-column: 1 / -1; grid-row: 4; justify-self: end; }
+    .m-cards-bank #bank-ops-empty td { grid-column: 1 / -1 !important; grid-row: auto !important; }
+
+    /* ── Контрагенты: название + тип компании, роль, реквизиты, действия ── */
+    .m-cards-cp td:nth-child(2) { grid-column: 1; grid-row: 1; font-size: 14px; font-weight: 500; }
+    .m-cards-cp td:nth-child(1) { grid-column: 2; grid-row: 1; justify-self: end; }
+    .m-cards-cp td:nth-child(3) { grid-column: 1 / -1; grid-row: 2; }
+    .m-cards-cp td:nth-child(4) { grid-column: 1 / -1; grid-row: 3; }
+    .m-cards-cp td:nth-child(5) { grid-column: 1 / -1; grid-row: 4; justify-self: end; margin-top: 4px !important; }
+
+    /* ── Перевозчики: название, сайт, комментарий, действия ── */
+    .m-cards-carrier td:nth-child(1) { font-size: 14px; font-weight: 500; }
+    .m-cards-carrier td:nth-child(4) { justify-self: end; margin-top: 4px !important; }
+
+    /* ── Справочник: контрагенты ── */
+    .m-cards-refcp td:nth-child(2) { grid-column: 1; grid-row: 1; font-size: 14px; }
+    .m-cards-refcp td:nth-child(1) { grid-column: 2; grid-row: 1; justify-self: end; }
+    .m-cards-refcp td:nth-child(3) { grid-column: 1 / -1; grid-row: 2; }
+    .m-cards-refcp td:nth-child(4) { grid-column: 1 / -1; grid-row: 3; justify-self: end; }
+
+    /* ── Справочник: перевозчики ── */
+    .m-cards-refcar td:nth-child(1) { grid-column: 1; grid-row: 1; font-size: 14px; align-self: center; }
+    .m-cards-refcar td:nth-child(2) { grid-column: 2; grid-row: 1; justify-self: end; }
+}
+
+/* ── Расходы предпринимателя: название + сумма, категория, дата + счёт ── */
+@media (max-width: 768px) {
+    .m-cards-exp td:nth-child(2) { grid-column: 1; grid-row: 1; font-size: 14px; }
+    .m-cards-exp td:nth-child(5) { grid-column: 2; grid-row: 1; justify-self: end; font-size: 15px; }
+    .m-cards-exp td:nth-child(3) { grid-column: 1 / -1; grid-row: 2; }
+    .m-cards-exp td:nth-child(1) { grid-column: 1; grid-row: 3; font-size: 12px; color: var(--text-muted); }
+    .m-cards-exp td:nth-child(4) { grid-column: 2; grid-row: 3; justify-self: end; }
+    .m-cards-exp td:nth-child(6) { grid-column: 1 / -1; grid-row: 4; justify-self: end; }
+}
+
+/* Пустые строки-заглушки (colspan) — всегда во всю ширину карточки */
+@media (max-width: 768px) {
+    tbody.m-cards td[colspan] {
+        grid-column: 1 / -1 !important;
+        grid-row: auto !important;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ФУНДАМЕНТ мобильной вёрстки (≤768px)
+   Глобальные предохранители: ничто не вылезает за экран, длинный
+   текст переносится, тач-таргеты крупные. Частные правила экранов
+   выше по файлу имеют приоритет (та же специфичность, идут позже —
+   нет: эти правила общие и низкоспецифичные, специфичные не ломают).
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+    /* ── 1. Ничего шире экрана ───────────────────────────────── */
+    /* Длинные слова/названия/URL переносятся, а не распирают блок */
+    .main-content { overflow-wrap: anywhere; }
+    /* Топ-уровневые блоки страницы не выходят за вьюпорт */
+    .main-content > * { max-width: 100%; }
+    /* Медиа всегда вписывается */
+    .main-content img,
+    .main-content svg,
+    .main-content canvas,
+    .main-content video,
+    .main-content iframe { max-width: 100%; }
+    /* Флекс/грид-элементы могут сжиматься, а не толкать ширину строки */
+    .stat-card, .tracker-card, .bank-card, .pnl-monthly-card,
+    .note-item, .dashboard-layout > *, .detail-item,
+    .pnl-cards-row > *, .calc-cards-row > * { min-width: 0; }
+
+    /* ── 2. Тач-таргеты под палец ────────────────────────────── */
+    .btn { min-height: 42px; }
+    .btn.btn-sm { min-height: 34px; }
+    .tab { min-height: 40px; display: inline-flex; align-items: center; }
+    .btn-action { min-height: 38px; min-width: 38px; }
+    /* Бейдж статуса кликабелен (смена статуса) — чуть крупнее */
+    td .badge { padding: 5px 10px; }
+
+    /* ── 3. Длинные заголовки в модалках/карточках не ломают ширину ── */
+    .modal-title, .drawer-title,
+    .detail-value, .bank-card__name,
+    .tracker-card__title, .tracker-card__counterparty { overflow-wrap: anywhere; }
+}

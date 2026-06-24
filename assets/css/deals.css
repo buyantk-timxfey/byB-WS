@@ -1,0 +1,216 @@
+/* ═══════════ СДЕЛКИ: доска ═══════════ */
+
+.deals-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.deals-col {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    min-height: 120px;
+}
+
+.deals-col-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    padding: 4px 6px 10px;
+    letter-spacing: 0.3px;
+}
+
+.deals-col-count {
+    background: var(--border);
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.deals-col-empty {
+    text-align: center;
+    padding: 20px 0;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.deal-card {
+    background: var(--bg-card, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color .15s, transform .15s;
+}
+.deal-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.deal-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.deal-card-qty {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.deal-card-cp {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.deal-card-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+.deal-card-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.deal-card-saving {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 3px 8px;
+    display: inline-block;
+}
+.deal-card-saving.pos { color: var(--success); background: rgba(74,222,128,0.08); }
+.deal-card-saving.neg { color: var(--danger);  background: rgba(239,68,68,0.08); }
+
+.deal-card-shipment {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ═══════════ Варианты поиска в модалке ═══════════ */
+
+.deal-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 6px;
+}
+.deal-option--chosen {
+    border-color: rgba(74,222,128,0.4);
+    background: rgba(74,222,128,0.05);
+}
+
+.deal-add-option {
+    display: grid;
+    grid-template-columns: 1.4fr 1.4fr 0.9fr 0.9fr 0.7fr auto;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: center;
+}
+
+/* ═══════════ Виджет на дашборде ═══════════ */
+
+.deals-widget-funnel {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 12px 14px 8px;
+}
+
+.deals-widget-stage {
+    text-align: center;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 4px;
+    cursor: pointer;
+    transition: border-color .15s;
+}
+.deals-widget-stage:hover { border-color: var(--accent); }
+
+.deals-widget-stage-num {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.1;
+}
+
+.deals-widget-stage-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.deals-widget-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    cursor: pointer;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+}
+.deals-widget-row:hover { background: var(--bg-subtle); }
+
+.deals-widget-row-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.deals-widget-row-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.deals-widget-row-stage {
+    background: var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 10px;
+}
+
+.deals-widget-footer {
+    text-align: center;
+    padding: 8px;
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+    border-top: 1px solid var(--border);
+}
+
+/* Мобильная доска — колонки в столбик */
+@media (max-width: 767px) {
+    .deals-board { grid-template-columns: 1fr !important; }
+    .deal-add-option { grid-template-columns: 1fr 1fr; }
+}

@@ -1,0 +1,114 @@
+/* ===== CHAIN — Цепочка движения товара ===== */
+
+.chain-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.chain-block {
+    display: flex;
+    gap: 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+}
+
+.chain-block--shipment { border-left: 3px solid var(--info); }
+.chain-block--warehouse { border-left: 3px solid var(--accent); }
+.chain-block--sales     { border-left: 3px solid var(--success); }
+.chain-block--summary   { border-left: 3px solid var(--warning); }
+
+.chain-block-icon {
+    font-size: 20px;
+    line-height: 1;
+    padding-top: 2px;
+}
+
+.chain-block-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.chain-block-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+}
+
+.chain-block-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.chain-row {
+    display: flex;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.chain-label {
+    color: var(--text-muted);
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.chain-value {
+    color: var(--text);
+}
+
+.chain-arrow {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 18px;
+    padding: 6px 0;
+    line-height: 1;
+}
+
+.chain-sales-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chain-sale-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 60px 90px auto;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.chain-sale-row:last-child {
+    border-bottom: none;
+}
+
+.chain-sale-date { color: var(--text-muted); }
+.chain-sale-buyer { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chain-sale-qty { color: var(--text-muted); text-align: center; }
+.chain-sale-price { font-weight: 500; text-align: right; }
+
+/* Кнопка-ссылка на цепочку */
+.btn-chain-link {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    opacity: 0.5;
+    padding: 0 4px;
+    transition: opacity 0.15s;
+    vertical-align: middle;
+}
+
+.btn-chain-link:hover {
+    opacity: 1;
+}
+/* Широкая модалка для цепочки */
+.chain-modal-wide {
+    width: min(780px, 92vw) !important;
+}

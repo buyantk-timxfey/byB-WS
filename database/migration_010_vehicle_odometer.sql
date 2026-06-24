@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS car_washes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    wash_date DATE NOT NULL,
+    amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    note VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE vehicle_settings ADD COLUMN start_odometer INT NOT NULL DEFAULT 0;
+
+ALTER TABLE vehicle_trips ADD COLUMN odometer INT NULL;
