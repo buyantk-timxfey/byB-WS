@@ -91,51 +91,44 @@ function _renderCalibResult(d) {
         </div>`;
     }
 
-    const missing    = d.missing_lines || [];
-    const missingIn  = missing.filter(l => l.direction === 'in');
-    const missingOut = missing.filter(l => l.direction === 'out');
-    const netMissing = +(d.missing_in_total || 0) - +(d.missing_out_total || 0);
-
-    let opsHtml = '';
-    if (missing.length) {
-        const renderList = (items, color, sign) => items.map(l =>
-            `<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 10px;border-radius:6px;background:var(--bg-subtle);margin-bottom:3px;font-size:12px">
-                <span style="color:${color};font-weight:600;flex-shrink:0">${sign}${fmt(Math.abs(+l.amount))} ₽</span>
-                <span style="color:var(--text-muted);flex-shrink:0">${fmtDate(l.operation_date)}</span>
-                <div style="flex:1;min-width:0">
-                    ${l.counterparty ? `<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(l.counterparty)}</div>` : ''}
-                    ${l.description ? `<div style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(l.description)}</div>` : ''}
-                </div>
-            </div>`
-        ).join('');
-
-        const netSign  = netMissing >= 0 ? '+' : '−';
-        const netColor = Math.abs(netMissing) < 0.02 ? 'var(--success)' : 'var(--warning)';
-
-        opsHtml = `
-        <div style="margin-top:16px">
-            <div style="font-size:12px;font-weight:600;color:var(--warning);margin-bottom:8px">
-                <i data-lucide="triangle-alert" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"></i>
-                Нет в ЦРМ: ${missing.length} ${_plural(missing.length, 'операция', 'операции', 'операций')}
-                &nbsp;·&nbsp; нетто <span style="color:${netColor}">${netSign}${fmt(Math.abs(netMissing))} ₽</span>
-            </div>
-            ${missingOut.length ? `
-            <div style="font-size:11px;font-weight:600;color:var(--danger);margin:8px 0 4px">
-                Списания (${missingOut.length}) — итого ${fmt(+(d.missing_out_total||0))} ₽
-            </div>
-            <div style="max-height:200px;overflow-y:auto">${renderList(missingOut, 'var(--danger)', '−')}</div>` : ''}
-            ${missingIn.length ? `
-            <div style="font-size:11px;font-weight:600;color:var(--success);margin:8px 0 4px">
-                Поступления (${missingIn.length}) — итого ${fmt(+(d.missing_in_total||0))} ₽
-            </div>
-            <div style="max-height:200px;overflow-y:auto">${renderList(missingIn, 'var(--success)', '+')}</div>` : ''}
-            <div style="font-size:11px;color:var(--text-muted);margin-top:8px">
-                Эти платежи есть в выписке банка, но не внесены в ЦРМ. Нетто-эффект на баланс: ${netSign}${fmt(Math.abs(netMissing))} ₽.
-            </div>
-        </div>`;
-    } else if (!isOk) {
-        opsHtml = `<div style="margin-top:12px;font-size:12px;color:var(--text-muted)">
-            Все строки выписки нашлись в ЦРМ, но баланс всё равно расходится — проверьте начальный остаток счёта или операции вне периода выписки.
+    const flows = d.flows || {};
+    let flowsHtml = '';
+    if (flows.stmt_in || flows.stmt_out) {
+        const fmtDiff = (v) => {
+            if (Math.abs(v) < 0.02) return `<span style="color:var(--success)">совпадает</span>`;
+            const sign = v > 0 ? '+' : '−';
+            return `<span style="color:var(--danger)">${sign}${fmt(Math.abs(v))} ₽</span>`;
+        };
+        flowsHtml = `
+        <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px">Обороты за период выписки</div>
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead>
+                    <tr>
+                        <th style="text-align:left;padding:4px 8px;color:var(--text-muted);font-weight:500"></th>
+                        <th style="text-align:right;padding:4px 8px;color:var(--text-muted);font-weight:500">По банку</th>
+                        <th style="text-align:right;padding:4px 8px;color:var(--text-muted);font-weight:500">По ЦРМ</th>
+                        <th style="text-align:right;padding:4px 8px;color:var(--text-muted);font-weight:500">Разница</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-top:1px solid var(--border)">
+                        <td style="padding:6px 8px"><i data-lucide="arrow-down-circle" style="width:11px;height:11px;vertical-align:-1px;margin-right:4px;color:var(--success)"></i>Поступления</td>
+                        <td style="text-align:right;padding:6px 8px;font-weight:500">${fmt(flows.stmt_in)} ₽</td>
+                        <td style="text-align:right;padding:6px 8px;font-weight:500">${fmt(flows.crm_in)} ₽</td>
+                        <td style="text-align:right;padding:6px 8px">${fmtDiff(flows.diff_in)}</td>
+                    </tr>
+                    <tr style="border-top:1px solid var(--border)">
+                        <td style="padding:6px 8px"><i data-lucide="arrow-up-circle" style="width:11px;height:11px;vertical-align:-1px;margin-right:4px;color:var(--danger)"></i>Списания</td>
+                        <td style="text-align:right;padding:6px 8px;font-weight:500">${fmt(flows.stmt_out)} ₽</td>
+                        <td style="text-align:right;padding:6px 8px;font-weight:500">${fmt(flows.crm_out)} ₽</td>
+                        <td style="text-align:right;padding:6px 8px">${fmtDiff(flows.diff_out)}</td>
+                    </tr>
+                </tbody>
+            </table>
+            ${!isOk ? `<div style="margin-top:10px;font-size:11px;color:var(--text-muted)">
+                Если разница в поступлениях или списаниях ненулевая — проверьте операции за этот период в ЦРМ.
+            </div>` : ''}
         </div>`;
     }
 
@@ -164,7 +157,7 @@ function _renderCalibResult(d) {
         </div>
         ${statusHtml}
         ${infoHtml}
-        ${opsHtml}
+        ${flowsHtml}
     </div>`;
 }
 

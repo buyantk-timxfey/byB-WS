@@ -262,88 +262,45 @@ switch ($method) {
                 2
             );
 
-            // ── Сверка строк выписки с операциями ЦРМ ──────────────────────────
-            // Нормализуем документы выписки (приход/расход, сумма, дата, контрагент)
-            $stmtLines = [];
-            foreach ($parsed['sections'] as $s) {
-                $dir    = sectionDirection($s);
-                $sDate  = parseDateRU($s['Дата'] ?? '');
-                $amount = (float) str_replace(',', '.', $s['Сумма'] ?? '0');
-                if (!$sDate || $amount <= 0) continue;
-                $stmtLines[] = [
-                    'direction'      => $dir,
-                    'amount'         => round($amount, 2),
-                    'operation_date' => $sDate,
-                    'counterparty'   => $dir === 'in' ? ($s['Плательщик'] ?? '') : ($s['Получатель'] ?? ''),
-                    'description'    => $s['НазначениеПлатежа'] ?? '',
-                    'matched'        => false,
-                ];
-            }
+            // ── Агрегаты ЦРМ за период выписки ─────────────────────────────────
+            $stmtTotalIn  = $p('ВсегоПоступило');
+            $stmtTotalOut = $p('ВсегоСписано');
 
-            // Операции ЦРМ за период выписки (для жадного сопоставления по сумме+направлению)
-            $crmOps = [];
+            $crmIn = 0; $crmOut = 0;
             if ($startDate && $endDate) {
-                $opsStmt = $pdo->prepare("
-                    SELECT bo.id, bo.type, bo.amount, bo.operation_date
-                    FROM bank_operations bo
-                    WHERE bo.account_id = ? AND bo.status IN ('confirmed','pending')
-                      AND bo.operation_date BETWEEN ? AND ?
+                $aggStmt = $pdo->prepare("
+                    SELECT
+                        COALESCE(SUM(CASE WHEN type IN ('Продажа','Прочий приход')
+                                         OR (type='Перевод' AND amount >= 0) THEN ABS(amount) ELSE 0 END), 0) as crm_in,
+                        COALESCE(SUM(CASE WHEN type IN ('Закупка','Расход','Выплата ЗП')
+                                         OR (type='Перевод' AND amount < 0)  THEN ABS(amount) ELSE 0 END), 0) as crm_out
+                    FROM bank_operations
+                    WHERE account_id = ? AND status IN ('confirmed','pending')
+                      AND operation_date BETWEEN ? AND ?
                 ");
-                $opsStmt->execute([$accountId, $startDate, $endDate]);
-                foreach ($opsStmt->fetchAll() as $op) {
-                    $isIn = in_array($op['type'], ['Продажа', 'Прочий приход'], true)
-                        || ($op['type'] === 'Перевод' && (float)$op['amount'] >= 0);
-                    $crmOps[] = [
-                        'direction' => $isIn ? 'in' : 'out',
-                        'amount'    => round(abs((float)$op['amount']), 2),
-                        'used'      => false,
-                    ];
-                }
+                $aggStmt->execute([$accountId, $startDate, $endDate]);
+                $agg    = $aggStmt->fetch();
+                $crmIn  = round((float)$agg['crm_in'],  2);
+                $crmOut = round((float)$agg['crm_out'], 2);
             }
-
-            // Жадное сопоставление: для каждой строки выписки ищем неиспользованную
-            // операцию ЦРМ того же направления с такой же суммой (±1 коп).
-            $missing = [];
-            foreach ($stmtLines as &$ln) {
-                foreach ($crmOps as &$op) {
-                    if ($op['used'] || $op['direction'] !== $ln['direction']) continue;
-                    if (abs($op['amount'] - $ln['amount']) <= 0.01) {
-                        $op['used'] = true;
-                        $ln['matched'] = true;
-                        break;
-                    }
-                }
-                unset($op);
-                if (!$ln['matched']) {
-                    $missing[] = [
-                        'direction'      => $ln['direction'],
-                        'amount'         => $ln['amount'],
-                        'operation_date' => $ln['operation_date'],
-                        'counterparty'   => $ln['counterparty'],
-                        'description'    => $ln['description'],
-                    ];
-                }
-            }
-            unset($ln);
-
-            // Сортируем недостающие по дате (свежие сверху)
-            usort($missing, fn($a, $b) => strcmp($b['operation_date'], $a['operation_date']));
-
-            $missingInTotal  = array_sum(array_map(fn($l) => $l['direction'] === 'in'  ? $l['amount'] : 0, $missing));
-            $missingOutTotal = array_sum(array_map(fn($l) => $l['direction'] === 'out' ? $l['amount'] : 0, $missing));
 
             echo json_encode([
-                'statement_balance'  => $statementBalance,
-                'crm_balance'        => $crmBalance,
-                'difference'         => round($crmBalance - $statementBalance, 2),
-                'account_name'       => $account['name'],
-                'date_range'         => ['start' => $startDate, 'end' => $endDate],
-                'missing_lines'      => $missing,
-                'missing_in_total'   => round($missingInTotal, 2),
-                'missing_out_total'  => round($missingOutTotal, 2),
-                'statement_info'     => [
-                    'total_in'  => $p('ВсегоПоступило'),
-                    'total_out' => $p('ВсегоСписано'),
+                'statement_balance' => $statementBalance,
+                'crm_balance'       => $crmBalance,
+                'difference'        => round($crmBalance - $statementBalance, 2),
+                'account_name'      => $account['name'],
+                'date_range'        => ['start' => $startDate, 'end' => $endDate],
+                'flows' => [
+                    'stmt_in'  => round($stmtTotalIn,  2),
+                    'stmt_out' => round($stmtTotalOut, 2),
+                    'crm_in'   => $crmIn,
+                    'crm_out'  => $crmOut,
+                    'diff_in'  => round($stmtTotalIn  - $crmIn,  2),
+                    'diff_out' => round($stmtTotalOut - $crmOut, 2),
+                ],
+                'statement_info' => [
+                    'total_in'  => $stmtTotalIn,
+                    'total_out' => $stmtTotalOut,
                     'opening'   => $p('НачальныйОстаток'),
                 ],
             ]);
