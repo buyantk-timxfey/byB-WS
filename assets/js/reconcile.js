@@ -91,31 +91,36 @@ function _renderCalibResult(d) {
         </div>`;
     }
 
-    const ops = d.period_operations || [];
+    const missing = d.missing_lines || [];
     let opsHtml = '';
-    if (!isOk && ops.length) {
+    if (missing.length) {
+        const totalMissing = missing.reduce((s, l) => s + Math.abs(+l.amount), 0);
         opsHtml = `
         <div style="margin-top:16px">
-            <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">
-                Операции за период выписки${dateRange ? ' (' + dateRange + ')' : ''}
+            <div style="font-size:12px;font-weight:600;color:var(--warning);margin-bottom:8px">
+                <i data-lucide="triangle-alert" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"></i>
+                Нет в ЦРМ: ${missing.length} ${_plural(missing.length, 'операция', 'операции', 'операций')} на ${fmt(totalMissing)} ₽
             </div>
-            <div style="max-height:260px;overflow-y:auto">
-            ${ops.map(op => {
-                const isIn  = ['Продажа','Прочий приход'].includes(op.type) || (op.type === 'Перевод' && +op.amount >= 0);
-                const amt   = Math.abs(+op.amount);
-                const isPending = op.status === 'pending';
-                return `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:6px;background:var(--bg-subtle);margin-bottom:3px;font-size:12px">
-                    <span style="color:${isIn ? 'var(--success)' : 'var(--danger)'};font-weight:600;flex-shrink:0">${isIn ? '+' : '−'}${fmt(amt)} ₽</span>
-                    <span style="color:var(--text-muted);flex-shrink:0">${fmtDate(op.operation_date)}</span>
-                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(op.description || '—')}</span>
-                    ${isPending ? `<span style="font-size:10px;color:var(--warning);flex-shrink:0">ожидает</span>` : ''}
+            <div style="max-height:280px;overflow-y:auto">
+            ${missing.map(l => {
+                const isIn = l.direction === 'in';
+                return `<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 10px;border-radius:6px;background:var(--bg-subtle);margin-bottom:3px;font-size:12px">
+                    <span style="color:${isIn ? 'var(--success)' : 'var(--danger)'};font-weight:600;flex-shrink:0">${isIn ? '+' : '−'}${fmt(Math.abs(+l.amount))} ₽</span>
+                    <span style="color:var(--text-muted);flex-shrink:0">${fmtDate(l.operation_date)}</span>
+                    <div style="flex:1;min-width:0">
+                        ${l.counterparty ? `<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(l.counterparty)}</div>` : ''}
+                        ${l.description ? `<div style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(l.description)}</div>` : ''}
+                    </div>
                 </div>`;
             }).join('')}
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px">
+                Эти платежи есть в выписке банка, но не внесены в ЦРМ. Добавьте их через «+ Операция».
             </div>
         </div>`;
     } else if (!isOk) {
         opsHtml = `<div style="margin-top:12px;font-size:12px;color:var(--text-muted)">
-            Нет операций за период выписки для сравнения
+            Все строки выписки нашлись в ЦРМ, но баланс всё равно расходится — проверьте начальный остаток счёта или операции вне периода выписки.
         </div>`;
     }
 
@@ -150,4 +155,11 @@ function _renderCalibResult(d) {
 
 function _escHtml(str) {
     return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function _plural(n, one, few, many) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+    return many;
 }

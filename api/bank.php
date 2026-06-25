@@ -253,21 +253,72 @@ switch ($method) {
                 2
             );
 
-            // Операции за период выписки — для контекста при расхождении
-            $periodOps = [];
+            // ── Сверка строк выписки с операциями ЦРМ ──────────────────────────
+            // Нормализуем документы выписки (приход/расход, сумма, дата, контрагент)
+            $stmtLines = [];
+            foreach ($parsed['sections'] as $s) {
+                $dir    = sectionDirection($s);
+                $sDate  = parseDateRU($s['Дата'] ?? '');
+                $amount = (float) str_replace(',', '.', $s['Сумма'] ?? '0');
+                if (!$sDate || $amount <= 0) continue;
+                $stmtLines[] = [
+                    'direction'      => $dir,
+                    'amount'         => round($amount, 2),
+                    'operation_date' => $sDate,
+                    'counterparty'   => $dir === 'in' ? ($s['Плательщик'] ?? '') : ($s['Получатель'] ?? ''),
+                    'description'    => $s['НазначениеПлатежа'] ?? '',
+                    'matched'        => false,
+                ];
+            }
+
+            // Операции ЦРМ за период выписки (для жадного сопоставления по сумме+направлению)
+            $crmOps = [];
             if ($startDate && $endDate) {
                 $opsStmt = $pdo->prepare("
-                    SELECT bo.id, bo.type, bo.amount, bo.description, bo.operation_date, bo.status,
-                           ba.name as account_name
+                    SELECT bo.id, bo.type, bo.amount, bo.operation_date
                     FROM bank_operations bo
-                    LEFT JOIN bank_accounts ba ON ba.id = bo.account_id
                     WHERE bo.account_id = ? AND bo.status IN ('confirmed','pending')
                       AND bo.operation_date BETWEEN ? AND ?
-                    ORDER BY bo.operation_date DESC
                 ");
                 $opsStmt->execute([$accountId, $startDate, $endDate]);
-                $periodOps = $opsStmt->fetchAll();
+                foreach ($opsStmt->fetchAll() as $op) {
+                    $isIn = in_array($op['type'], ['Продажа', 'Прочий приход'], true)
+                        || ($op['type'] === 'Перевод' && (float)$op['amount'] >= 0);
+                    $crmOps[] = [
+                        'direction' => $isIn ? 'in' : 'out',
+                        'amount'    => round(abs((float)$op['amount']), 2),
+                        'used'      => false,
+                    ];
+                }
             }
+
+            // Жадное сопоставление: для каждой строки выписки ищем неиспользованную
+            // операцию ЦРМ того же направления с такой же суммой (±1 коп).
+            $missing = [];
+            foreach ($stmtLines as &$ln) {
+                foreach ($crmOps as &$op) {
+                    if ($op['used'] || $op['direction'] !== $ln['direction']) continue;
+                    if (abs($op['amount'] - $ln['amount']) <= 0.01) {
+                        $op['used'] = true;
+                        $ln['matched'] = true;
+                        break;
+                    }
+                }
+                unset($op);
+                if (!$ln['matched']) {
+                    $missing[] = [
+                        'direction'      => $ln['direction'],
+                        'amount'         => $ln['amount'],
+                        'operation_date' => $ln['operation_date'],
+                        'counterparty'   => $ln['counterparty'],
+                        'description'    => $ln['description'],
+                    ];
+                }
+            }
+            unset($ln);
+
+            // Сортируем недостающие по дате (свежие сверху)
+            usort($missing, fn($a, $b) => strcmp($b['operation_date'], $a['operation_date']));
 
             echo json_encode([
                 'statement_balance' => $statementBalance,
@@ -275,7 +326,7 @@ switch ($method) {
                 'difference'        => round($crmBalance - $statementBalance, 2),
                 'account_name'      => $account['name'],
                 'date_range'        => ['start' => $startDate, 'end' => $endDate],
-                'period_operations' => $periodOps,
+                'missing_lines'     => $missing,
                 'statement_info'    => [
                     'total_in'  => $p('ВсегоПоступило'),
                     'total_out' => $p('ВсегоСписано'),
