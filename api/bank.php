@@ -329,14 +329,19 @@ switch ($method) {
             // Сортируем недостающие по дате (свежие сверху)
             usort($missing, fn($a, $b) => strcmp($b['operation_date'], $a['operation_date']));
 
+            $missingInTotal  = array_sum(array_map(fn($l) => $l['direction'] === 'in'  ? $l['amount'] : 0, $missing));
+            $missingOutTotal = array_sum(array_map(fn($l) => $l['direction'] === 'out' ? $l['amount'] : 0, $missing));
+
             echo json_encode([
-                'statement_balance' => $statementBalance,
-                'crm_balance'       => $crmBalance,
-                'difference'        => round($crmBalance - $statementBalance, 2),
-                'account_name'      => $account['name'],
-                'date_range'        => ['start' => $startDate, 'end' => $endDate],
-                'missing_lines'     => $missing,
-                'statement_info'    => [
+                'statement_balance'  => $statementBalance,
+                'crm_balance'        => $crmBalance,
+                'difference'         => round($crmBalance - $statementBalance, 2),
+                'account_name'       => $account['name'],
+                'date_range'         => ['start' => $startDate, 'end' => $endDate],
+                'missing_lines'      => $missing,
+                'missing_in_total'   => round($missingInTotal, 2),
+                'missing_out_total'  => round($missingOutTotal, 2),
+                'statement_info'     => [
                     'total_in'  => $p('ВсегоПоступило'),
                     'total_out' => $p('ВсегоСписано'),
                     'opening'   => $p('НачальныйОстаток'),

@@ -91,31 +91,46 @@ function _renderCalibResult(d) {
         </div>`;
     }
 
-    const missing = d.missing_lines || [];
+    const missing    = d.missing_lines || [];
+    const missingIn  = missing.filter(l => l.direction === 'in');
+    const missingOut = missing.filter(l => l.direction === 'out');
+    const netMissing = +(d.missing_in_total || 0) - +(d.missing_out_total || 0);
+
     let opsHtml = '';
     if (missing.length) {
-        const totalMissing = missing.reduce((s, l) => s + Math.abs(+l.amount), 0);
+        const renderList = (items, color, sign) => items.map(l =>
+            `<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 10px;border-radius:6px;background:var(--bg-subtle);margin-bottom:3px;font-size:12px">
+                <span style="color:${color};font-weight:600;flex-shrink:0">${sign}${fmt(Math.abs(+l.amount))} ₽</span>
+                <span style="color:var(--text-muted);flex-shrink:0">${fmtDate(l.operation_date)}</span>
+                <div style="flex:1;min-width:0">
+                    ${l.counterparty ? `<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(l.counterparty)}</div>` : ''}
+                    ${l.description ? `<div style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(l.description)}</div>` : ''}
+                </div>
+            </div>`
+        ).join('');
+
+        const netSign  = netMissing >= 0 ? '+' : '−';
+        const netColor = Math.abs(netMissing) < 0.02 ? 'var(--success)' : 'var(--warning)';
+
         opsHtml = `
         <div style="margin-top:16px">
             <div style="font-size:12px;font-weight:600;color:var(--warning);margin-bottom:8px">
                 <i data-lucide="triangle-alert" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px"></i>
-                Нет в ЦРМ: ${missing.length} ${_plural(missing.length, 'операция', 'операции', 'операций')} на ${fmt(totalMissing)} ₽
+                Нет в ЦРМ: ${missing.length} ${_plural(missing.length, 'операция', 'операции', 'операций')}
+                &nbsp;·&nbsp; нетто <span style="color:${netColor}">${netSign}${fmt(Math.abs(netMissing))} ₽</span>
             </div>
-            <div style="max-height:280px;overflow-y:auto">
-            ${missing.map(l => {
-                const isIn = l.direction === 'in';
-                return `<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 10px;border-radius:6px;background:var(--bg-subtle);margin-bottom:3px;font-size:12px">
-                    <span style="color:${isIn ? 'var(--success)' : 'var(--danger)'};font-weight:600;flex-shrink:0">${isIn ? '+' : '−'}${fmt(Math.abs(+l.amount))} ₽</span>
-                    <span style="color:var(--text-muted);flex-shrink:0">${fmtDate(l.operation_date)}</span>
-                    <div style="flex:1;min-width:0">
-                        ${l.counterparty ? `<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(l.counterparty)}</div>` : ''}
-                        ${l.description ? `<div style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(l.description)}</div>` : ''}
-                    </div>
-                </div>`;
-            }).join('')}
+            ${missingOut.length ? `
+            <div style="font-size:11px;font-weight:600;color:var(--danger);margin:8px 0 4px">
+                Списания (${missingOut.length}) — итого ${fmt(+(d.missing_out_total||0))} ₽
             </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:6px">
-                Эти платежи есть в выписке банка, но не внесены в ЦРМ. Добавьте их через «+ Операция».
+            <div style="max-height:200px;overflow-y:auto">${renderList(missingOut, 'var(--danger)', '−')}</div>` : ''}
+            ${missingIn.length ? `
+            <div style="font-size:11px;font-weight:600;color:var(--success);margin:8px 0 4px">
+                Поступления (${missingIn.length}) — итого ${fmt(+(d.missing_in_total||0))} ₽
+            </div>
+            <div style="max-height:200px;overflow-y:auto">${renderList(missingIn, 'var(--success)', '+')}</div>` : ''}
+            <div style="font-size:11px;color:var(--text-muted);margin-top:8px">
+                Эти платежи есть в выписке банка, но не внесены в ЦРМ. Нетто-эффект на баланс: ${netSign}${fmt(Math.abs(netMissing))} ₽.
             </div>
         </div>`;
     } else if (!isOk) {
