@@ -44,8 +44,7 @@ $opsTotal = (int)$opsCntStmt->fetchColumn();
 $opsTotalPages = max(1, (int)ceil($opsTotal / BANK_OPS_PAGE_SIZE));
 
 $opsStmt = $pdo->prepare("
-    SELECT bo.*, ba.name as account_name,
-        EXISTS (SELECT 1 FROM bank_statement_matches bsm WHERE bsm.bank_operation_id = bo.id) as has_statement
+    SELECT bo.*, ba.name as account_name
     FROM bank_operations bo
     LEFT JOIN bank_accounts ba ON ba.id = bo.account_id
     WHERE bo.status IN ('confirmed','pending') AND $opPeriodCond
@@ -55,14 +54,6 @@ $opsStmt = $pdo->prepare("
 $opsStmt->execute($opPeriodP);
 $operations = $opsStmt->fetchAll();
 
-// Счётчик для бейджа сопоставления
-try {
-    $pendingCnt   = (int)$pdo->query("SELECT COUNT(*) FROM bank_operations WHERE status='pending'")->fetchColumn();
-    $unmatchedCnt = (int)$pdo->query("SELECT COUNT(*) FROM bank_statement_lines WHERE status='unmatched'")->fetchColumn();
-    $reconcileCnt = $pendingCnt + $unmatchedCnt;
-} catch (PDOException $e) {
-    $reconcileCnt = $pendingCnt = $unmatchedCnt = 0;
-}
 ?>
 
 <div class="bank-cards-row bank-cards-row--bank">
@@ -154,12 +145,9 @@ try {
         <input type="text" id="search-bank" class="form-control toolbar-search" placeholder="Поиск...">
     </div>
     <div class="tab-toolbar-right">
-        <button class="btn btn-ghost" style="display:flex;align-items:center;gap:8px" onclick="openReconciliation()">
-            <i data-lucide="git-merge" style="width:14px;height:14px"></i>
-            Сопоставить платежи
-            <?php if ($reconcileCnt > 0): ?>
-            <span id="reconcile-badge" class="count-badge"><?= $reconcileCnt ?></span>
-            <?php endif; ?>
+        <button class="btn btn-ghost" style="display:flex;align-items:center;gap:8px" onclick="openBalanceCalibration()">
+            <i data-lucide="scan-line" style="width:14px;height:14px"></i>
+            Калибровка баланса
         </button>
         <button class="btn btn-primary" onclick="openAddBankOperation()">+ Операция</button>
     </div>

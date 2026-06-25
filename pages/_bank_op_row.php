@@ -5,7 +5,7 @@
  * через бесконечный скролл (api/bank.php?operations_html). Единый источник
  * разметки — чтобы строки не разъезжались между серверным рендером и догрузкой.
  *
- * $op ожидает поля: id, account_id, type, description, has_statement,
+ * $op ожидает поля: id, account_id, type, description,
  *                   sale_id, shipment_id, operation_date, account_name, amount.
  */
 if (!function_exists('renderBankOpRow')) {
@@ -47,11 +47,6 @@ if (!function_exists('renderBankOpRow')) {
                 <?= $isIncome ? '+' : '−' ?><?= number_format($displayAmount, 0, '.', ' ') ?> ₽
             </td>
             <td class="actions-cell">
-                <?php if (!empty($op['has_statement'])): ?>
-                <span title="Подтверждено по выписке" style="color:var(--success);font-size:14px;line-height:1">✓</span>
-                <?php else: ?>
-                <span title="Ожидает подтверждения по выписке" style="color:var(--warning);font-size:13px;line-height:1"><i data-lucide="clock" style="width:13px;height:13px"></i></span>
-                <?php endif; ?>
                 <?php if (!$op['sale_id'] && !$op['shipment_id']): ?>
                 <div class="row-actions">
                     <button class="btn-icon btn-icon-danger" title="Удалить"
