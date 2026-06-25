@@ -181,51 +181,31 @@ switch ($method) {
             $stmt->execute($params);
             $rows = $stmt->fetchAll();
 
-            $filename = 'bank-operations-' . date('Y-m-d') . '.xls';
-            // Отдаём как XLS (Excel открывает HTML-таблицы с этим MIME)
-            header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
+            $filename = 'bank-operations-' . date('Y-m-d') . '.csv';
+            header('Content-Type: text/csv; charset=UTF-8');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
             header('Cache-Control: no-cache');
-            // UTF-8 BOM чтобы Excel правильно открыл кириллицу
-            echo "\xEF\xBB\xBF";
-            echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">';
-            echo '<head><meta charset="UTF-8">
-            <style>
-                th { background:#f0f0f0; font-weight:bold; border:1px solid #ccc; padding:4px 8px; }
-                td { border:1px solid #ddd; padding:4px 8px; }
-                .income { color:#2e7d32; }
-                .expense { color:#c62828; }
-                .num { mso-number-format:\'#\,##0\.00\'; text-align:right; }
-            </style></head><body>';
-            echo '<table>';
-            echo '<thead><tr>
-                <th>Дата</th>
-                <th>Тип</th>
-                <th>Описание</th>
-                <th>Счёт</th>
-                <th>Направление</th>
-                <th>Сумма, ₽</th>
-            </tr></thead><tbody>';
+
+            $out = fopen('php://output', 'w');
+            // UTF-8 BOM — Excel и Numbers корректно открывают кириллицу
+            fputs($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['Дата', 'Тип', 'Описание', 'Счёт', 'Направление', 'Сумма, руб'], ';');
 
             $typeIncome = ['Продажа', 'Прочий приход'];
             foreach ($rows as $r) {
                 $isIn = in_array($r['type'], $typeIncome)
                     || ($r['type'] === 'Перевод' && (float)$r['amount'] >= 0);
-                $displayAmt = number_format(abs((float)$r['amount']), 2, '.', '');
-                $signedAmt  = ($isIn ? '' : '-') . $displayAmt;
-                $direction  = $isIn ? 'Приход' : 'Расход';
-                $cls        = $isIn ? 'income' : 'expense';
-                echo '<tr>';
-                echo '<td>' . date('d.m.Y', strtotime($r['operation_date'])) . '</td>';
-                echo '<td>' . htmlspecialchars($r['type']) . '</td>';
-                echo '<td>' . htmlspecialchars($r['description'] ?? '—') . '</td>';
-                echo '<td>' . htmlspecialchars($r['account_name'] ?? '') . '</td>';
-                echo '<td class="' . $cls . '">' . $direction . '</td>';
-                echo '<td class="num ' . $cls . '">' . $signedAmt . '</td>';
-                echo '</tr>';
+                $signedAmt = ($isIn ? '' : '-') . number_format(abs((float)$r['amount']), 2, '.', '');
+                fputcsv($out, [
+                    date('d.m.Y', strtotime($r['operation_date'])),
+                    $r['type'],
+                    $r['description'] ?? '',
+                    $r['account_name'] ?? '',
+                    $isIn ? 'Приход' : 'Расход',
+                    $signedAmt,
+                ], ';');
             }
-
-            echo '</tbody></table></body></html>';
+            fclose($out);
             exit;
         }
 
