@@ -151,6 +151,84 @@ switch ($method) {
             break;
         }
 
+        // Экспорт операций в Excel (XLS через HTML-таблицу)
+        if (isset($_GET['export'])) {
+            $where  = ["bo.status IN ('confirmed','pending')"];
+            $params = [];
+            if (!empty($_GET['account_id'])) { $where[] = 'bo.account_id = ?'; $params[] = (int)$_GET['account_id']; }
+            if (($_GET['direction'] ?? '') === 'income') {
+                $where[] = "(bo.type IN ('Продажа','Прочий приход') OR (bo.type='Перевод' AND bo.amount >= 0))";
+            } elseif (($_GET['direction'] ?? '') === 'expense') {
+                $where[] = "(bo.type IN ('Закупка','Расход','Выплата ЗП') OR (bo.type='Перевод' AND bo.amount < 0))";
+            }
+            if (($_GET['period'] ?? '') !== 'all') {
+                $m = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('n');
+                $y = isset($_GET['year'])  ? (int)$_GET['year']  : (int)date('Y');
+                $where[]  = "MONTH(bo.operation_date) = ? AND YEAR(bo.operation_date) = ?";
+                $params[] = $m;
+                $params[] = $y;
+            }
+            $whereStr = 'WHERE ' . implode(' AND ', $where);
+
+            $stmt = $pdo->prepare("
+                SELECT bo.operation_date, bo.type, bo.description, ba.name as account_name,
+                       bo.amount, bo.sale_id, bo.shipment_id
+                FROM bank_operations bo
+                LEFT JOIN bank_accounts ba ON ba.id = bo.account_id
+                {$whereStr}
+                ORDER BY bo.operation_date DESC, bo.created_at DESC
+            ");
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll();
+
+            $filename = 'bank-operations-' . date('Y-m-d') . '.xls';
+            // Отдаём как XLS (Excel открывает HTML-таблицы с этим MIME)
+            header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Cache-Control: no-cache');
+            // UTF-8 BOM чтобы Excel правильно открыл кириллицу
+            echo "\xEF\xBB\xBF";
+            echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">';
+            echo '<head><meta charset="UTF-8">
+            <style>
+                th { background:#f0f0f0; font-weight:bold; border:1px solid #ccc; padding:4px 8px; }
+                td { border:1px solid #ddd; padding:4px 8px; }
+                .income { color:#2e7d32; }
+                .expense { color:#c62828; }
+                .num { mso-number-format:\'#\,##0\.00\'; text-align:right; }
+            </style></head><body>';
+            echo '<table>';
+            echo '<thead><tr>
+                <th>Дата</th>
+                <th>Тип</th>
+                <th>Описание</th>
+                <th>Счёт</th>
+                <th>Направление</th>
+                <th>Сумма, ₽</th>
+            </tr></thead><tbody>';
+
+            $typeIncome = ['Продажа', 'Прочий приход'];
+            foreach ($rows as $r) {
+                $isIn = in_array($r['type'], $typeIncome)
+                    || ($r['type'] === 'Перевод' && (float)$r['amount'] >= 0);
+                $displayAmt = number_format(abs((float)$r['amount']), 2, '.', '');
+                $signedAmt  = ($isIn ? '' : '-') . $displayAmt;
+                $direction  = $isIn ? 'Приход' : 'Расход';
+                $cls        = $isIn ? 'income' : 'expense';
+                echo '<tr>';
+                echo '<td>' . date('d.m.Y', strtotime($r['operation_date'])) . '</td>';
+                echo '<td>' . htmlspecialchars($r['type']) . '</td>';
+                echo '<td>' . htmlspecialchars($r['description'] ?? '—') . '</td>';
+                echo '<td>' . htmlspecialchars($r['account_name'] ?? '') . '</td>';
+                echo '<td class="' . $cls . '">' . $direction . '</td>';
+                echo '<td class="num ' . $cls . '">' . $signedAmt . '</td>';
+                echo '</tr>';
+            }
+
+            echo '</tbody></table></body></html>';
+            exit;
+        }
+
         // Догрузка ленты операций (постраничная)
         if (isset($_GET['operations_html'])) {
             require_once __DIR__ . '/../pages/_bank_op_row.php';

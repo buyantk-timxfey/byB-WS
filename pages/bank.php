@@ -145,6 +145,9 @@ $operations = $opsStmt->fetchAll();
         <input type="text" id="search-bank" class="form-control toolbar-search" placeholder="Поиск...">
     </div>
     <div class="tab-toolbar-right">
+        <button class="btn-icon" title="Выгрузить в Excel" onclick="exportBankOps()" style="color:var(--text-muted)">
+            <i data-lucide="file-spreadsheet" style="width:15px;height:15px"></i>
+        </button>
         <button class="btn btn-ghost" style="display:flex;align-items:center;gap:8px" onclick="openBalanceCalibration()">
             <i data-lucide="scan-line" style="width:14px;height:14px"></i>
             Калибровка баланса

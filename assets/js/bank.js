@@ -97,6 +97,19 @@ function initBankPage() {
     if (accountId || type) filterBankOps();
 }
 
+// Экспорт операций в Excel с учётом текущих фильтров
+function exportBankOps() {
+    const { accountId, type } = _bankFilterParams();
+    const qs = new URLSearchParams({ export: 'xls' });
+    if (accountId) qs.set('account_id', accountId);
+    if (type) qs.set('direction', type);
+    const cur = new URLSearchParams(window.location.search);
+    const tbody = document.getElementById('bank-ops-tbody');
+    if (cur.get('period') === 'all' || tbody?.dataset.periodAll === '1') qs.set('period', 'all');
+    else { if (cur.get('month')) qs.set('month', cur.get('month')); if (cur.get('year')) qs.set('year', cur.get('year')); }
+    window.open('api/bank.php?' + qs.toString(), '_blank');
+}
+
 // Открыть детали операции
 async function openBankOperation(id) {
     const op = await api(`bank.php?operation_id=${id}`);
