@@ -62,6 +62,15 @@ function parse1cStatement(string $rawBytes): array {
     return ['sections' => $sections, 'account' => $account];
 }
 
+/** Определяет направление платежа из секции 1С (приход/расход). */
+function sectionDirection(array $s): string {
+    if (!empty($s['ДатаПоступило'])) return 'in';
+    if (!empty($s['ДатаСписано']))   return 'out';
+    $type = mb_strtolower($s['_doctype'] ?? '');
+    if (str_contains($type, 'поступ')) return 'in';
+    return 'out';
+}
+
 // ── Маршрутизация ─────────────────────────────────────────────────────────────
 try {
 switch ($method) {
