@@ -7,7 +7,7 @@ const page = usePage();
 const url = computed(() => page.url);
 
 const nav = [
-    { label: 'Дашборд', icon: 'grid', href: '/dashboard' },
+    { label: 'Главная', icon: 'grid', href: '/dashboard' },
     { label: 'Поступления', icon: 'box', href: '/shipments' },
     { label: 'Продажи', icon: 'bag', href: '/sales' },
     { label: 'Склад', icon: 'warehouse', href: '/warehouse' },

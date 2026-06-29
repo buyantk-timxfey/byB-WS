@@ -71,7 +71,7 @@ const tx = [
 </script>
 
 <template>
-    <Head title="Дашборд" />
+    <Head title="Главная" />
 
     <AppShell>
         <!-- Ряд 1: KPI (S) -->
@@ -117,7 +117,7 @@ const tx = [
         </div>
 
         <!-- Ряд 3: крупные виджеты (L) -->
-        <div class="sec" style="max-width:760px">
+        <div class="sec" style="max-width:1120px">
             <!-- Деньги по счетам -->
             <div class="glass w-pad wgt-l">
                 <span class="h2">Деньги по счетам</span>
@@ -132,6 +132,16 @@ const tx = [
                             <span class="text-[14px] font-medium">{{ a.name }}</span>
                         </div>
                         <span class="text-[14px] font-semibold tnum">{{ money(a.balance) }}</span>
+                    </div>
+                </div>
+                <div style="margin-top:auto;padding-top:14px;border-top:1px solid var(--glass-border)" class="flex gap-2.5">
+                    <div class="flex-1">
+                        <div class="text-[11px] text-ink-3">Приход / мес</div>
+                        <div class="tnum" style="font-size:15px;font-weight:700;color:var(--income)">+1 284 000 ₽</div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-[11px] text-ink-3">Расход / мес</div>
+                        <div class="tnum" style="font-size:15px;font-weight:700;color:var(--expense)">−972 000 ₽</div>
                     </div>
                 </div>
             </div>
