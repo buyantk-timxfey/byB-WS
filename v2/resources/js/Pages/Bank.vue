@@ -27,6 +27,7 @@ const rows = computed(() => props.lines.filter((o) => {
 const totalIn = computed(() => rows.value.filter((o) => o.amount > 0).reduce((a, o) => a + o.amount, 0));
 const totalOut = computed(() => rows.value.filter((o) => o.amount < 0).reduce((a, o) => a + Math.abs(o.amount), 0));
 const unmatchedCount = computed(() => props.lines.filter((o) => o.status === 'unmatched' || o.status === 'partial').length);
+const unmatchedSum = computed(() => props.lines.filter((o) => o.status === 'unmatched' || o.status === 'partial').reduce((a, o) => a + Math.abs(o.amount), 0));
 const statusPill = (s: string) => ({ matched: { t: 'Разнесено', v: 'ok' }, partial: { t: 'Частично', v: 'warn' }, unmatched: { t: 'Не разнесено', v: 'bad' }, ignore: { t: 'Игнор', v: 'neutral' } } as any)[s];
 
 // ── Сверка ──
@@ -91,6 +92,16 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                 </div>
             </div>
             <div v-if="!accounts.length" class="text-ink-3" style="padding:20px">Добавьте счёт в Справочниках.</div>
+        </div>
+
+        <!-- Неразнесённые строки выписки -->
+        <div v-if="unmatchedCount" class="recon-banner glass">
+            <span class="rb-ic"><Icon name="alert" :size="18" /></span>
+            <div class="rb-text">
+                <div class="rb-t">Неразнесённые строки выписки</div>
+                <div class="rb-s">{{ unmatchedCount }} операций · {{ money(unmatchedSum) }} ждут сверки</div>
+            </div>
+            <button class="btn-primary pressable rb-btn" @click="seg = 'unmatched'">Свести</button>
         </div>
 
         <div class="toolbar" style="margin-top:18px">
@@ -178,3 +189,12 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
         </AppModal>
     </AppShell>
 </template>
+
+<style scoped>
+.recon-banner { display: flex; align-items: center; gap: 14px; padding: 14px 18px; margin-top: 14px; border: 1px solid rgba(255,159,10,.35); }
+.rb-ic { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,159,10,.14); color: var(--warn); flex-shrink: 0; }
+.rb-text { min-width: 0; }
+.rb-t { font-size: 15px; font-weight: 600; }
+.rb-s { font-size: 13px; color: var(--ink-2); margin-top: 1px; }
+.rb-btn { margin-left: auto; border-radius: 12px; padding: 9px 18px; }
+</style>

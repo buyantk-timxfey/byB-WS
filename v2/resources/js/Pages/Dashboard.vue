@@ -17,7 +17,6 @@ const props = defineProps<{
 const kpis = props.kpis;
 const accounts = props.accounts;
 const totalBalance = props.totalBalance;
-const unrec = props.unrec;
 const shipments = props.shipments;
 const warehouse = props.warehouse;
 const mailboxes = props.mailboxes;
@@ -91,23 +90,6 @@ const go = (url: string) => { if (!editMode.value) router.visit(url); };
                         </div>
                     </div>
                 </template>
-            </div>
-
-            <!-- Сигнал-баннер -->
-            <div v-if="isVis('signal')" class="sec">
-                <div class="wwrap" style="width:100%">
-                    <button v-if="editMode" class="whide" @click.stop="hide('signal')">×</button>
-                    <div class="glass banner pressable" @click="go('/bank')">
-                        <div class="flex items-center gap-3" style="min-width:0">
-                            <span class="chip" style="width:38px;height:38px;color:var(--warn)"><Icon name="alert" :size="20" /></span>
-                            <div style="min-width:0">
-                                <div class="text-[15px] font-semibold">Неразнесённые строки выписки</div>
-                                <div class="text-[13px] text-ink-2">{{ unrec.count }} операций · {{ money(unrec.amount) }} ждут сверки</div>
-                            </div>
-                        </div>
-                        <button class="inkbtn pressable" @click.stop="go('/bank')">Свести</button>
-                    </div>
-                </div>
             </div>
 
             <!-- Поставки: лента -->
