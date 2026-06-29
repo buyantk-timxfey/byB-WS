@@ -1,38 +1,40 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import AppModal from '@/Components/AppModal.vue';
+import { initials } from '@/lib/format';
 
-type Folder = { id: string; name: string; count: number };
-type Account = { email: string; folders: Folder[] };
-const accounts = ref<Account[]>([
-    { email: 'info@bybuka.ru', folders: [{ id: 'in1', name: 'Входящие', count: 3 }, { id: 'sent1', name: 'Отправленные', count: 0 }, { id: 'draft1', name: 'Черновики', count: 1 }] },
-    { email: 'zakaz@bybuka.ru', folders: [{ id: 'in2', name: 'Входящие', count: 2 }, { id: 'sent2', name: 'Отправленные', count: 0 }] },
-]);
-const activeFolder = ref('in1');
+const props = defineProps<{
+    accounts: any[]; messages: any[]; imapAvailable: boolean;
+}>();
 
-type Msg = { id: number; from: string; email: string; subject: string; preview: string; body: string; time: string; unread: boolean; attach: number; party: string };
-const messages = ref<Msg[]>([
-    { id: 1, from: 'ИП Сидоров', email: 'sidorov@mail.ru', subject: 'Отгрузка насосов Grundfos', time: '11:24', unread: true, attach: 1, party: 'ИП Сидоров',
-      preview: 'Добрый день! Отгрузили сегодня, трек DL-882190…', body: 'Добрый день!\n\nОтгрузили сегодня партию насосов Grundfos UPS 25-40, 5 шт. Трек-номер Деловых линий: DL-882190. Ориентировочно у вас 10.07.\n\nСчёт во вложении.\n\nС уважением, Сидоров А.' },
-    { id: 2, from: 'ООО Профиль', email: 'sales@profil.ru', subject: 'Счёт на кабель-канал №451', time: '09:50', unread: true, attach: 2, party: 'ООО Профиль',
-      preview: 'Направляем счёт №451 на оплату партии…', body: 'Здравствуйте!\n\nНаправляем счёт №451 на оплату партии кабель-канала 40×40 — 200 шт. Сумма 214 000 ₽. Отгрузка в течение 3 дней после оплаты.\n\nДокументы во вложении.' },
-    { id: 3, from: 'Точка Банк', email: 'noreply@tochka.com', subject: 'Выписка за июнь готова', time: 'вчера', unread: true, attach: 1, party: '',
-      preview: 'Сформирована выписка по счёту 5512…', body: 'Сформирована выписка по счёту •••• 5512 за период 01.06–30.06.2026. Файл 1CClientBankExchange во вложении — можно импортировать в byBuka.' },
-    { id: 4, from: 'ООО Строймонтаж', email: 'buh@strojmontazh.ru', subject: 'Оплата по ИН-0029', time: 'вчера', unread: false, attach: 0, party: 'ООО Строймонтаж',
-      preview: 'Оплату произвели, проверьте поступление…', body: 'Оплату по счёту ИН-0029 на 236 000 ₽ произвели сегодня. Просьба подтвердить поступление.' },
-    { id: 5, from: 'ИП Васильев', email: 'vasilev@mail.ru', subject: 'Запрос КП на автоматы ABB', time: '26 июн', unread: false, attach: 0, party: 'ИП Васильев',
-      preview: 'Нужно коммерческое на 100 шт автоматов…', body: 'Здравствуйте! Нужно коммерческое предложение на 100 шт автоматов ABB SH201 C16. Сроки и цену пришлите, пожалуйста.' },
-]);
+const activeFolder = ref(props.accounts[0]?.folders[0]?.id ?? '');
+const activeAccountId = computed(() => Number(String(activeFolder.value).split(':')[1] ?? 0));
+const activeFolderName = computed(() => String(activeFolder.value).split(':')[0]);
 
-const selectedId = ref(1);
-const selected = computed(() => messages.value.find((m) => m.id === selectedId.value) || null);
-function openMsg(m: Msg) { m.unread = false; selectedId.value = m.id; }
-const initials = (s: string) => s.replace(/^(ООО|ИП|ПАО|АО)\s+/, '').trim().slice(0, 2).toUpperCase();
+const list = computed(() => props.messages.filter((m) =>
+    m.account_id === activeAccountId.value && m.folder === activeFolderName.value));
 
+const selectedId = ref<number | null>(props.messages[0]?.id ?? null);
+const selected = computed(() => props.messages.find((m) => m.id === selectedId.value) || null);
+function openMsg(m: any) {
+    selectedId.value = m.id;
+    if (m.unread) router.post(`/mail/${m.id}/read`, {}, { preserveScroll: true, preserveState: true });
+}
+
+// Написать
 const compose = ref(false);
+const cForm = useForm({ account_id: props.accounts[0]?.id ?? null, to: '', subject: '', body: '', doc_type: '', doc_id: null });
+function send() { cForm.post('/mail/compose', { onSuccess: () => { compose.value = false; cForm.reset(); } }); }
+
+// Добавить ящик
+const acc = ref(false);
+const aForm = useForm({ email: '', imap_host: '', imap_port: 993, smtp_host: '', smtp_port: 465, login: '', password: '', use_ssl: true });
+function addAccount() { aForm.post('/mail/accounts', { onSuccess: () => { acc.value = false; aForm.reset(); } }); }
+
+function sync() { if (activeAccountId.value) router.post(`/mail/accounts/${activeAccountId.value}/sync`); }
 </script>
 
 <template>
@@ -40,24 +42,27 @@ const compose = ref(false);
     <AppShell>
         <div class="toolbar">
             <h1>Почта</h1>
-            <button class="btn-primary pressable" style="margin-left:auto" @click="compose = true"><Icon name="plus" :size="17" /> Написать</button>
+            <button v-if="imapAvailable && accounts.length" class="btn-ghost pressable" style="margin-left:auto" @click="sync"><Icon name="search" :size="15" /> Синхр.</button>
+            <button class="btn-ghost pressable" :style="!(imapAvailable && accounts.length) ? 'margin-left:auto' : ''" @click="acc = true">+ Ящик</button>
+            <button class="btn-primary pressable" @click="compose = true" :disabled="!accounts.length"><Icon name="plus" :size="17" /> Написать</button>
         </div>
 
-        <div class="mail-grid glass">
-            <!-- Ящики -->
+        <div v-if="!accounts.length" class="jcard glass" style="padding:40px;text-align:center;color:var(--ink-3)">
+            Почтовые ящики не настроены. Нажмите «+ Ящик», чтобы добавить IMAP/SMTP-аккаунт.
+        </div>
+
+        <div v-else class="mail-grid glass">
             <div class="mbox">
-                <div v-for="a in accounts" :key="a.email" class="mbox-acc">
+                <div v-for="a in accounts" :key="a.id" class="mbox-acc">
                     <div class="mbox-email"><Icon name="mail" :size="14" /> {{ a.email }}</div>
                     <button v-for="f in a.folders" :key="f.id" class="mbox-f" :class="{ on: activeFolder === f.id }" @click="activeFolder = f.id">
-                        <span>{{ f.name }}</span>
-                        <span v-if="f.count" class="mbox-c">{{ f.count }}</span>
+                        <span>{{ f.name }}</span><span v-if="f.count" class="mbox-c">{{ f.count }}</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Список писем -->
             <div class="mlist">
-                <div v-for="m in messages" :key="m.id" class="mitem" :class="{ on: selectedId === m.id, unread: m.unread }" @click="openMsg(m)">
+                <div v-for="m in list" :key="m.id" class="mitem" :class="{ on: selectedId === m.id, unread: m.unread }" @click="openMsg(m)">
                     <div class="mi-av">{{ initials(m.from) }}</div>
                     <div class="mi-main">
                         <div class="mi-top"><span class="mi-from">{{ m.from }}</span><span class="mi-time">{{ m.time }}</span></div>
@@ -66,45 +71,67 @@ const compose = ref(false);
                     </div>
                     <span v-if="m.unread" class="mi-dot"></span>
                 </div>
+                <div v-if="!list.length" class="j-empty" style="padding:30px">Писем нет</div>
             </div>
 
-            <!-- Чтение -->
             <div class="mread" v-if="selected">
                 <div class="mr-head">
-                    <div class="mr-subj">{{ selected.subject }}</div>
+                    <div class="mr-subj">{{ selected.subject || '(без темы)' }}</div>
                     <div class="mr-meta">
                         <div class="mr-av">{{ initials(selected.from) }}</div>
                         <div>
                             <div class="mr-from">{{ selected.from }} <span class="mr-email">&lt;{{ selected.email }}&gt;</span></div>
-                            <div class="mr-to">кому: info@bybuka.ru · {{ selected.time }}</div>
+                            <div class="mr-to">{{ selected.time }}</div>
                         </div>
                         <span v-if="selected.party" class="pill pill--info mr-link"><Icon name="building" :size="12" /> {{ selected.party }}</span>
                     </div>
                 </div>
                 <div class="mr-body">{{ selected.body }}</div>
-                <div v-if="selected.attach" class="mr-attach">
-                    <div v-for="n in selected.attach" :key="n" class="mr-file"><Icon name="doc" :size="16" /> вложение_{{ n }}.pdf</div>
-                </div>
                 <div class="mr-actions">
                     <button class="btn-primary pressable" @click="compose = true">Ответить</button>
-                    <button class="btn-ghost pressable">Переслать</button>
-                    <button class="btn-ghost pressable" v-if="selected.party">К контрагенту</button>
+                    <button class="btn-ghost pressable" @click="router.delete(`/mail/${selected.id}`)">Удалить</button>
                 </div>
             </div>
             <div class="mread mread--empty" v-else>Выберите письмо</div>
         </div>
 
         <!-- Написать -->
-        <AppModal :open="compose" title="Новое письмо" subtitle="от info@bybuka.ru" @close="compose = false">
-            <div class="fld"><label>Кому</label><input placeholder="email или выберите контрагента" /></div>
-            <div class="fld"><label>Тема</label><input placeholder="Тема письма" /></div>
-            <div class="fld"><label>Связать с документом (опц.)</label><input placeholder="№ поставки / продажи" /></div>
-            <div class="fld"><label>Текст</label><textarea rows="6" class="mail-area" placeholder="Текст письма…"></textarea></div>
-            <button class="btn-ghost pressable" style="align-self:flex-start"><Icon name="doc" :size="15" /> Прикрепить файл</button>
+        <AppModal :open="compose" title="Новое письмо" @close="compose = false">
+            <div class="fld"><label>От кого</label>
+                <select v-model="cForm.account_id"><option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.email }}</option></select>
+            </div>
+            <div class="fld"><label>Кому</label><input v-model="cForm.to" placeholder="email" /></div>
+            <div class="fld"><label>Тема</label><input v-model="cForm.subject" /></div>
+            <div class="fld"><label>Текст</label><textarea v-model="cForm.body" rows="6" class="mail-area"></textarea></div>
             <template #footer>
-                <button class="btn-primary pressable" style="flex:1;justify-content:center">Отправить</button>
-                <button class="btn-ghost pressable" @click="compose = false">В черновики</button>
+                <button class="btn-primary pressable" style="flex:1;justify-content:center" :disabled="cForm.processing" @click="send">Отправить</button>
+                <button class="btn-ghost pressable" @click="compose = false">Отмена</button>
+            </template>
+        </AppModal>
+
+        <!-- Добавить ящик -->
+        <AppModal :open="acc" title="Почтовый ящик" subtitle="IMAP для чтения, SMTP для отправки" @close="acc = false">
+            <div class="fld"><label>Email</label><input v-model="aForm.email" /></div>
+            <div class="fld-row">
+                <div class="fld"><label>IMAP-хост</label><input v-model="aForm.imap_host" placeholder="imap.mail.ru" /></div>
+                <div class="fld"><label>Порт</label><input v-model.number="aForm.imap_port" type="number" /></div>
+            </div>
+            <div class="fld-row">
+                <div class="fld"><label>SMTP-хост</label><input v-model="aForm.smtp_host" placeholder="smtp.mail.ru" /></div>
+                <div class="fld"><label>Порт</label><input v-model.number="aForm.smtp_port" type="number" /></div>
+            </div>
+            <div class="fld-row">
+                <div class="fld"><label>Логин</label><input v-model="aForm.login" /></div>
+                <div class="fld"><label>Пароль</label><input v-model="aForm.password" type="password" /></div>
+            </div>
+            <template #footer>
+                <button class="btn-primary pressable" style="flex:1;justify-content:center" @click="addAccount">Сохранить</button>
+                <button class="btn-ghost pressable" @click="acc = false">Отмена</button>
             </template>
         </AppModal>
     </AppShell>
 </template>
+
+<style scoped>
+.mail-area { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 12px; padding: 10px 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; resize: vertical; }
+</style>

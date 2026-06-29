@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\PinController;
 use App\Http\Controllers\BankController;
 use App\Http\Controllers\FinanceController;
+use App\Http\Controllers\MailController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReferenceController;
 use App\Http\Controllers\SaleController;
@@ -83,9 +84,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/vehicle/settings', [VehicleController::class, 'updateSettings']);
 });
 
-// Почта — свёрстанная страница
-Route::get('/mail', fn () => Inertia::render('Mail'))
-    ->middleware(['auth', 'verified'])->name('mail');
+// Почта — реальные данные
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/mail', [MailController::class, 'index'])->name('mail');
+    Route::post('/mail/accounts', [MailController::class, 'storeAccount']);
+    Route::post('/mail/compose', [MailController::class, 'compose']);
+    Route::post('/mail/{message}/read', [MailController::class, 'markRead']);
+    Route::delete('/mail/{message}', [MailController::class, 'destroy']);
+    Route::post('/mail/accounts/{account}/sync', [MailController::class, 'sync']);
+});
 
 // Быстрый вход по PIN
 Route::get('/pin', [PinController::class, 'show'])->name('pin');
