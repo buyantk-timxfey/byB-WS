@@ -41,6 +41,23 @@ function changePin() {
     if (pin && /^\d{4,8}$/.test(pin)) router.put('/pin', { pin });
     else if (pin !== null) alert('PIN должен быть 4–8 цифр');
 }
+
+// ── Деплой ZIP-патча ──
+const patchForm = useForm<{ archive: File | null }>({ archive: null });
+const patchName = ref('');
+function onPatch(e: Event) {
+    const f = (e.target as HTMLInputElement).files?.[0] ?? null;
+    patchForm.archive = f;
+    patchName.value = f?.name ?? '';
+}
+function applyPatch() {
+    if (!patchForm.archive) return;
+    patchForm.post('/deploy', {
+        forceFormData: true,
+        onSuccess: () => { patchForm.reset(); patchName.value = ''; alert('Патч применён ✓'); },
+        onError: () => alert('Ошибка применения патча'),
+    });
+}
 </script>
 
 <template>
@@ -125,15 +142,17 @@ function changePin() {
             <!-- Обновление (ZIP-патч) -->
             <div class="set-card glass">
                 <div class="set-h"><Icon name="doc" :size="18" /> Обновление системы (ZIP-патч)</div>
-                <div class="set-hint">Загрузите патч сборки (.zip). Перед применением автоматически создаётся бэкап БД; миграции из патча выполняются по порядку.</div>
-                <div class="drop">
+                <div class="set-hint">Загрузите ZIP-патч сборки — система распакует его поверх приложения, применит новые миграции и сбросит кэш. Файлы <code>.env</code> и данные не трогаются.</div>
+                <label class="drop" style="cursor:pointer;display:block">
+                    <input type="file" accept=".zip" class="hidden" @change="onPatch" />
                     <Icon name="doc" :size="26" class="text-ink-3" />
-                    <div class="drop-t">Перетащите patch-*.zip сюда</div>
-                    <div class="drop-s">или нажмите, чтобы выбрать файл</div>
-                </div>
+                    <div class="drop-t">{{ patchName || 'Выберите ZIP-патч' }}</div>
+                    <div class="drop-s">нажмите, чтобы выбрать файл</div>
+                </label>
+                <div v-if="patchForm.progress" class="set-hint">Загрузка… {{ patchForm.progress.percentage }}%</div>
                 <div class="set-toggle">
                     <div><div class="st-t">Последний патч</div><div class="st-s">{{ lastPatch || 'ещё не применялся' }}</div></div>
-                    <button class="btn-primary pressable" style="border-radius:12px">Применить патч</button>
+                    <button class="btn-primary pressable" style="border-radius:12px" :disabled="!patchForm.archive || patchForm.processing" @click="applyPatch">Применить патч</button>
                 </div>
             </div>
         </div>
