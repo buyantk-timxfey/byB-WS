@@ -71,9 +71,12 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);font-family:-apple-
 .jtable .num{text-align:right;font-variant-numeric:tabular-nums}
 .jtable tfoot td{padding:13px 16px;border-top:1px solid var(--glass-border);font-weight:700;font-variant-numeric:tabular-nums;background:var(--glass-fill)}
 /* drawer */
-.drawer-ov{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:none}
-.drawer-ov.open{display:block}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,96vw);z-index:91;display:flex;flex-direction:column;border-radius:24px 0 0 24px}
+.drawer-ov{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
+.drawer-ov.open{display:flex}
+.drawer{width:min(640px,100%);max-height:86vh;display:flex;flex-direction:column;border-radius:26px;overflow:hidden;animation:modal-in .26s cubic-bezier(.22,1,.36,1)}
+@keyframes modal-in{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@media(max-width:560px){.drawer-ov.open{align-items:flex-end;padding:0}.drawer{width:100%;max-height:92vh;border-radius:26px 26px 0 0;animation:sheet-in .3s cubic-bezier(.22,1,.36,1)}}
 .drawer-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid var(--glass-border)}
 .drawer-head .dt{font-size:18px;font-weight:700}
 .drawer-head .ds{font-size:13px;color:var(--ink-2);margin-top:2px}
