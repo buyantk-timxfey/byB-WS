@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReferenceController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ShipmentController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -43,13 +45,19 @@ Route::get('/bank', fn () => Inertia::render('Bank'))
 Route::get('/finances', fn () => Inertia::render('Finances'))
     ->middleware(['auth', 'verified'])->name('finances');
 
-// Справочники — свёрстанная страница
-Route::get('/references', fn () => Inertia::render('References'))
-    ->middleware(['auth', 'verified'])->name('references');
+// Справочники — реальные данные
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/references', [ReferenceController::class, 'index'])->name('references');
+    Route::post('/references/{type}', [ReferenceController::class, 'store']);
+    Route::put('/references/{type}/{id}', [ReferenceController::class, 'update']);
+    Route::delete('/references/{type}/{id}', [ReferenceController::class, 'destroy']);
 
-// Настройки — свёрстанная страница
-Route::get('/settings', fn () => Inertia::render('Settings'))
-    ->middleware(['auth', 'verified'])->name('settings');
+    // Настройки
+    Route::get('/settings', [SettingController::class, 'index'])->name('settings');
+    Route::put('/settings', [SettingController::class, 'update']);
+    Route::post('/settings/rules', [SettingController::class, 'storeRule']);
+    Route::delete('/settings/rules/{rule}', [SettingController::class, 'destroyRule']);
+});
 
 // Транспорт — свёрстанная страница
 Route::get('/vehicle', fn () => Inertia::render('Transport'))
