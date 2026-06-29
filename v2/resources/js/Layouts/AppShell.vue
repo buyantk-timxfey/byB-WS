@@ -13,7 +13,7 @@ const url = computed(() => page.url);
 
 const nav = [
     { label: 'Главная', icon: 'grid', href: '/dashboard' },
-    { label: 'Поступления', icon: 'box', href: '/shipments' },
+    { label: 'Поставки', icon: 'box', href: '/shipments' },
     { label: 'Продажи', icon: 'bag', href: '/sales' },
     { label: 'Склад', icon: 'warehouse', href: '/warehouse' },
     { label: 'Банк', icon: 'wallet', href: '/bank' },

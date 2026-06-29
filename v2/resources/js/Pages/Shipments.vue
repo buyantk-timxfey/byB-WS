@@ -48,10 +48,10 @@ function create() {
 </script>
 
 <template>
-    <Head title="Поступления" />
+    <Head title="Поставки" />
     <AppShell>
         <div class="toolbar">
-            <h1>Поступления</h1>
+            <h1>Поставки</h1>
             <div class="tb-search">
                 <Icon name="search" :size="16" class="text-ink-3" />
                 <input v-model="q" placeholder="Поиск по поставщику, товару, №…" />
@@ -102,7 +102,7 @@ function create() {
         </div>
 
         <!-- Форма-документ -->
-        <Drawer :open="open" :title="cur?.id || 'Новое поступление'" :subtitle="cur?.supplier" @close="open = false">
+        <Drawer :open="open" :title="cur?.id || 'Новая поставка'" :subtitle="cur?.supplier" @close="open = false">
             <template v-if="cur">
                 <div class="fld-row">
                     <div class="fld"><label>Поставщик</label><input :value="cur.supplier" placeholder="Выберите контрагента" /></div>
