@@ -39,10 +39,6 @@ const tx = [
     <Head title="Дашборд" />
 
     <AppShell>
-        <template #title>
-            <h1 class="text-[22px] font-bold tracking-tight">Дашборд</h1>
-        </template>
-
         <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
             <!-- KPI -->
             <Widget
