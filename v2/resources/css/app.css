@@ -284,6 +284,40 @@
 .jtable .num { text-align: right; font-variant-numeric: tabular-nums; }
 .jtable tfoot td { padding: 13px 16px; border-top: 1px solid var(--glass-border); font-weight: 700; font-variant-numeric: tabular-nums; background: var(--glass-fill); }
 .j-empty { padding: 48px; text-align: center; color: var(--ink-3); }
+.link-btn { border: 0; background: transparent; color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; padding: 2px 4px; }
+.link-btn:hover { color: var(--ink); }
+.link-btn--bad { color: var(--expense); }
+
+/* ── Склад: сводка + разворот партий ── */
+.wh-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.wh-stat { flex: 1; min-width: 200px; padding: 16px 18px; }
+.wh-stat--warn { border-color: rgba(255,159,10,.4); }
+.wh-label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.wh-val { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 2px; }
+.wh-sub { font-size: 12px; color: var(--ink-3); }
+.cell-chev { text-align: center; color: var(--ink-3); }
+.chev { transition: transform .2s ease; display: inline-block; }
+.chev-open { transform: rotate(90deg); }
+.jtable--exp tbody tr.tr-open td { background: var(--glass-fill); }
+.batch-tr td { padding: 0 16px 12px !important; border-top: 0 !important; }
+.batch-tr:hover td { background: transparent !important; }
+.batches { background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 14px; padding: 6px 14px; }
+.batch-head, .batch-row { display: grid; grid-template-columns: 1fr 1.2fr 80px 110px 70px 90px; gap: 10px; align-items: center; }
+.batch-head { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-3); padding: 8px 0; }
+.batch-row { padding: 9px 0; border-top: 1px solid var(--glass-border); font-size: 13px; }
+.batch-row.stale .bship { color: var(--warn); }
+.batch-row .bship { font-weight: 600; }
+.batch-row .num { font-variant-numeric: tabular-nums; }
+/* Карточка товара */
+.card-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.ck { background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 12px; padding: 10px 12px; }
+.ck-l { font-size: 11px; color: var(--ink-2); }
+.ck-v { font-size: 16px; font-weight: 700; margin-top: 2px; }
+.moves { display: flex; flex-direction: column; }
+.mv { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--glass-border); font-size: 13px; }
+.mv .num { font-variant-numeric: tabular-nums; }
+.mv-in { color: var(--income); font-weight: 600; }
+.mv-out { color: var(--expense); font-weight: 600; }
 
 /* Статус-пилюли */
 .pill--neutral { background: var(--glass-fill-strong); color: var(--ink-2); }

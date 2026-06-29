@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>byBuka 2.0 — Склад</title>
+<style>
+:root{
+  --bg:#eef0f5;--ink:#0b0b0f;--ink-2:rgba(11,11,15,.6);--ink-3:rgba(11,11,15,.4);
+  --glass-fill:rgba(255,255,255,.45);--glass-fill-strong:rgba(255,255,255,.6);
+  --glass-border:rgba(255,255,255,.55);--glass-highlight:rgba(255,255,255,.9);
+  --shadow:0 8px 30px rgba(17,22,40,.1);--shadow-lg:0 20px 60px rgba(17,22,40,.14);
+  --income:#34c759;--expense:#ff3b30;--warn:#ff9f0a;
+  --orb-b:rgba(52,199,89,.3);--orb-d:rgba(255,159,10,.25);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme]){
+  --bg:#0b0b0f;--ink:#f5f6f8;--ink-2:rgba(245,246,248,.62);--ink-3:rgba(245,246,248,.4);
+  --glass-fill:rgba(255,255,255,.07);--glass-fill-strong:rgba(255,255,255,.12);
+  --glass-border:rgba(255,255,255,.12);--glass-highlight:rgba(255,255,255,.16);
+  --shadow:0 10px 40px rgba(0,0,0,.5);--shadow-lg:0 24px 70px rgba(0,0,0,.6);
+  --orb-b:rgba(52,199,89,.4);--orb-d:rgba(255,159,10,.3);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0b0f;--ink:#f5f6f8;--ink-2:rgba(245,246,248,.62);--ink-3:rgba(245,246,248,.4);
+  --glass-fill:rgba(255,255,255,.07);--glass-fill-strong:rgba(255,255,255,.12);
+  --glass-border:rgba(255,255,255,.12);--glass-highlight:rgba(255,255,255,.16);
+  --shadow:0 10px 40px rgba(0,0,0,.5);--shadow-lg:0 24px 70px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:light dark}
+body{min-height:100dvh;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.orbs i{position:absolute;border-radius:50%;filter:blur(80px);display:block}
+.ob{width:50vw;height:50vw;left:24vw;bottom:-18vw;background:radial-gradient(circle,var(--orb-b),transparent 70%)}
+.od{width:34vw;height:34vw;right:14vw;bottom:6vh;background:radial-gradient(circle,var(--orb-d),transparent 70%)}
+.tnum{font-variant-numeric:tabular-nums}
+.glass{background:var(--glass-fill);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 var(--glass-highlight);border-radius:22px}
+.glass-strong{background:var(--glass-fill-strong);backdrop-filter:blur(40px) saturate(190%);-webkit-backdrop-filter:blur(40px) saturate(190%);border:1px solid var(--glass-border);box-shadow:var(--shadow-lg),inset 0 1px 0 var(--glass-highlight)}
+.topnav{position:sticky;top:12px;z-index:30;margin:12px auto 18px;max-width:1240px;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:999px}
+.brand{display:flex;align-items:center;gap:8px;padding-right:6px}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.brand .name{font-size:16px;font-weight:600;white-space:nowrap}
+.links{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+.links::-webkit-scrollbar{display:none}
+.links a{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap}
+.links a.active{background:var(--ink);color:var(--bg)}
+.wrap{max-width:1240px;margin:0 auto;padding:0 14px 60px}
+.pill{border-radius:999px;font-weight:600;font-size:12px;padding:3px 10px;display:inline-block}
+.pill--warn{background:rgba(255,159,10,.16);color:var(--warn)}
+.pill--bad{background:rgba(255,59,48,.16);color:var(--expense)}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar h1{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-right:auto}
+.tb-search{display:flex;align-items:center;gap:8px;background:var(--glass-fill);border:1px solid var(--glass-border);border-radius:999px;padding:7px 14px;min-width:200px;color:var(--ink-3);font-size:14px}
+.seg{display:flex;gap:2px;background:var(--glass-fill);border:1px solid var(--glass-border);border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--ink-2);font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.btn-ghost{border:1px solid var(--glass-border);background:var(--glass-fill);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-primary{display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;background:var(--ink);color:var(--bg);font-size:14px;font-weight:600;padding:9px 16px;border-radius:12px}
+/* сводка */
+.wh-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.wh-stat{flex:1;min-width:200px;padding:16px 18px}
+.wh-stat--warn{border-color:rgba(255,159,10,.4)}
+.wh-label{font-size:12px;font-weight:600;color:var(--ink-2)}
+.wh-val{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:4px 0 2px}
+.wh-sub{font-size:12px;color:var(--ink-3)}
+/* journal */
+.jcard{overflow:hidden}
+.jscroll{overflow-x:auto}
+.jtable{width:100%;border-collapse:collapse;font-size:14px;min-width:820px}
+.jtable thead th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);padding:12px 16px;background:var(--glass-fill-strong);white-space:nowrap}
+.jtable tbody td{padding:13px 16px;border-top:1px solid var(--glass-border);white-space:nowrap}
+.jtable tbody tr.prod{cursor:pointer}
+.jtable tbody tr.prod:hover td{background:var(--glass-fill)}
+.jtable tbody tr.tr-open td{background:var(--glass-fill)}
+.jtable .num{text-align:right;font-variant-numeric:tabular-nums}
+.cell-chev{text-align:center;color:var(--ink-3)}
+.chev{display:inline-block;transition:transform .2s ease}
+.chev-open{transform:rotate(90deg)}
+.link-btn{border:0;background:transparent;color:var(--ink-2);font-size:13px;font-weight:600;cursor:pointer;padding:2px 4px}
+.link-btn--bad{color:var(--expense)}
+.batch-tr td{padding:0 16px 12px!important;border-top:0!important;background:transparent!important}
+.batches{background:var(--glass-fill);border:1px solid var(--glass-border);border-radius:14px;padding:6px 14px}
+.batch-head,.batch-row{display:grid;grid-template-columns:1fr 1.2fr 80px 110px 70px 90px;gap:10px;align-items:center}
+.batch-head{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-3);padding:8px 0}
+.batch-row{padding:9px 0;border-top:1px solid var(--glass-border);font-size:13px}
+.batch-row.stale .bship{color:var(--warn)}
+.batch-row .bship{font-weight:600}
+.batch-row .num{text-align:right;font-variant-numeric:tabular-nums}
+.themebtn{position:fixed;right:16px;bottom:16px;z-index:50;padding:10px 16px;border:1px solid var(--glass-border);border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;background:var(--glass-fill-strong);backdrop-filter:blur(30px);color:var(--ink)}
+.ml2{margin-left:8px}
+</style>
+</head>
+<body>
+<div class="orbs"><i class="ob"></i><i class="od"></i></div>
+
+<header class="topnav glass-strong">
+  <div class="brand"><div class="mark">bB</div><div class="name">byBuka</div></div>
+  <nav class="links">
+    <a href="#">Главная</a><a href="#">Поставки</a><a href="#">Продажи</a>
+    <a class="active" href="#">Склад</a><a href="#">Банк</a><a href="#">Финансы</a><a href="#">Почта</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="toolbar">
+    <h1>Склад</h1>
+    <div class="tb-search">Поиск по товару, группе…</div>
+    <div class="seg"><button class="on">Все</button><button>Есть остаток</button><button>Залежалые</button><button>Под заказ</button></div>
+    <button class="btn-ghost">Списание</button>
+    <button class="btn-ghost">Инвентаризация</button>
+  </div>
+
+  <div class="wh-stats">
+    <div class="wh-stat glass">
+      <div class="wh-label">Замороженные деньги</div>
+      <div class="wh-val tnum">494 380 ₽</div>
+      <div class="wh-sub">стоимость остатков по себестоимости</div>
+    </div>
+    <div class="wh-stat glass wh-stat--warn">
+      <div class="wh-label">Зависло (старше 60 дн.)</div>
+      <div class="wh-val tnum" style="color:var(--warn)">81 000 ₽</div>
+      <div class="wh-sub">залежалый товар</div>
+    </div>
+    <div class="wh-stat glass">
+      <div class="wh-label">Позиций на складе</div>
+      <div class="wh-val tnum">5</div>
+      <div class="wh-sub"><span style="color:var(--expense)">1 под заказ (минус)</span></div>
+    </div>
+  </div>
+
+  <div class="jcard glass">
+    <div class="jscroll">
+      <table class="jtable">
+        <thead><tr><th style="width:34px"></th><th>Товар</th><th>Группа</th><th>Ед.</th><th class="num">Остаток</th><th class="num">Стоимость</th><th class="num">Дней</th><th></th></tr></thead>
+        <tbody>
+          <tr class="prod" onclick="tg('b1',this)"><td class="cell-chev"><span class="chev" id="c-b1">›</span></td><td>Кабель-канал 40×40</td><td style="color:var(--ink-2)">Профиль</td><td style="color:var(--ink-2)">шт</td><td class="num">200</td><td class="num">214 000 ₽</td><td class="num" style="color:var(--ink-2)">0</td><td class="num"><button class="link-btn">Карточка</button></td></tr>
+          <tr class="batch-tr" id="b1" style="display:none"><td></td><td colspan="7"><div class="batches"><div class="batch-head"><span>Поступление</span><span>Дата прихода</span><span class="num">Кол-во</span><span class="num">Себест. ед.</span><span class="num">Дней</span><span></span></div><div class="batch-row"><span class="bship">ИЛ-0044</span><span style="color:var(--ink-2)">01.07.2026</span><span class="num">200</span><span class="num">1 070 ₽</span><span class="num" style="color:var(--ink-2)">0</span><span class="num"><button class="link-btn link-btn--bad">Списать</button></span></div></div></td></tr>
+
+          <tr class="prod" onclick="tg('b2',this)"><td class="cell-chev"><span class="chev" id="c-b2">›</span></td><td>Насос Grundfos UPS 25-40</td><td style="color:var(--ink-2)">Насосы</td><td style="color:var(--ink-2)">шт</td><td class="num">3</td><td class="num">57 900 ₽</td><td class="num" style="color:var(--ink-2)">1</td><td class="num"><button class="link-btn">Карточка</button></td></tr>
+          <tr class="batch-tr" id="b2" style="display:none"><td></td><td colspan="7"><div class="batches"><div class="batch-head"><span>Поступление</span><span>Дата прихода</span><span class="num">Кол-во</span><span class="num">Себест. ед.</span><span class="num">Дней</span><span></span></div><div class="batch-row"><span class="bship">ИН-0043</span><span style="color:var(--ink-2)">28.06.2026</span><span class="num">3</span><span class="num">19 300 ₽</span><span class="num" style="color:var(--ink-2)">1</span><span class="num"><button class="link-btn link-btn--bad">Списать</button></span></div></div></td></tr>
+
+          <tr class="prod" onclick="tg('b3',this)"><td class="cell-chev"><span class="chev" id="c-b3">›</span></td><td>Кабель ВВГ 3×2.5 <span class="pill pill--warn ml2">Залежалый</span></td><td style="color:var(--ink-2)">Кабель</td><td style="color:var(--ink-2)">м</td><td class="num">150</td><td class="num">81 000 ₽</td><td class="num" style="color:var(--ink-2)">96</td><td class="num"><button class="link-btn">Карточка</button></td></tr>
+          <tr class="batch-tr" id="b3" style="display:none"><td></td><td colspan="7"><div class="batches"><div class="batch-head"><span>Поступление</span><span>Дата прихода</span><span class="num">Кол-во</span><span class="num">Себест. ед.</span><span class="num">Дней</span><span></span></div><div class="batch-row stale"><span class="bship">ИН-0035</span><span style="color:var(--ink-2)">25.03.2026</span><span class="num">150</span><span class="num">540 ₽</span><span class="num" style="color:var(--ink-2)">96 <span style="color:var(--warn)">⚠</span></span><span class="num"><button class="link-btn link-btn--bad">Списать</button></span></div></div></td></tr>
+
+          <tr class="prod" onclick="tg('b4',this)"><td class="cell-chev"><span class="chev" id="c-b4">›</span></td><td>Автомат ABB SH201 C16</td><td style="color:var(--ink-2)">Автоматы</td><td style="color:var(--ink-2)">шт</td><td class="num">40</td><td class="num">58 080 ₽</td><td class="num" style="color:var(--ink-2)">14</td><td class="num"><button class="link-btn">Карточка</button></td></tr>
+          <tr class="batch-tr" id="b4" style="display:none"><td></td><td colspan="7"><div class="batches"><div class="batch-head"><span>Поступление</span><span>Дата прихода</span><span class="num">Кол-во</span><span class="num">Себест. ед.</span><span class="num">Дней</span><span></span></div><div class="batch-row"><span class="bship">ИН-0041</span><span style="color:var(--ink-2)">15.06.2026</span><span class="num">40</span><span class="num">1 452 ₽</span><span class="num" style="color:var(--ink-2)">14</span><span class="num"><button class="link-btn link-btn--bad">Списать</button></span></div></div></td></tr>
+
+          <tr class="prod" onclick="tg('b5',this)"><td class="cell-chev"><span class="chev" id="c-b5">›</span></td><td>Лоток 100×50</td><td style="color:var(--ink-2)">Лотки</td><td style="color:var(--ink-2)">шт</td><td class="num">60</td><td class="num">83 400 ₽</td><td class="num" style="color:var(--ink-2)">17</td><td class="num"><button class="link-btn">Карточка</button></td></tr>
+          <tr class="batch-tr" id="b5" style="display:none"><td></td><td colspan="7"><div class="batches"><div class="batch-head"><span>Поступление</span><span>Дата прихода</span><span class="num">Кол-во</span><span class="num">Себест. ед.</span><span class="num">Дней</span><span></span></div><div class="batch-row"><span class="bship">ИН-0040</span><span style="color:var(--ink-2)">12.06.2026</span><span class="num">60</span><span class="num">1 390 ₽</span><span class="num" style="color:var(--ink-2)">17</span><span class="num"><button class="link-btn link-btn--bad">Списать</button></span></div></div></td></tr>
+
+          <tr class="prod" onclick="tg('b6',this)"><td class="cell-chev"><span class="chev" id="c-b6">›</span></td><td>Светильник LED 36W <span class="pill pill--bad ml2">Под заказ</span></td><td style="color:var(--ink-2)">Освещение</td><td style="color:var(--ink-2)">шт</td><td class="num" style="color:var(--expense)">−10</td><td class="num" style="color:var(--expense)">−14 000 ₽</td><td class="num" style="color:var(--ink-2)">—</td><td class="num"><button class="link-btn">Карточка</button></td></tr>
+          <tr class="batch-tr" id="b6" style="display:none"><td></td><td colspan="7"><div style="color:var(--ink-3);padding:8px 0;font-size:13px">Партий нет — товар продан под заказ, остаток отрицательный. Закроется ближайшим приходом.</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<button class="themebtn" onclick="(function(){var r=document.documentElement;var t=r.getAttribute('data-theme');var n=t==='dark'?'light':(t==='light'?'dark':'dark');r.setAttribute('data-theme',n);this.textContent=n==='dark'?'☾ Тёмная':'☀ Светлая';}).call(this)">Сменить тему</button>
+<script>
+function tg(id,row){
+  var b=document.getElementById(id);var c=document.getElementById('c-'+id);
+  var show=b.style.display==='none';
+  b.style.display=show?'':'none';
+  row.classList.toggle('tr-open',show);
+  c.style.transform=show?'rotate(90deg)':'';
+}
+</script>
+</body>
+</html>
