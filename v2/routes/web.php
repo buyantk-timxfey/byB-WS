@@ -18,6 +18,23 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+// Разделы (пока заглушки — будут свёрстаны далее)
+$sections = [
+    'shipments'   => 'Поступления',
+    'sales'       => 'Продажи',
+    'warehouse'   => 'Склад',
+    'bank'        => 'Банк',
+    'finances'    => 'Финансы',
+    'mail'        => 'Почта',
+    'vehicle'     => 'Транспорт',
+    'references'  => 'Справочники',
+    'settings'    => 'Настройки',
+];
+foreach ($sections as $slug => $title) {
+    Route::get("/{$slug}", fn () => Inertia::render('Stub', ['title' => $title]))
+        ->middleware(['auth', 'verified'])->name($slug);
+}
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

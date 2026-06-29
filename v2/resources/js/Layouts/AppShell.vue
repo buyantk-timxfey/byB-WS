@@ -3,8 +3,10 @@ import { computed, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import Icon from '@/Components/Icon.vue';
 import SearchPalette from '@/Components/SearchPalette.vue';
+import NotificationsPanel from '@/Components/NotificationsPanel.vue';
 
 const search = ref<InstanceType<typeof SearchPalette> | null>(null);
+const notif = ref<InstanceType<typeof NotificationsPanel> | null>(null);
 
 const page = usePage();
 const url = computed(() => page.url);
@@ -66,7 +68,7 @@ const isActive = (href: string) => url.value.startsWith(href);
                 <button class="pressable flex h-[34px] w-[34px] items-center justify-center rounded-full text-ink-2 hover:text-ink" @click="search?.show()">
                     <Icon name="search" :size="19" />
                 </button>
-                <button class="pressable flex h-[34px] w-[34px] items-center justify-center rounded-full text-ink-2 hover:text-ink">
+                <button class="pressable flex h-[34px] w-[34px] items-center justify-center rounded-full text-ink-2 hover:text-ink" @click="notif?.toggle()">
                     <Icon name="bell" :size="19" />
                 </button>
             </div>
@@ -77,5 +79,6 @@ const isActive = (href: string) => url.value.startsWith(href);
         </main>
 
         <SearchPalette ref="search" />
+        <NotificationsPanel ref="notif" />
     </div>
 </template>
