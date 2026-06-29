@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\PinController;
 use App\Http\Controllers\BankController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ProfileController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\ReferenceController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ShipmentController;
+use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\WarehouseController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -72,15 +74,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/settings/rules/{rule}', [SettingController::class, 'destroyRule']);
 });
 
-// Транспорт — свёрстанная страница
-Route::get('/vehicle', fn () => Inertia::render('Transport'))
-    ->middleware(['auth', 'verified'])->name('vehicle');
+// Транспорт — реальные данные
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/vehicle', [VehicleController::class, 'index'])->name('vehicle');
+    Route::post('/vehicle/fuel', [VehicleController::class, 'storeFuel']);
+    Route::post('/vehicle/trip', [VehicleController::class, 'storeTrip']);
+    Route::post('/vehicle/wash', [VehicleController::class, 'storeWash']);
+    Route::post('/vehicle/topup', [VehicleController::class, 'storeTopup']);
+    Route::put('/vehicle/settings', [VehicleController::class, 'updateSettings']);
+});
 
 // Почта — свёрстанная страница
 Route::get('/mail', fn () => Inertia::render('Mail'))
     ->middleware(['auth', 'verified'])->name('mail');
 
+// Быстрый вход по PIN
+Route::get('/pin', [PinController::class, 'show'])->name('pin');
+Route::post('/pin', [PinController::class, 'login']);
+
 Route::middleware('auth')->group(function () {
+    Route::put('/pin', [PinController::class, 'change']);
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

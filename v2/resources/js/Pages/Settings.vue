@@ -35,6 +35,12 @@ const actionLabel = (a: string) => ({
 const ruleForm = useForm({ match_field: 'purpose', match_value: '', action_type: 'expense_article', article_id: null as number | null, priority: 100 });
 const addRule = () => ruleForm.post('/settings/rules', { onSuccess: () => ruleForm.reset() });
 const delRule = (id: number) => router.delete(`/settings/rules/${id}`);
+
+function changePin() {
+    const pin = window.prompt('Новый PIN (4–8 цифр):');
+    if (pin && /^\d{4,8}$/.test(pin)) router.put('/pin', { pin });
+    else if (pin !== null) alert('PIN должен быть 4–8 цифр');
+}
 </script>
 
 <template>
@@ -106,7 +112,7 @@ const delRule = (id: number) => router.delete(`/settings/rules/${id}`);
                 <div class="set-h"><Icon name="bell" :size="18" /> Безопасность</div>
                 <div class="set-toggle">
                     <div><div class="st-t">PIN-код входа</div><div class="st-s">быстрый вход без пароля</div></div>
-                    <a class="btn-ghost pressable" href="/pin">Сменить PIN</a>
+                    <button class="btn-ghost pressable" @click="changePin">Сменить PIN</button>
                 </div>
                 <div class="h2" style="margin-top:6px">Устройства (Face ID / WebAuthn)</div>
                 <div class="rule" v-for="d in devices" :key="d.id">

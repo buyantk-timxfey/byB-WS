@@ -1,44 +1,39 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
+import AppModal from '@/Components/AppModal.vue';
+import { money, num, date as fdate } from '@/lib/format';
 
-const money = (n: number) => new Intl.NumberFormat('ru-RU').format(Math.round(n)) + ' ₽';
-
-// Настройки машины (vehicle_settings)
-const tank = 60;            // объём бака, л
-const consumption = 8.0;    // расход, л/100км
-const odometer = 142350;    // одометр, км
-const fuelLeft = 38;        // остаток топлива по калибровке, л
-const cardBalance = 12400;  // баланс топливной карты, ₽
-const fuelPct = computed(() => Math.round((fuelLeft / tank) * 100));
-const rangeKm = computed(() => Math.round((fuelLeft / consumption) * 100));
+const props = defineProps<{
+    settings: any; fuelUps: any[]; trips: any[]; washes: any[]; topups: any[];
+    monthSpend: number; monthKm: number;
+}>();
 
 const tab = ref<'fuel' | 'trips' | 'wash' | 'card'>('fuel');
+const today = new Date().toISOString().slice(0, 10);
 
-const fuelUps = ref([
-    { date: '28.06.2026', azs: 'Лукойл', liters: 42, price: 58.5, sum: 2457, odo: 142100 },
-    { date: '20.06.2026', azs: 'Газпромнефть', liters: 38, price: 57.9, sum: 2200, odo: 141600 },
-    { date: '12.06.2026', azs: 'Лукойл', liters: 45, price: 58.2, sum: 2619, odo: 141050 },
-]);
-const trips = ref([
-    { date: '27.06.2026', route: 'Москва → Подольск → Москва', km: 84, fuel: 6.7, goal: 'Доставка ИН-0029' },
-    { date: '24.06.2026', route: 'По городу', km: 45, fuel: 3.6, goal: 'Закупка' },
-    { date: '22.06.2026', route: 'Москва → Тверь', km: 320, fuel: 25.6, goal: 'Доставка ИН-0028' },
-]);
-const washes = ref([
-    { date: '26.06.2026', place: 'Мойка №1', type: 'Комплекс', sum: 1200 },
-    { date: '15.06.2026', place: 'Fast Wash', type: 'Кузов', sum: 600 },
-]);
-const topups = ref([
-    { date: '15.06.2026', sum: 10000, src: 'Перевод со Сбер · 7781' },
-    { date: '01.06.2026', sum: 15000, src: 'Перевод со Сбер · 7781' },
-]);
+const fuelTotal = computed(() => props.fuelUps.reduce((a, x) => a + Number(x.sum), 0));
+const tripsKm = computed(() => props.trips.reduce((a, x) => a + Number(x.km), 0));
+const washTotal = computed(() => props.washes.reduce((a, x) => a + Number(x.sum), 0));
 
-const fuelTotal = computed(() => fuelUps.value.reduce((a, x) => a + x.sum, 0));
-const tripsKm = computed(() => trips.value.reduce((a, x) => a + x.km, 0));
-const washTotal = computed(() => washes.value.reduce((a, x) => a + x.sum, 0));
+// Формы
+const open = ref(false);
+const fuel = useForm({ date: today, azs: '', liters: 0, price: 0, odometer: null as number | null, paid_from: 'card' });
+const trip = useForm({ date: today, route: '', km: 0, fuel: 0, goal: '' });
+const wash = useForm({ date: today, place: '', type: '', sum: 0 });
+const topup = useForm({ date: today, sum: 0, source: '' });
+
+function add() { open.value = true; }
+function submit() {
+    const opts = { onSuccess: () => { open.value = false; } };
+    if (tab.value === 'fuel') fuel.post('/vehicle/fuel', opts);
+    else if (tab.value === 'trips') trip.post('/vehicle/trip', opts);
+    else if (tab.value === 'wash') wash.post('/vehicle/wash', opts);
+    else topup.post('/vehicle/topup', opts);
+}
+const addLabel = computed(() => ({ fuel: 'Заправка', trips: 'Маршрут', wash: 'Мойка', card: 'Пополнение' }[tab.value]));
 </script>
 
 <template>
@@ -46,21 +41,19 @@ const washTotal = computed(() => washes.value.reduce((a, x) => a + x.sum, 0));
     <AppShell>
         <div class="toolbar">
             <h1>Транспорт</h1>
-            <button class="btn-ghost pressable" style="margin-left:auto"><Icon name="gear" :size="16" /> Машина</button>
-            <button class="btn-primary pressable"><Icon name="plus" :size="17" /> Заправка</button>
+            <button class="btn-primary pressable" style="margin-left:auto" @click="add"><Icon name="plus" :size="17" /> {{ addLabel }}</button>
         </div>
 
-        <!-- Состояние машины -->
         <div class="veh-hero">
-            <div class="vh glass vh-fuel">
+            <div class="vh glass">
                 <div class="vh-l">Остаток топлива</div>
-                <div class="vh-v tnum">{{ fuelLeft }} л <span class="vh-pct">/ {{ tank }} л</span></div>
-                <div class="gauge"><div class="gauge-fill" :class="{ 'gauge-fill--low': fuelPct < 25 }" :style="{ width: fuelPct + '%' }"></div></div>
-                <div class="vh-s">{{ fuelPct }}% · хватит на ~{{ rangeKm }} км</div>
+                <div class="vh-v tnum">{{ num(settings.fuel_left) }} л <span class="vh-pct">/ {{ num(settings.tank) }} л</span></div>
+                <div class="gauge"><div class="gauge-fill" :class="{ 'gauge-fill--low': settings.fuel_pct < 25 }" :style="{ width: settings.fuel_pct + '%' }"></div></div>
+                <div class="vh-s">{{ settings.fuel_pct }}% · хватит на ~{{ settings.range_km }} км</div>
             </div>
-            <div class="vh glass"><div class="vh-l">Одометр</div><div class="vh-v tnum">{{ new Intl.NumberFormat('ru-RU').format(odometer) }} км</div><div class="vh-s">расход {{ consumption.toFixed(1) }} л/100км</div></div>
-            <div class="vh glass"><div class="vh-l">Топливная карта</div><div class="vh-v tnum">{{ money(cardBalance) }}</div><div class="vh-s">с неё списываются АЗС и мойки</div></div>
-            <div class="vh glass"><div class="vh-l">За месяц</div><div class="vh-v tnum">{{ money(fuelTotal + washTotal) }}</div><div class="vh-s">{{ tripsKm }} км пробега</div></div>
+            <div class="vh glass"><div class="vh-l">Одометр</div><div class="vh-v tnum">{{ num(settings.odometer) }} км</div><div class="vh-s">расход {{ settings.consumption }} л/100км</div></div>
+            <div class="vh glass"><div class="vh-l">Топливная карта</div><div class="vh-v tnum">{{ money(settings.card_balance) }}</div><div class="vh-s">с неё списываются АЗС и мойки</div></div>
+            <div class="vh glass"><div class="vh-l">За месяц</div><div class="vh-v tnum">{{ money(monthSpend) }}</div><div class="vh-s">{{ num(monthKm) }} км пробега</div></div>
         </div>
 
         <div class="seg veh-tabs">
@@ -72,52 +65,66 @@ const washTotal = computed(() => washes.value.reduce((a, x) => a + x.sum, 0));
 
         <div class="jcard glass">
             <div class="jscroll">
-                <!-- Заправки -->
                 <table v-if="tab === 'fuel'" class="jtable">
                     <thead><tr><th>Дата</th><th>АЗС</th><th class="num">Литры</th><th class="num">Цена/л</th><th class="num">Сумма</th><th class="num">Одометр</th></tr></thead>
                     <tbody>
-                        <tr v-for="(x, i) in fuelUps" :key="i">
-                            <td class="text-ink-2">{{ x.date }}</td><td>{{ x.azs }}</td>
-                            <td class="num">{{ x.liters }} л</td><td class="num text-ink-2">{{ x.price.toFixed(2) }} ₽</td>
-                            <td class="num">{{ money(x.sum) }}</td><td class="num text-ink-2">{{ new Intl.NumberFormat('ru-RU').format(x.odo) }}</td>
-                        </tr>
-                        <tr><td colspan="4">Итого за период</td><td class="num" style="font-weight:700">{{ money(fuelTotal) }}</td><td></td></tr>
+                        <tr v-for="x in fuelUps" :key="x.id"><td class="text-ink-2">{{ fdate(x.date) }}</td><td>{{ x.azs }}</td><td class="num">{{ num(x.liters) }} л</td><td class="num text-ink-2">{{ Number(x.price).toFixed(2) }} ₽</td><td class="num">{{ money(x.sum) }}</td><td class="num text-ink-2">{{ x.odometer ? num(x.odometer) : '—' }}</td></tr>
+                        <tr v-if="fuelUps.length"><td colspan="4">Итого за период</td><td class="num" style="font-weight:700">{{ money(fuelTotal) }}</td><td></td></tr>
+                        <tr v-if="!fuelUps.length"><td colspan="6"><div class="j-empty">Заправок нет</div></td></tr>
                     </tbody>
                 </table>
-                <!-- Маршруты -->
                 <table v-else-if="tab === 'trips'" class="jtable">
                     <thead><tr><th>Дата</th><th>Маршрут</th><th class="num">Км</th><th class="num">Топливо</th><th>Цель</th></tr></thead>
                     <tbody>
-                        <tr v-for="(x, i) in trips" :key="i">
-                            <td class="text-ink-2">{{ x.date }}</td><td>{{ x.route }}</td>
-                            <td class="num">{{ x.km }}</td><td class="num text-ink-2">{{ x.fuel.toFixed(1) }} л</td><td class="text-ink-2">{{ x.goal }}</td>
-                        </tr>
-                        <tr><td colspan="2">Итого пробег</td><td class="num" style="font-weight:700">{{ tripsKm }} км</td><td colspan="2"></td></tr>
+                        <tr v-for="x in trips" :key="x.id"><td class="text-ink-2">{{ fdate(x.date) }}</td><td>{{ x.route }}</td><td class="num">{{ num(x.km) }}</td><td class="num text-ink-2">{{ Number(x.fuel).toFixed(1) }} л</td><td class="text-ink-2">{{ x.goal }}</td></tr>
+                        <tr v-if="trips.length"><td colspan="2">Итого пробег</td><td class="num" style="font-weight:700">{{ num(tripsKm) }} км</td><td colspan="2"></td></tr>
+                        <tr v-if="!trips.length"><td colspan="5"><div class="j-empty">Маршрутов нет</div></td></tr>
                     </tbody>
                 </table>
-                <!-- Мойки -->
                 <table v-else-if="tab === 'wash'" class="jtable">
                     <thead><tr><th>Дата</th><th>Место</th><th>Тип</th><th class="num">Сумма</th></tr></thead>
                     <tbody>
-                        <tr v-for="(x, i) in washes" :key="i">
-                            <td class="text-ink-2">{{ x.date }}</td><td>{{ x.place }}</td><td class="text-ink-2">{{ x.type }}</td><td class="num">{{ money(x.sum) }}</td>
-                        </tr>
-                        <tr><td colspan="3">Итого за период</td><td class="num" style="font-weight:700">{{ money(washTotal) }}</td></tr>
+                        <tr v-for="x in washes" :key="x.id"><td class="text-ink-2">{{ fdate(x.date) }}</td><td>{{ x.place }}</td><td class="text-ink-2">{{ x.type }}</td><td class="num">{{ money(x.sum) }}</td></tr>
+                        <tr v-if="washes.length"><td colspan="3">Итого за период</td><td class="num" style="font-weight:700">{{ money(washTotal) }}</td></tr>
+                        <tr v-if="!washes.length"><td colspan="4"><div class="j-empty">Моек нет</div></td></tr>
                     </tbody>
                 </table>
-                <!-- Топливная карта -->
                 <table v-else class="jtable">
                     <thead><tr><th>Дата</th><th class="num">Пополнение</th><th>Источник</th></tr></thead>
                     <tbody>
-                        <tr v-for="(x, i) in topups" :key="i">
-                            <td class="text-ink-2">{{ x.date }}</td><td class="num" :style="{ color: 'var(--income)' }">+ {{ money(x.sum) }}</td><td class="text-ink-2">{{ x.src }}</td>
-                        </tr>
-                        <tr><td>Текущий баланс</td><td class="num" style="font-weight:700">{{ money(cardBalance) }}</td><td></td></tr>
+                        <tr v-for="x in topups" :key="x.id"><td class="text-ink-2">{{ fdate(x.date) }}</td><td class="num" :style="{ color: 'var(--income)' }">+ {{ money(x.sum) }}</td><td class="text-ink-2">{{ x.source }}</td></tr>
+                        <tr><td>Текущий баланс</td><td class="num" style="font-weight:700">{{ money(settings.card_balance) }}</td><td></td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div class="set-hint" style="margin-top:12px">Расходы на топливо и мойки попадают в P&L по статье «Транспорт / Топливо». Остаток топлива считается по калибровке бака и среднему расходу.</div>
+        <AppModal :open="open" :title="addLabel" @close="open = false">
+            <template v-if="tab === 'fuel'">
+                <div class="fld-row"><div class="fld"><label>Дата</label><input v-model="fuel.date" type="date" /></div><div class="fld"><label>АЗС</label><input v-model="fuel.azs" /></div></div>
+                <div class="fld-row"><div class="fld"><label>Литры</label><input v-model.number="fuel.liters" type="number" /></div><div class="fld"><label>Цена/л</label><input v-model.number="fuel.price" type="number" step="0.01" /></div></div>
+                <div class="fld-row"><div class="fld"><label>Одометр</label><input v-model.number="fuel.odometer" type="number" /></div><div class="fld"><label>Оплата</label><select v-model="fuel.paid_from"><option value="card">Топл. карта</option><option value="cash">Наличные</option></select></div></div>
+            </template>
+            <template v-else-if="tab === 'trips'">
+                <div class="fld"><label>Дата</label><input v-model="trip.date" type="date" /></div>
+                <div class="fld"><label>Маршрут</label><input v-model="trip.route" /></div>
+                <div class="fld-row"><div class="fld"><label>Км</label><input v-model.number="trip.km" type="number" /></div><div class="fld"><label>Топливо, л (авто)</label><input v-model.number="trip.fuel" type="number" /></div></div>
+                <div class="fld"><label>Цель</label><input v-model="trip.goal" /></div>
+            </template>
+            <template v-else-if="tab === 'wash'">
+                <div class="fld-row"><div class="fld"><label>Дата</label><input v-model="wash.date" type="date" /></div><div class="fld"><label>Сумма</label><input v-model.number="wash.sum" type="number" /></div></div>
+                <div class="fld"><label>Место</label><input v-model="wash.place" /></div>
+                <div class="fld"><label>Тип</label><input v-model="wash.type" /></div>
+            </template>
+            <template v-else>
+                <div class="fld-row"><div class="fld"><label>Дата</label><input v-model="topup.date" type="date" /></div><div class="fld"><label>Сумма</label><input v-model.number="topup.sum" type="number" /></div></div>
+                <div class="fld"><label>Источник</label><input v-model="topup.source" placeholder="перевод со счёта…" /></div>
+            </template>
+            <template #footer>
+                <button class="btn-primary pressable" style="flex:1;justify-content:center" @click="submit">Добавить</button>
+            </template>
+        </AppModal>
+
+        <div class="set-hint" style="margin-top:12px">Расходы на топливо и мойки попадают в P&L по статье «Транспорт / Топливо».</div>
     </AppShell>
 </template>
