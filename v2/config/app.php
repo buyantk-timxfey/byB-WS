@@ -54,6 +54,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Токен одноразового веб-установщика (/setup?key=...). Убрать из .env после установки.
+    'install_token' => env('INSTALL_TOKEN'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

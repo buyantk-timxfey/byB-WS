@@ -94,6 +94,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/mail/accounts/{account}/sync', [MailController::class, 'sync']);
 });
 
+// Одноразовый веб-установщик (создаёт БД с нуля без консоли)
+Route::get('/setup', [\App\Http\Controllers\SetupController::class, 'run']);
+
 // Быстрый вход по PIN
 Route::get('/pin', [PinController::class, 'show'])->name('pin');
 Route::post('/pin', [PinController::class, 'login']);
