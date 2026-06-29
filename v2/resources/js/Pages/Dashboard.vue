@@ -5,6 +5,7 @@ import Widget from '@/Components/Widget.vue';
 import Ring from '@/Components/Ring.vue';
 import Icon from '@/Components/Icon.vue';
 import Sparkline from '@/Components/Sparkline.vue';
+import Calendar from '@/Components/Calendar.vue';
 
 // Демо-данные (Phase 0 — каркас UI; реальные данные подключим в Фазе 1).
 const money = (n: number) => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
@@ -125,8 +126,11 @@ const tx = [
                 </div>
             </Widget>
 
+            <!-- Календарь ETA поставок -->
+            <Calendar class="col-span-2 lg:col-span-3" />
+
             <!-- Банковская лента (Apple Card) -->
-            <Widget title="Последние операции" class="col-span-2 lg:col-span-3">
+            <Widget title="Последние операции" class="col-span-2 lg:col-span-6">
                 <div class="flex flex-col">
                     <div
                         v-for="t in tx"

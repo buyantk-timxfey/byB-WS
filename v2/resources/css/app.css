@@ -142,6 +142,16 @@
         font-size: 12px;
         padding: 3px 10px;
     }
+
+    /* Календарь поставок */
+    .cal-head { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 6px; }
+    .cal-head span { text-align: center; font-size: 11px; color: var(--ink-3); }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+    .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; font-size: 13px; color: var(--ink-2); position: relative; }
+    .cal-day.has-eta { background: var(--glass-fill); color: var(--ink); font-weight: 600; cursor: pointer; }
+    .cal-day.today { outline: 2px solid var(--ink); outline-offset: -2px; color: var(--ink); }
+    .cal-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 3px; }
+    .cal-day.has-eta:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--ink); color: var(--bg); font-size: 11px; font-weight: 500; padding: 5px 9px; border-radius: 8px; z-index: 5; pointer-events: none; }
 }
 
 /* Доступность / слабые устройства — матовый фолбэк вместо живого блюра */

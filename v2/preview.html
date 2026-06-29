@@ -76,6 +76,15 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
 .ship .ring{width:74px;height:74px}
 .ship .dates{font-size:11px;color:var(--ink-2);margin-top:10px}
 .ship .pill{margin-top:8px}
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:6px}
+.cal-head span{text-align:center;font-size:11px;color:var(--ink-3)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;font-size:13px;color:var(--ink-2);position:relative}
+.cal-day.empty{visibility:hidden}
+.cal-day.has-eta{background:var(--glass-fill);color:var(--ink);font-weight:600;cursor:pointer}
+.cal-day.today{outline:2px solid var(--ink);outline-offset:-2px;color:var(--ink)}
+.cal-dot{width:6px;height:6px;border-radius:50%;margin-top:3px}
+.cal-day.has-eta:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--ink);color:var(--bg);font-size:11px;font-weight:500;padding:5px 9px;border-radius:8px;z-index:5;pointer-events:none}
 .row{display:flex;align-items:center;justify-content:space-between}
 .acc{display:flex;flex-direction:column;gap:8px}
 .acc .item{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-radius:14px;background:var(--glass-fill)}
@@ -211,7 +220,20 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
       </div>
     </div>
 
-    <div class="w glass col3"><h2>Последние операции</h2>
+    <div class="w glass col3">
+      <div class="row" style="margin-bottom:14px">
+        <span style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)">Календарь поставок</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="icbtn" style="width:28px;height:28px">‹</button>
+          <span style="font-size:14px;font-weight:600;min-width:104px;text-align:center">Июль 2026</span>
+          <button class="icbtn" style="width:28px;height:28px">›</button>
+        </div>
+      </div>
+      <div class="cal-head"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="w glass" style="grid-column:1/-1"><h2>Последние операции</h2>
       <div class="tx">
         <div class="t"><div class="left"><span class="av">ОО</span><div><div class="nm">ООО Электро</div><div class="cat">Продажа</div></div></div><span class="amt tnum" style="color:var(--income)">+184 000 ₽</span></div>
         <div class="t"><div class="left"><span class="av">ИП</span><div><div class="nm">ИП Сидоров</div><div class="cat">Закупка</div></div></div><span class="amt tnum">-96 500 ₽</span></div>
@@ -222,6 +244,19 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
     </div>
   </div>
 </main>
+
+<script>
+(function(){
+  var eta={2:['Партия кабеля','ООО Электро','var(--income)'],10:['Насосы Grundfos','ИП Сидоров','var(--warn)'],12:['Кабель-канал','ООО Профиль','var(--ink-3)']};
+  var lead=2, days=31, g=document.getElementById('calGrid'); if(!g) return; var h='';
+  for(var i=0;i<lead;i++) h+='<div class="cal-day empty"></div>';
+  for(var d=1;d<=days;d++){ var e=eta[d];
+    if(e) h+='<div class="cal-day has-eta" data-tip="'+e[0]+' · '+e[1]+'"><span>'+d+'</span><span class="cal-dot" style="background:'+e[2]+'"></span></div>';
+    else h+='<div class="cal-day"><span>'+d+'</span></div>';
+  }
+  g.innerHTML=h;
+})();
+</script>
 
 <button class="themebtn" onclick="(function(){var r=document.documentElement;var t=r.getAttribute('data-theme');var n=t==='dark'?'light':(t==='light'?'dark':'dark');r.setAttribute('data-theme',n);this.textContent=n==='dark'?'☾ Тёмная':'☀ Светлая';}).call(this)">Сменить тему</button>
 </body>
