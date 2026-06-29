@@ -165,7 +165,7 @@ const go = (url: string) => { if (!editMode.value) router.visit(url); };
                         </div>
 
                         <!-- Календарь -->
-                        <Calendar v-else-if="element.id === 'calendar'" class="wgt-l overflow-hidden" />
+                        <Calendar v-else-if="element.id === 'calendar'" :data="calendarData" class="wgt-l overflow-hidden" />
 
                         <!-- Операции -->
                         <div v-else-if="element.id === 'tx'" class="glass w-pad wgt-l pressable" @click="go('/bank')">

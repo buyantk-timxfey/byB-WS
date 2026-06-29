@@ -2,18 +2,15 @@
 import { ref, computed } from 'vue';
 import Icon from '@/Components/Icon.vue';
 
+// data: { 'YYYY-MM-DD': [{ name, cp }] } — ETA поставок «в пути» из регистра
+const props = defineProps<{ data?: Record<string, { name: string; cp: string }[]> }>();
+
 const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const pad = (n: number) => String(n).padStart(2, '0');
+const now = new Date();
+const todayKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
-// Демо-данные ETA (Фаза 0). В Фазе 1 придут из регистра поставок.
-const etas: Record<string, { name: string; cp: string; color: string }> = {
-    '2026-07-02': { name: 'Партия кабеля', cp: 'ООО Электро', color: 'var(--income)' },
-    '2026-07-10': { name: 'Насосы Grundfos', cp: 'ИП Сидоров', color: 'var(--warn)' },
-    '2026-07-12': { name: 'Кабель-канал', cp: 'ООО Профиль', color: 'var(--ink-3)' },
-};
-const today = '2026-06-29';
-
-const cur = ref(new Date(2026, 6, 1)); // Июль 2026
-
+const cur = ref(new Date(now.getFullYear(), now.getMonth(), 1));
 const title = computed(() => `${monthNames[cur.value.getMonth()]} ${cur.value.getFullYear()}`);
 
 const cells = computed(() => {
@@ -21,18 +18,21 @@ const cells = computed(() => {
     const m = cur.value.getMonth();
     const lead = (new Date(y, m, 1).getDay() + 6) % 7; // Пн = 0
     const dim = new Date(y, m + 1, 0).getDate();
-    const arr: ({ d: number; key: string; eta?: { name: string; cp: string; color: string }; today: boolean } | null)[] = [];
+    const data = props.data ?? {};
+    const arr: ({ d: number; key: string; eta?: { tip: string }; today: boolean } | null)[] = [];
     for (let i = 0; i < lead; i++) arr.push(null);
     for (let d = 1; d <= dim; d++) {
-        const key = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        arr.push({ d, key, eta: etas[key], today: key === today });
+        const key = `${y}-${pad(m + 1)}-${pad(d)}`;
+        const list = data[key];
+        arr.push({
+            d, key, today: key === todayKey,
+            eta: list && list.length ? { tip: list.map((e) => `${e.name} · ${e.cp}`).join('\n') } : undefined,
+        });
     }
     return arr;
 });
 
-const step = (n: number) => {
-    cur.value = new Date(cur.value.getFullYear(), cur.value.getMonth() + n, 1);
-};
+const step = (n: number) => { cur.value = new Date(cur.value.getFullYear(), cur.value.getMonth() + n, 1); };
 </script>
 
 <template>
@@ -56,14 +56,9 @@ const step = (n: number) => {
         <div class="cal-grid">
             <template v-for="(c, i) in cells" :key="i">
                 <div v-if="!c"></div>
-                <div
-                    v-else
-                    class="cal-day"
-                    :class="{ 'has-eta': c.eta, today: c.today }"
-                    :data-tip="c.eta ? `${c.eta.name} · ${c.eta.cp}` : undefined"
-                >
+                <div v-else class="cal-day" :class="{ 'has-eta': c.eta, today: c.today }" :title="c.eta?.tip">
                     <span>{{ c.d }}</span>
-                    <span v-if="c.eta" class="cal-dot" :style="`background:${c.eta.color}`"></span>
+                    <span v-if="c.eta" class="cal-dot" style="background:var(--info,#0a84ff)"></span>
                 </div>
             </template>
         </div>

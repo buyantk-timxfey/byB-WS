@@ -12,14 +12,14 @@ const page = usePage();
 const url = computed(() => page.url);
 
 const nav = [
-    { label: 'Главная', icon: 'grid', href: '/dashboard' },
-    { label: 'Поставки', icon: 'box', href: '/shipments' },
-    { label: 'Продажи', icon: 'bag', href: '/sales' },
+    { label: 'Главная', icon: 'home', href: '/dashboard' },
+    { label: 'Поставки', icon: 'package', href: '/shipments' },
+    { label: 'Продажи', icon: 'cart', href: '/sales' },
     { label: 'Склад', icon: 'warehouse', href: '/warehouse' },
-    { label: 'Банк', icon: 'wallet', href: '/bank' },
+    { label: 'Банк', icon: 'card', href: '/bank' },
     { label: 'Финансы', icon: 'chart', href: '/finances' },
     { label: 'Почта', icon: 'mail', href: '/mail' },
-    { label: 'Транспорт', icon: 'car', href: '/vehicle' },
+    { label: 'Транспорт', icon: 'truck', href: '/vehicle' },
     { label: 'Справочники', icon: 'book', href: '/references' },
 ];
 
@@ -38,19 +38,7 @@ const isActive = (href: string) => url.value.startsWith(href);
             class="glass-strong sticky top-3 z-30 mx-auto mb-5 mt-3 flex max-w-[1400px] items-center gap-2.5 px-3.5 py-2"
             style="border-radius: 999px"
         >
-            <div class="flex items-center gap-2 pr-1.5">
-                <div
-                    class="flex h-[30px] w-[30px] items-center justify-center rounded-[9px]"
-                    style="background: var(--ink); color: var(--bg)"
-                >
-                    <span class="text-[12px] font-bold">bB</span>
-                </div>
-                <span class="hidden whitespace-nowrap text-[16px] font-semibold tracking-tight sm:inline">
-                    byBuka
-                </span>
-            </div>
-
-            <nav class="flex flex-1 items-center gap-0.5 overflow-x-auto" style="scrollbar-width: none">
+            <nav class="flex flex-1 items-center gap-0.5 overflow-x-auto pl-1" style="scrollbar-width: none">
                 <Link
                     v-for="item in nav"
                     :key="item.href"
