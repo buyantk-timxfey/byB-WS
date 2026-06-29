@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>byBuka 2.0 — Банк</title>
+<style>
+:root{
+  --bg:#eef0f5;--ink:#0b0b0f;--ink-2:rgba(11,11,15,.6);--ink-3:rgba(11,11,15,.4);
+  --glass-fill:rgba(255,255,255,.45);--glass-fill-strong:rgba(255,255,255,.6);
+  --glass-border:rgba(255,255,255,.55);--glass-highlight:rgba(255,255,255,.9);
+  --shadow:0 8px 30px rgba(17,22,40,.1);--shadow-lg:0 20px 60px rgba(17,22,40,.14);
+  --income:#34c759;--expense:#ff3b30;--warn:#ff9f0a;
+  --orb-b:rgba(52,199,89,.3);--orb-d:rgba(255,159,10,.25);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme]){
+  --bg:#0b0b0f;--ink:#f5f6f8;--ink-2:rgba(245,246,248,.62);--ink-3:rgba(245,246,248,.4);
+  --glass-fill:rgba(255,255,255,.07);--glass-fill-strong:rgba(255,255,255,.12);
+  --glass-border:rgba(255,255,255,.12);--glass-highlight:rgba(255,255,255,.16);
+  --shadow:0 10px 40px rgba(0,0,0,.5);--shadow-lg:0 24px 70px rgba(0,0,0,.6);
+  --orb-b:rgba(52,199,89,.4);--orb-d:rgba(255,159,10,.3);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0b0f;--ink:#f5f6f8;--ink-2:rgba(245,246,248,.62);--ink-3:rgba(245,246,248,.4);
+  --glass-fill:rgba(255,255,255,.07);--glass-fill-strong:rgba(255,255,255,.12);
+  --glass-border:rgba(255,255,255,.12);--glass-highlight:rgba(255,255,255,.16);
+  --shadow:0 10px 40px rgba(0,0,0,.5);--shadow-lg:0 24px 70px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:light dark}
+body{min-height:100dvh;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.orbs i{position:absolute;border-radius:50%;filter:blur(80px);display:block}
+.ob{width:50vw;height:50vw;left:24vw;bottom:-18vw;background:radial-gradient(circle,var(--orb-b),transparent 70%)}
+.od{width:34vw;height:34vw;right:14vw;bottom:6vh;background:radial-gradient(circle,var(--orb-d),transparent 70%)}
+.tnum{font-variant-numeric:tabular-nums}
+.glass{background:var(--glass-fill);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 var(--glass-highlight);border-radius:22px}
+.glass-strong{background:var(--glass-fill-strong);backdrop-filter:blur(40px) saturate(190%);-webkit-backdrop-filter:blur(40px) saturate(190%);border:1px solid var(--glass-border);box-shadow:var(--shadow-lg),inset 0 1px 0 var(--glass-highlight)}
+.topnav{position:sticky;top:12px;z-index:30;margin:12px auto 18px;max-width:1240px;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:999px}
+.brand{display:flex;align-items:center;gap:8px;padding-right:6px}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.brand .name{font-size:16px;font-weight:600;white-space:nowrap}
+.links{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+.links::-webkit-scrollbar{display:none}
+.links a{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap}
+.links a.active{background:var(--ink);color:var(--bg)}
+.wrap{max-width:1240px;margin:0 auto;padding:0 14px 60px}
+.pill{border-radius:999px;font-weight:600;font-size:12px;padding:3px 10px;display:inline-block}
+.pill--neutral{background:var(--glass-fill-strong);color:var(--ink-2)}
+.pill--ok{background:rgba(52,199,89,.16);color:var(--income)}
+.pill--warn{background:rgba(255,159,10,.16);color:var(--warn)}
+.pill--bad{background:rgba(255,59,48,.16);color:var(--expense)}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar h1{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-right:auto}
+.tb-search{display:flex;align-items:center;gap:8px;background:var(--glass-fill);border:1px solid var(--glass-border);border-radius:999px;padding:7px 14px;min-width:220px;color:var(--ink-3);font-size:14px}
+.seg{display:flex;gap:2px;background:var(--glass-fill);border:1px solid var(--glass-border);border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--ink-2);font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.seg-dot{margin-left:6px;background:var(--expense);color:#fff;font-size:11px;padding:1px 7px;border-radius:999px}
+.btn-primary{display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;background:var(--ink);color:var(--bg);font-size:14px;font-weight:600;padding:9px 16px;border-radius:12px}
+.btn-ghost{border:1px solid var(--glass-border);background:var(--glass-fill);color:var(--ink);border-radius:12px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer}
+.sec-h{font-size:17px;font-weight:700;letter-spacing:-.01em}
+/* bank cards */
+.bank-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.bank-card{position:relative;min-height:168px;border-radius:22px;padding:20px 22px;color:#fff;display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(0,0,0,.28);overflow:hidden}
+.bank-card::after{content:'';position:absolute;inset:0;background:radial-gradient(120% 80% at 80% 0%,rgba(255,255,255,.28),transparent 60%);pointer-events:none}
+.bc-top{display:flex;align-items:center;justify-content:space-between}
+.bc-bank{font-size:14px;font-weight:600;opacity:.95}
+.bc-chip{width:34px;height:24px;border-radius:6px;background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(255,255,255,.45));box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.bc-bal{margin-top:auto;font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.bc-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.bc-num{font-size:14px;letter-spacing:.12em;opacity:.9;font-variant-numeric:tabular-nums}
+.bc-badge{font-size:12px;font-weight:600;background:rgba(0,0,0,.28);padding:3px 10px;border-radius:999px}
+.bc-ok{font-size:12px;font-weight:600;opacity:.85}
+@media(max-width:820px){.bank-cards{grid-template-columns:1fr}}
+/* op list */
+.op-list{padding:6px 8px}
+.op-row{display:grid;grid-template-columns:40px 1fr auto auto;gap:14px;align-items:center;padding:12px 14px;border-radius:14px;cursor:pointer}
+.op-row:hover{background:var(--glass-fill)}
+.op-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.op-av--in{background:rgba(52,199,89,.16);color:var(--income)}
+.op-av--out{background:var(--glass-fill-strong);color:var(--ink-2)}
+.op-party{font-size:14px;font-weight:600}
+.op-purpose{font-size:12px;color:var(--ink-3);margin-top:2px}
+.op-meta{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.op-link{font-size:11px;color:var(--ink-3)}
+.op-amt{font-size:15px;font-weight:700;min-width:120px;text-align:right;font-variant-numeric:tabular-nums}
+.op-foot{display:flex;gap:24px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--glass-border);font-size:13px;color:var(--ink-2)}
+@media(max-width:640px){.op-row{grid-template-columns:36px 1fr auto}.op-meta{display:none}}
+/* modal */
+.modal-ov{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-ov.open{display:flex}
+.modal-box{width:min(640px,100%);max-height:86vh;display:flex;flex-direction:column;border-radius:26px;overflow:hidden;animation:modal-in .26s cubic-bezier(.22,1,.36,1)}
+@keyframes modal-in{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@media(max-width:560px){.modal-ov.open{align-items:flex-end;padding:0}.modal-box{width:100%;max-height:92vh;border-radius:26px 26px 0 0;animation:sheet-in .3s cubic-bezier(.22,1,.36,1)}}
+.modal-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid var(--glass-border)}
+.modal-head .dt{font-size:18px;font-weight:700}
+.modal-head .ds{font-size:13px;color:var(--ink-2);margin-top:2px}
+.modal-x{margin-left:auto;width:32px;height:32px;border:0;background:var(--glass-fill);border-radius:999px;color:var(--ink-2);cursor:pointer;font-size:18px}
+.modal-body{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+.modal-foot{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--glass-border)}
+.h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)}
+.rec-line{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;background:var(--glass-fill);border:1px solid var(--glass-border);border-radius:14px;padding:14px 16px;font-size:14px}
+.rec-l{color:var(--ink-2)}
+.rec-v{font-weight:600;text-align:right}
+.rec-note{display:flex;gap:10px;align-items:flex-start;background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.3);color:var(--warn);border-radius:12px;padding:12px 14px;font-size:13px}
+.cand{border:1px solid var(--glass-border);border-radius:14px;padding:12px 14px;margin-top:8px}
+.cand--best{border-color:rgba(52,199,89,.45);background:rgba(52,199,89,.07)}
+.cand-r{display:flex;align-items:center;gap:12px}
+.cand-r>div:nth-child(2){flex:1}
+.cand-tick{width:24px;height:24px;border-radius:50%;background:var(--income);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.cand-tick--off{background:transparent;border:2px solid var(--glass-border)}
+.cand-doc{font-size:14px;font-weight:600}
+.cand-sub{font-size:12px;color:var(--ink-3);margin-top:2px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:12px;font-weight:600;color:var(--ink-2)}
+.fld select{border:1px solid var(--glass-border);background:var(--glass-fill);border-radius:12px;padding:10px 12px;color:var(--ink);font-size:14px;font-family:inherit;outline:none}
+.cand-btn{border:0;cursor:pointer;background:var(--ink);color:var(--bg);font-size:13px;font-weight:600;padding:7px 14px;border-radius:10px}
+.cand-btn--ghost{border:1px solid var(--glass-border);background:var(--glass-fill);color:var(--ink)}
+.themebtn{position:fixed;right:16px;bottom:16px;z-index:50;padding:10px 16px;border:1px solid var(--glass-border);border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;background:var(--glass-fill-strong);backdrop-filter:blur(30px);color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="orbs"><i class="ob"></i><i class="od"></i></div>
+
+<header class="topnav glass-strong">
+  <div class="brand"><div class="mark">bB</div><div class="name">byBuka</div></div>
+  <nav class="links">
+    <a href="#">Главная</a><a href="#">Поставки</a><a href="#">Продажи</a>
+    <a href="#">Склад</a><a class="active" href="#">Банк</a><a href="#">Финансы</a><a href="#">Почта</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="toolbar">
+    <h1>Банк</h1>
+    <div class="tb-search">Поиск по контрагенту, назначению…</div>
+    <button class="btn-primary" onclick="openImp()">+ Импорт выписки</button>
+  </div>
+
+  <div class="bank-cards">
+    <div class="bank-card" style="background:linear-gradient(135deg,#1f9d57,#0c6b3a)">
+      <div class="bc-top"><span class="bc-bank">Сбербанк</span><span class="bc-chip"></span></div>
+      <div class="bc-bal">1 284 500 ₽</div>
+      <div class="bc-bottom"><span class="bc-num">•••• 7781</span><span class="bc-badge">2 не разнесено</span></div>
+    </div>
+    <div class="bank-card" style="background:linear-gradient(135deg,#5b6cff,#8a3ffc)">
+      <div class="bc-top"><span class="bc-bank">Точка</span><span class="bc-chip"></span></div>
+      <div class="bc-bal">642 300 ₽</div>
+      <div class="bc-bottom"><span class="bc-num">•••• 5512</span><span class="bc-badge">1 не разнесено</span></div>
+    </div>
+    <div class="bank-card" style="background:linear-gradient(135deg,#2b2b30,#e0203a)">
+      <div class="bc-top"><span class="bc-bank">Альфа-Банк</span><span class="bc-chip"></span></div>
+      <div class="bc-bal">318 900 ₽</div>
+      <div class="bc-bottom"><span class="bc-num">•••• 3390</span><span class="bc-ok">всё разнесено</span></div>
+    </div>
+  </div>
+
+  <div class="toolbar" style="margin-top:18px">
+    <h2 class="sec-h">Операции</h2>
+    <div class="seg" style="margin-left:auto"><button class="on">Все</button><button>Не разнесено<span class="seg-dot">3</span></button><button>Приход</button><button>Расход</button></div>
+  </div>
+
+  <div class="op-list glass">
+    <div class="op-row" onclick="openRec('+ 236 000 ₽','ООО Строймонтаж · 27.06.2026')"><div class="op-av op-av--in">СТ</div><div><div class="op-party">ООО Строймонтаж</div><div class="op-purpose">Оплата по счёту ИН-0029 · Сбер · 7781</div></div><div class="op-meta"><span class="pill pill--ok">Разнесено</span><span class="op-link">Продажа ИН-0029</span></div><div class="op-amt" style="color:var(--income)">+ 236 000 ₽</div></div>
+    <div class="op-row" onclick="openRec('+ 60 000 ₽','ИП Васильев · 27.06.2026')"><div class="op-av op-av--in">ВА</div><div><div class="op-party">ИП Васильев</div><div class="op-purpose">Аванс по договору · Точка · 5512</div></div><div class="op-meta"><span class="pill pill--warn">Частично</span><span class="op-link">Продажа ИН-0030</span></div><div class="op-amt" style="color:var(--income)">+ 60 000 ₽</div></div>
+    <div class="op-row" onclick="openRec('+ 97 797 ₽','Эквайринг (Точка) · 26.06.2026')"><div class="op-av op-av--in">ЭК</div><div><div class="op-party">Эквайринг (Точка)</div><div class="op-purpose">Зачисление по картам 24.06 · Точка · 5512</div></div><div class="op-meta"><span class="pill pill--bad">Не разнесено</span></div><div class="op-amt" style="color:var(--income)">+ 97 797 ₽</div></div>
+    <div class="op-row" onclick="openRec('− 184 000 ₽','ИП Сидоров · 24.06.2026')"><div class="op-av op-av--out">СИ</div><div><div class="op-party">ИП Сидоров</div><div class="op-purpose">Оплата поставки ИН-0042 · Сбер · 7781</div></div><div class="op-meta"><span class="pill pill--ok">Разнесено</span><span class="op-link">Поставка ИН-0042</span></div><div class="op-amt">− 184 000 ₽</div></div>
+    <div class="op-row" onclick="openRec('− 200 000 ₽','Между своими счетами · 22.06.2026')"><div class="op-av op-av--out">МС</div><div><div class="op-party">Между своими счетами</div><div class="op-purpose">Перевод Сбер → Точка · Сбер · 7781</div></div><div class="op-meta"><span class="pill pill--ok">Разнесено</span><span class="op-link">Перевод</span></div><div class="op-amt">− 200 000 ₽</div></div>
+    <div class="op-row" onclick="openRec('− 45 000 ₽','ООО Деловые Сети · 20.06.2026')"><div class="op-av op-av--out">ДЕ</div><div><div class="op-party">ООО Деловые Сети</div><div class="op-purpose">Аренда офиса, июнь · Альфа · 3390</div></div><div class="op-meta"><span class="pill pill--ok">Разнесено</span><span class="op-link">Статья: Аренда</span></div><div class="op-amt">− 45 000 ₽</div></div>
+    <div class="op-row" onclick="openRec('− 8 400 ₽','ПАО Ростелеком · 19.06.2026')"><div class="op-av op-av--out">РО</div><div><div class="op-party">ПАО Ростелеком</div><div class="op-purpose">Услуги связи · Сбер · 7781</div></div><div class="op-meta"><span class="pill pill--bad">Не разнесено</span></div><div class="op-amt">− 8 400 ₽</div></div>
+    <div class="op-foot"><span>Приход: <b style="color:var(--income)">393 797 ₽</b></span><span>Расход: <b>437 400 ₽</b></span></div>
+  </div>
+</main>
+
+<!-- Reconcile -->
+<div class="modal-ov" id="rov" onclick="if(event.target===this)closeRec()">
+  <div class="modal-box glass-strong">
+    <div class="modal-head"><div><div class="dt" id="rec-amt">+ 97 797 ₽</div><div class="ds" id="rec-sub">Эквайринг (Точка) · 26.06.2026</div></div><button class="modal-x" onclick="closeRec()">×</button></div>
+    <div class="modal-body">
+      <div class="rec-line">
+        <div class="rec-l">Назначение</div><div class="rec-v">Зачисление по картам 24.06</div>
+        <div class="rec-l">Счёт</div><div class="rec-v">Точка · 5512</div>
+        <div class="rec-l">Статус</div><div class="rec-v"><span class="pill pill--bad">Не разнесено</span></div>
+      </div>
+      <div class="rec-note"><span>⚠</span><span>Эквайринг: банк зачислил за вычетом комиссии ~1,22%. Разница в пределах допуска уйдёт на статью «Эквайринг» автоматически при сопоставлении.</span></div>
+      <div>
+        <span class="h2">Кандидаты-документы</span>
+        <div class="cand cand--best"><div class="cand-r"><div class="cand-tick">✓</div><div><div class="cand-doc">Продажа ИН-0031</div><div class="cand-sub">ООО Строймонтаж · совпадение по ИНН + сумме</div></div><button class="cand-btn">Привязать</button></div></div>
+        <div class="cand"><div class="cand-r"><div class="cand-tick cand-tick--off"></div><div><div class="cand-doc">Продажа ИН-0028</div><div class="cand-sub">другой контрагент · сумма близка</div></div><button class="cand-btn cand-btn--ghost">Привязать</button></div></div>
+      </div>
+      <div class="fld"><label>Или отнести на статью</label><select><option>— выбрать статью —</option><option>Аренда</option><option>Связь и интернет</option><option>Эквайринг</option><option>Прочие расходы</option><option>Перевод между счетами</option></select></div>
+    </div>
+    <div class="modal-foot"><button class="btn-primary" style="flex:1;justify-content:center">Разнести</button><button class="btn-ghost">Игнорировать</button></div>
+  </div>
+</div>
+
+<!-- Import -->
+<div class="modal-ov" id="iov" onclick="if(event.target===this)closeImp()">
+  <div class="modal-box glass-strong">
+    <div class="modal-head"><div><div class="dt">Импорт выписки</div><div class="ds">Формат 1CClientBankExchange (Windows-1251)</div></div><button class="modal-x" onclick="closeImp()">×</button></div>
+    <div class="modal-body">
+      <div style="border:2px dashed var(--glass-border);border-radius:16px;padding:28px;text-align:center">
+        <div style="font-size:15px;font-weight:600">Перетащите файл выписки сюда</div>
+        <div style="font-size:13px;color:var(--ink-3);margin-top:4px">или нажмите, чтобы выбрать .txt от банк-клиента</div>
+      </div>
+      <div>
+        <span class="h2">Превью батча</span>
+        <div class="rec-line">
+          <div class="rec-l">Период</div><div class="rec-v">01.06.2026 — 27.06.2026</div>
+          <div class="rec-l">Счёт</div><div class="rec-v">Сбер · 7781</div>
+          <div class="rec-l">Строк</div><div class="rec-v">42 <span style="color:var(--ink-3)">(3 дубликата пропущены)</span></div>
+          <div class="rec-l">Приход</div><div class="rec-v" style="color:var(--income)">1 340 000 ₽</div>
+          <div class="rec-l">Расход</div><div class="rec-v">870 500 ₽</div>
+          <div class="rec-l">Баланс</div><div class="rec-v">815 000 ₽ → 1 284 500 ₽</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn-primary" style="flex:1;justify-content:center">Применить батч</button><button class="btn-ghost" onclick="closeImp()">Отмена</button></div>
+  </div>
+</div>
+
+<button class="themebtn" onclick="(function(){var r=document.documentElement;var t=r.getAttribute('data-theme');var n=t==='dark'?'light':(t==='light'?'dark':'dark');r.setAttribute('data-theme',n);this.textContent=n==='dark'?'☾ Тёмная':'☀ Светлая';}).call(this)">Сменить тему</button>
+<script>
+function openRec(amt,sub){document.getElementById('rec-amt').textContent=amt;document.getElementById('rec-sub').textContent=sub;document.getElementById('rov').classList.add('open');}
+function closeRec(){document.getElementById('rov').classList.remove('open');}
+function openImp(){document.getElementById('iov').classList.add('open');}
+function closeImp(){document.getElementById('iov').classList.remove('open');}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeRec();closeImp();}});
+</script>
+</body>
+</html>
