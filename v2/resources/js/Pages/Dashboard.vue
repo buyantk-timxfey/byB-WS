@@ -43,6 +43,16 @@ const warehouse = {
     ],
 };
 
+const mailboxes = [
+    { addr: 'info@bybuka.ru', unread: 3, letters: [
+        { from: 'ООО Электро', sub: 'Счёт на оплату №1242' },
+        { from: 'ИП Сидоров', sub: 'Отгрузка готова, трек 1Z…' },
+    ] },
+    { addr: 'zakaz@bybuka.ru', unread: 1, letters: [
+        { from: 'ООО Лайт', sub: 'Запрос КП на насосы Grundfos' },
+    ] },
+];
+
 const tx = [
     { who: 'ООО Электро', cat: 'Продажа', amount: 184000, kind: 'in' },
     { who: 'ИП Сидоров', cat: 'Закупка', amount: -96500, kind: 'out' },
@@ -157,6 +167,20 @@ const tx = [
                             </div>
                         </div>
                         <span class="text-[14px] font-semibold tnum">{{ money(p.cost) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Почта по ящикам -->
+            <div class="glass w-pad wgt-l">
+                <span class="h2">Почта</span>
+                <div v-for="(mb, idx) in mailboxes" :key="mb.addr" :style="idx ? 'margin-top:16px' : 'margin-top:10px'">
+                    <div class="flex items-center justify-between" style="margin-bottom:4px">
+                        <span class="text-[13px] font-semibold">{{ mb.addr }}</span>
+                        <span class="pill" style="background:rgba(10,132,255,.18);color:#0a84ff">{{ mb.unread }} нов.</span>
+                    </div>
+                    <div v-for="(lt, i) in mb.letters" :key="i" class="mletter">
+                        <b>{{ lt.from }}</b> · {{ lt.sub }}
                     </div>
                 </div>
             </div>
