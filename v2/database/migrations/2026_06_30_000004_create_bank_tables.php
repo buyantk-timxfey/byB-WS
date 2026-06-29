@@ -45,7 +45,7 @@ return new class extends Migration
         Schema::create('bank_matches', function (Blueprint $t) {
             $t->id();
             $t->foreignId('bank_line_id')->constrained('bank_lines')->cascadeOnDelete();
-            $t->enum('target_type', ['sale', 'shipment', 'expense_article', 'transfer', 'other']);
+            $t->enum('target_type', ['sale', 'shipment', 'expense_article', 'acquiring', 'transfer', 'other']);
             $t->unsignedBigInteger('target_id')->nullable();   // id продажи/поставки/статьи/счёта-пары
             $t->decimal('amount', 14, 2);
             $t->timestamps();

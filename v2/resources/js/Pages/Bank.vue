@@ -1,61 +1,71 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
+import { money, signed, initials } from '@/lib/format';
 
-const money = (n: number) => new Intl.NumberFormat('ru-RU').format(Math.round(n)) + ' ₽';
-const signed = (n: number) => (n > 0 ? '+ ' : '− ') + new Intl.NumberFormat('ru-RU').format(Math.abs(Math.round(n))) + ' ₽';
+type Line = { id: number; date: string; party: string; purpose: string | null; account: string; amount: number; status: string; inn: string | null; link: string | null };
+type Doc = { id: number; number: string; party: string; sum: number; debt: number; inn: string | null };
 
-type Acc = { id: string; bank: string; last4: string; balance: number; unmatched: number; grad: string };
-const accounts = ref<Acc[]>([
-    { id: 'sber', bank: 'Сбербанк', last4: '7781', balance: 1284500, unmatched: 2, grad: 'linear-gradient(135deg,#1f9d57,#0c6b3a)' },
-    { id: 'tochka', bank: 'Точка', last4: '5512', balance: 642300, unmatched: 1, grad: 'linear-gradient(135deg,#5b6cff,#8a3ffc)' },
-    { id: 'alfa', bank: 'Альфа-Банк', last4: '3390', balance: 318900, unmatched: 0, grad: 'linear-gradient(135deg,#2b2b30,#e0203a)' },
-]);
-
-type Op = {
-    id: number; date: string; party: string; purpose: string; acc: string; amount: number;
-    status: 'matched' | 'unmatched' | 'partial' | 'ignore'; link: string; acquiring: boolean;
-};
-const ops = ref<Op[]>([
-    { id: 1, date: '27.06.2026', party: 'ООО Строймонтаж', purpose: 'Оплата по счёту ИН-0029', acc: 'Сбер · 7781', amount: 236000, status: 'matched', link: 'Продажа ИН-0029', acquiring: false },
-    { id: 2, date: '27.06.2026', party: 'ИП Васильев', purpose: 'Аванс по договору', acc: 'Точка · 5512', amount: 60000, status: 'partial', link: 'Продажа ИН-0030', acquiring: false },
-    { id: 3, date: '26.06.2026', party: 'Эквайринг (Точка)', purpose: 'Зачисление по картам 24.06', acc: 'Точка · 5512', amount: 97797, status: 'unmatched', link: '', acquiring: true },
-    { id: 4, date: '24.06.2026', party: 'ИП Сидоров', purpose: 'Оплата поставки ИН-0042', acc: 'Сбер · 7781', amount: -184000, status: 'matched', link: 'Поставка ИН-0042', acquiring: false },
-    { id: 5, date: '22.06.2026', party: 'Между своими счетами', purpose: 'Перевод Сбер → Точка', acc: 'Сбер · 7781', amount: -200000, status: 'matched', link: 'Перевод', acquiring: false },
-    { id: 6, date: '20.06.2026', party: 'ООО Деловые Сети', purpose: 'Аренда офиса, июнь', acc: 'Альфа · 3390', amount: -45000, status: 'matched', link: 'Статья: Аренда', acquiring: false },
-    { id: 7, date: '19.06.2026', party: 'ПАО Ростелеком', purpose: 'Услуги связи', acc: 'Сбер · 7781', amount: -8400, status: 'unmatched', link: '', acquiring: false },
-]);
+const props = defineProps<{
+    accounts: any[]; lines: Line[]; articles: { id: number; name: string }[];
+    openSales: Doc[]; openShipments: Doc[]; importAccounts: { id: number; name: string }[];
+}>();
 
 const seg = ref<'all' | 'unmatched' | 'in' | 'out'>('all');
 const q = ref('');
-const rows = computed(() => ops.value.filter((o) => {
+const rows = computed(() => props.lines.filter((o) => {
     if (seg.value === 'unmatched' && (o.status === 'matched' || o.status === 'ignore')) return false;
     if (seg.value === 'in' && o.amount < 0) return false;
     if (seg.value === 'out' && o.amount > 0) return false;
-    if (q.value && !(`${o.party} ${o.purpose}`.toLowerCase().includes(q.value.toLowerCase()))) return false;
+    if (q.value && !(`${o.party} ${o.purpose ?? ''}`.toLowerCase().includes(q.value.toLowerCase()))) return false;
     return true;
 }));
-
 const totalIn = computed(() => rows.value.filter((o) => o.amount > 0).reduce((a, o) => a + o.amount, 0));
 const totalOut = computed(() => rows.value.filter((o) => o.amount < 0).reduce((a, o) => a + Math.abs(o.amount), 0));
-const unmatchedCount = computed(() => ops.value.filter((o) => o.status === 'unmatched' || o.status === 'partial').length);
+const unmatchedCount = computed(() => props.lines.filter((o) => o.status === 'unmatched' || o.status === 'partial').length);
+const statusPill = (s: string) => ({ matched: { t: 'Разнесено', v: 'ok' }, partial: { t: 'Частично', v: 'warn' }, unmatched: { t: 'Не разнесено', v: 'bad' }, ignore: { t: 'Игнор', v: 'neutral' } } as any)[s];
 
-const statusPill = (s: Op['status']) => ({
-    matched: { t: 'Разнесено', v: 'ok' }, partial: { t: 'Частично', v: 'warn' },
-    unmatched: { t: 'Не разнесено', v: 'bad' }, ignore: { t: 'Игнор', v: 'neutral' },
-} as const)[s];
-
-const initials = (s: string) => s.replace(/^(ООО|ИП|ПАО|АО)\s+/, '').trim().slice(0, 2).toUpperCase();
-
+// ── Сверка ──
 const open = ref(false);
-const cur = ref<Op | null>(null);
-function reconcile(o: Op) { cur.value = o; open.value = true; }
+const cur = ref<Line | null>(null);
+const sel = ref<{ target_type: string; target_id: number | null; amount: number } | null>(null);
+const candidates = computed<Doc[]>(() => cur.value ? (cur.value.amount > 0 ? props.openSales : props.openShipments) : []);
 
+function reconcile(l: Line) {
+    cur.value = l;
+    sel.value = null;
+    open.value = true;
+}
+function pickDoc(d: Doc) {
+    if (!cur.value) return;
+    sel.value = { target_type: cur.value.amount > 0 ? 'sale' : 'shipment', target_id: d.id, amount: Math.min(Math.abs(cur.value.amount), d.debt) };
+}
+function pickArticle(id: number) {
+    if (!cur.value) return;
+    sel.value = { target_type: 'expense_article', target_id: id, amount: Math.abs(cur.value.amount) };
+}
+function pickTransfer() {
+    if (!cur.value) return;
+    sel.value = { target_type: 'transfer', target_id: null, amount: Math.abs(cur.value.amount) };
+}
+function applyReconcile() {
+    if (!cur.value || !sel.value) return;
+    router.post(`/bank/lines/${cur.value.id}/reconcile`, { matches: [sel.value] }, { onSuccess: () => { open.value = false; } });
+}
+function ignore() {
+    if (!cur.value) return;
+    router.post(`/bank/lines/${cur.value.id}/ignore`, {}, { onSuccess: () => { open.value = false; } });
+}
+
+// ── Импорт ──
 const imp = ref(false);
+const importForm = useForm<{ file: File | null; account_id: number | null }>({ file: null, account_id: props.importAccounts[0]?.id ?? null });
+function onFile(e: Event) { importForm.file = (e.target as HTMLInputElement).files?.[0] ?? null; }
+function doImport() { importForm.post('/bank/import', { forceFormData: true, onSuccess: () => { imp.value = false; importForm.reset(); } }); }
 </script>
 
 <template>
@@ -70,23 +80,19 @@ const imp = ref(false);
             <button class="btn-primary pressable" @click="imp = true"><Icon name="plus" :size="17" /> Импорт выписки</button>
         </div>
 
-        <!-- Счета — премиальные карточки -->
         <div class="bank-cards">
-            <div v-for="a in accounts" :key="a.id" class="bank-card" :style="{ background: a.grad }">
-                <div class="bc-top">
-                    <span class="bc-bank">{{ a.bank }}</span>
-                    <span class="bc-chip"></span>
-                </div>
+            <div v-for="a in accounts" :key="a.id" class="bank-card" :style="{ background: a.color || 'linear-gradient(135deg,#2b2b30,#4b4b52)' }">
+                <div class="bc-top"><span class="bc-bank">{{ a.bank || a.name }}</span><span class="bc-chip"></span></div>
                 <div class="bc-bal tnum">{{ money(a.balance) }}</div>
                 <div class="bc-bottom">
-                    <span class="bc-num">•••• {{ a.last4 }}</span>
+                    <span class="bc-num">{{ a.last4 ? '•••• ' + a.last4 : a.type }}</span>
                     <span v-if="a.unmatched" class="bc-badge">{{ a.unmatched }} не разнесено</span>
                     <span v-else class="bc-ok">всё разнесено</span>
                 </div>
             </div>
+            <div v-if="!accounts.length" class="text-ink-3" style="padding:20px">Добавьте счёт в Справочниках.</div>
         </div>
 
-        <!-- Лента операций -->
         <div class="toolbar" style="margin-top:18px">
             <h2 class="sec-h">Операции</h2>
             <div class="seg" style="margin-left:auto">
@@ -102,7 +108,7 @@ const imp = ref(false);
                 <div class="op-av" :class="o.amount > 0 ? 'op-av--in' : 'op-av--out'">{{ initials(o.party) }}</div>
                 <div class="op-main">
                     <div class="op-party">{{ o.party }}</div>
-                    <div class="op-purpose">{{ o.purpose }} · {{ o.acc }}</div>
+                    <div class="op-purpose">{{ o.purpose }} · {{ o.account }}</div>
                 </div>
                 <div class="op-meta">
                     <StatusPill :text="statusPill(o.status).t" :variant="statusPill(o.status).v" />
@@ -110,76 +116,63 @@ const imp = ref(false);
                 </div>
                 <div class="op-amt tnum" :style="o.amount > 0 ? { color: 'var(--income)' } : {}">{{ signed(o.amount) }}</div>
             </div>
-            <div v-if="!rows.length" class="j-empty">Ничего не найдено</div>
+            <div v-if="!rows.length" class="j-empty">Операций нет — импортируйте выписку</div>
             <div v-if="rows.length" class="op-foot">
                 <span>Приход: <b :style="{ color: 'var(--income)' }">{{ money(totalIn) }}</b></span>
                 <span>Расход: <b>{{ money(totalOut) }}</b></span>
             </div>
         </div>
 
-        <!-- Экран сверки -->
+        <!-- Сверка -->
         <AppModal :open="open" :title="cur ? signed(cur.amount) : ''" :subtitle="cur ? cur.party + ' · ' + cur.date : ''" @close="open = false">
             <template v-if="cur">
                 <div class="rec-line">
                     <div class="rec-l">Назначение</div><div class="rec-v">{{ cur.purpose }}</div>
-                    <div class="rec-l">Счёт</div><div class="rec-v">{{ cur.acc }}</div>
-                    <div class="rec-l">Статус</div><div class="rec-v"><StatusPill :text="statusPill(cur.status).t" :variant="statusPill(cur.status).v" /></div>
+                    <div class="rec-l">Счёт</div><div class="rec-v">{{ cur.account }}</div>
                 </div>
-
-                <div v-if="cur.acquiring" class="rec-note">
-                    <Icon name="alert" :size="16" />
-                    <span>Эквайринг: банк зачислил за вычетом комиссии ~1,22%. Разница в пределах допуска уйдёт на статью «Эквайринг» автоматически при сопоставлении.</span>
-                </div>
-
                 <div>
-                    <span class="h2">Кандидаты-документы</span>
-                    <div class="cand cand--best">
+                    <span class="h2">{{ cur.amount > 0 ? 'Продажи с долгом' : 'Поставки с долгом' }}</span>
+                    <div v-for="d in candidates" :key="d.id" class="cand" :class="{ 'cand--best': sel?.target_id === d.id && (sel?.target_type==='sale'||sel?.target_type==='shipment') }" @click="pickDoc(d)" style="cursor:pointer">
                         <div class="cand-r">
-                            <div class="cand-tick">✓</div>
-                            <div><div class="cand-doc">{{ cur.amount > 0 ? 'Продажа ИН-0031' : 'Поставка ИН-0044' }}</div><div class="cand-sub">{{ cur.amount > 0 ? 'ООО Строймонтаж' : 'ООО Профиль' }} · совпадение по ИНН + сумме</div></div>
-                            <button class="btn-primary pressable" style="padding:7px 14px">Привязать</button>
+                            <div class="cand-tick" :class="{ 'cand-tick--off': !(sel?.target_id === d.id) }">{{ sel?.target_id === d.id ? '✓' : '' }}</div>
+                            <div><div class="cand-doc">{{ d.number }} · {{ d.party }}</div><div class="cand-sub">долг {{ money(d.debt) }}<span v-if="d.inn && cur.inn === d.inn"> · совпадение по ИНН</span></div></div>
+                            <span class="tnum">{{ money(d.debt) }}</span>
                         </div>
                     </div>
-                    <div class="cand">
-                        <div class="cand-r">
-                            <div class="cand-tick cand-tick--off"></div>
-                            <div><div class="cand-doc">{{ cur.amount > 0 ? 'Продажа ИН-0028' : 'Поставка ИН-0041' }}</div><div class="cand-sub">другой контрагент · сумма близка</div></div>
-                            <button class="btn-ghost pressable" style="padding:7px 14px">Привязать</button>
-                        </div>
-                    </div>
+                    <div v-if="!candidates.length" class="text-ink-3" style="font-size:13px;padding:8px 0">Нет подходящих документов с долгом.</div>
                 </div>
-
-                <div class="fld">
+                <div class="fld" v-if="cur.amount < 0">
                     <label>Или отнести на статью</label>
-                    <select><option>— выбрать статью —</option><option>Аренда</option><option>Связь и интернет</option><option>Эквайринг</option><option>Прочие расходы</option><option>Перевод между счетами</option></select>
+                    <select @change="pickArticle(Number(($event.target as HTMLSelectElement).value))">
+                        <option value="">— выбрать статью —</option>
+                        <option v-for="a in articles" :key="a.id" :value="a.id">{{ a.name }}</option>
+                    </select>
+                </div>
+                <button class="link-btn" @click="pickTransfer">Это перевод между своими счетами</button>
+                <div v-if="sel" class="rec-note" style="background:rgba(52,199,89,.12);border-color:rgba(52,199,89,.3);color:var(--income)">
+                    Выбрано: разнести {{ money(sel.amount) }}
                 </div>
             </template>
             <template #footer>
-                <button class="btn-primary pressable" style="flex:1;justify-content:center">Разнести</button>
-                <button class="btn-ghost pressable">Игнорировать</button>
+                <button class="btn-primary pressable" style="flex:1;justify-content:center" :disabled="!sel" @click="applyReconcile">Разнести</button>
+                <button class="btn-ghost pressable" @click="ignore">Игнорировать</button>
             </template>
         </AppModal>
 
-        <!-- Импорт выписки -->
+        <!-- Импорт -->
         <AppModal :open="imp" title="Импорт выписки" subtitle="Формат 1CClientBankExchange (Windows-1251)" @close="imp = false">
-            <div class="drop">
-                <Icon name="wallet" :size="28" class="text-ink-3" />
-                <div class="drop-t">Перетащите файл выписки сюда</div>
-                <div class="drop-s">или нажмите, чтобы выбрать .txt от банк-клиента</div>
+            <div class="fld"><label>Счёт</label>
+                <select v-model="importForm.account_id"><option v-for="a in importAccounts" :key="a.id" :value="a.id">{{ a.name }}</option></select>
             </div>
-            <div>
-                <span class="h2">Превью батча</span>
-                <div class="rec-line">
-                    <div class="rec-l">Период</div><div class="rec-v">01.06.2026 — 27.06.2026</div>
-                    <div class="rec-l">Счёт</div><div class="rec-v">Сбер · 7781</div>
-                    <div class="rec-l">Строк</div><div class="rec-v">42 <span class="text-ink-3">(3 дубликата пропущены)</span></div>
-                    <div class="rec-l">Приход</div><div class="rec-v" :style="{ color: 'var(--income)' }">{{ money(1340000) }}</div>
-                    <div class="rec-l">Расход</div><div class="rec-v">{{ money(870500) }}</div>
-                    <div class="rec-l">Баланс</div><div class="rec-v">{{ money(815000) }} → {{ money(1284500) }}</div>
-                </div>
-            </div>
+            <label class="drop" style="cursor:pointer;display:block">
+                <input type="file" accept=".txt,.1c" class="hidden" @change="onFile" />
+                <Icon name="doc" :size="26" class="text-ink-3" />
+                <div class="drop-t">{{ importForm.file ? importForm.file.name : 'Выберите файл выписки' }}</div>
+                <div class="drop-s">.txt от банк-клиента</div>
+            </label>
+            <div v-if="importForm.progress" class="text-ink-2 text-[13px]">Загрузка… {{ importForm.progress.percentage }}%</div>
             <template #footer>
-                <button class="btn-primary pressable" style="flex:1;justify-content:center">Применить батч</button>
+                <button class="btn-primary pressable" style="flex:1;justify-content:center" :disabled="!importForm.file || !importForm.account_id || importForm.processing" @click="doImport">Импортировать</button>
                 <button class="btn-ghost pressable" @click="imp = false">Отмена</button>
             </template>
         </AppModal>

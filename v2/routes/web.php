@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BankController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReferenceController;
@@ -45,9 +46,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::get('/warehouse', [WarehouseController::class, 'index'])
     ->middleware(['auth', 'verified'])->name('warehouse');
 
-// Банк — свёрстанная страница
-Route::get('/bank', fn () => Inertia::render('Bank'))
-    ->middleware(['auth', 'verified'])->name('bank');
+// Банк — реальные данные (импорт выписки + сверка)
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/bank', [BankController::class, 'index'])->name('bank');
+    Route::post('/bank/import', [BankController::class, 'import']);
+    Route::post('/bank/lines/{line}/reconcile', [BankController::class, 'reconcile']);
+    Route::post('/bank/lines/{line}/ignore', [BankController::class, 'ignore']);
+});
 
 // Финансы — реальные данные (P&L из оборотов)
 Route::get('/finances', [FinanceController::class, 'index'])
