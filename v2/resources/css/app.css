@@ -314,6 +314,11 @@
 .item-row .sub { font-size: 12px; color: var(--ink-3); }
 .btn-ghost { border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); border-radius: 12px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
 
+/* Блок итогов продажи (выручка / себестоимость / прибыль) */
+.sale-sums { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 14px; background: var(--glass-fill); border: 1px solid var(--glass-border); }
+.ss-row { display: flex; align-items: center; justify-content: space-between; }
+.ss-row--total { padding-top: 8px; margin-top: 2px; border-top: 1px solid var(--glass-border); }
+
 /* ── Модалка: центр + zoom (на мобайле — снизу) ── */
 .modal-ov { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: ov-in .2s ease; }
 .modal-box { width: min(640px, 100%); max-height: 86vh; display: flex; flex-direction: column; border-radius: 26px; overflow: hidden; animation: modal-in .26s cubic-bezier(.22,1,.36,1); transform-origin: center; }

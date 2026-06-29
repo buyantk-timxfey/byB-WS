@@ -18,13 +18,16 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// Поступления — свёрстанная страница
+// Поставки — свёрстанная страница
 Route::get('/shipments', fn () => Inertia::render('Shipments'))
     ->middleware(['auth', 'verified'])->name('shipments');
 
+// Продажи — свёрстанная страница
+Route::get('/sales', fn () => Inertia::render('Sales'))
+    ->middleware(['auth', 'verified'])->name('sales');
+
 // Разделы (пока заглушки — будут свёрстаны далее)
 $sections = [
-    'sales'       => 'Продажи',
     'warehouse'   => 'Склад',
     'bank'        => 'Банк',
     'finances'    => 'Финансы',
