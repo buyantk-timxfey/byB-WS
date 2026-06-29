@@ -108,24 +108,6 @@ const tx = [
                 </div>
             </Widget>
 
-            <!-- Долги -->
-            <Widget title="Взаиморасчёты" class="col-span-2 lg:col-span-3">
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="rounded-control p-3" style="background: var(--glass-fill)">
-                        <div class="text-[13px] text-ink-2">Нам должны</div>
-                        <div class="mt-1 text-[22px] font-bold tnum" style="color: var(--income)">
-                            {{ money(428000) }}
-                        </div>
-                    </div>
-                    <div class="rounded-control p-3" style="background: var(--glass-fill)">
-                        <div class="text-[13px] text-ink-2">Мы должны</div>
-                        <div class="mt-1 text-[22px] font-bold tnum" style="color: var(--expense)">
-                            {{ money(213500) }}
-                        </div>
-                    </div>
-                </div>
-            </Widget>
-
             <!-- Трекер поставок -->
             <Widget title="Трекер поставок" class="col-span-2 lg:col-span-3">
                 <div class="flex justify-around">
@@ -138,7 +120,7 @@ const tx = [
             </Widget>
 
             <!-- Банковская лента (Apple Card) -->
-            <Widget title="Последние операции" class="col-span-2 lg:col-span-3">
+            <Widget title="Последние операции" class="col-span-2 lg:col-span-6">
                 <div class="flex flex-col">
                     <div
                         v-for="t in tx"
