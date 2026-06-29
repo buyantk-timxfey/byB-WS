@@ -53,6 +53,14 @@ const mailboxes = [
     ] },
 ];
 
+// Заметки/напоминания: авто (dot+тип) и ручные (checkbox).
+const reminders = [
+    { kind: 'auto', dot: 'var(--expense)', title: 'ООО Электро · долг просрочен', sub: '5 дней · 184 000 ₽' },
+    { kind: 'auto', dot: 'var(--warn)', title: 'Автоматы ABB · ETA истёк', sub: 'поставка просрочена' },
+    { kind: 'auto', dot: '#0a84ff', title: 'Новая выписка', sub: '5 строк не разнесено' },
+    { kind: 'note', dot: '', title: 'Перезвонить в ООО Лайт по КП', sub: 'заметка' },
+];
+
 const tx = [
     { who: 'ООО Электро', cat: 'Продажа', amount: 184000, kind: 'in' },
     { who: 'ИП Сидоров', cat: 'Закупка', amount: -96500, kind: 'out' },
@@ -181,6 +189,24 @@ const tx = [
                     </div>
                     <div v-for="(lt, i) in mb.letters" :key="i" class="mletter">
                         <b>{{ lt.from }}</b> · {{ lt.sub }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Заметки и напоминания -->
+            <div class="glass w-pad wgt-l">
+                <span class="h2">Заметки и напоминания</span>
+                <div class="addnote"><span style="font-size:16px;line-height:1">+</span> Добавить заметку…</div>
+                <div class="txw">
+                    <div v-for="(r, i) in reminders" :key="i" class="t">
+                        <div class="left">
+                            <span v-if="r.kind === 'auto'" class="rdot" :style="`background:${r.dot}`"></span>
+                            <span v-else class="chk"></span>
+                            <div style="min-width:0">
+                                <div class="nm">{{ r.title }}</div>
+                                <div class="cat">{{ r.sub }}</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
