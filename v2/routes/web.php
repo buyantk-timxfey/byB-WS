@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ShipmentController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -18,9 +19,13 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// Поставки — свёрстанная страница
-Route::get('/shipments', fn () => Inertia::render('Shipments'))
-    ->middleware(['auth', 'verified'])->name('shipments');
+// Поставки — реальные данные
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments');
+    Route::post('/shipments', [ShipmentController::class, 'store']);
+    Route::put('/shipments/{shipment}', [ShipmentController::class, 'update']);
+    Route::delete('/shipments/{shipment}', [ShipmentController::class, 'destroy']);
+});
 
 // Продажи — свёрстанная страница
 Route::get('/sales', fn () => Inertia::render('Sales'))
