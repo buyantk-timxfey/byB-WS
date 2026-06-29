@@ -28,10 +28,12 @@ const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
 // Сигнал: неразнесённые строки выписки
 const unrec = { count: 5, amount: 248500 };
 
+// Поставки — каждая отдельным виджетом фикс. размера. Состояния: transit/wait/overdue.
 const shipments = [
-    { name: 'Партия кабеля', cp: 'ООО Электро', pct: 72, color: 'var(--income)' },
-    { name: 'Насосы Grundfos', cp: 'ИП Сидоров', pct: 35, color: 'var(--warn)' },
-    { name: 'Светильники', cp: 'ООО Лайт', pct: 100, color: 'var(--income)' },
+    { name: 'Партия кабеля', cp: 'ООО Электро', pct: 72, color: 'var(--income)', label: '72%', dates: '10.06 → 02.07', status: 'В пути', statusBg: 'rgba(52,199,89,.16)', statusFg: 'var(--income)' },
+    { name: 'Насосы Grundfos', cp: 'ИП Сидоров', pct: 35, color: 'var(--warn)', label: '35%', dates: '20.06 → 10.07', status: 'В пути', statusBg: 'rgba(255,159,10,.16)', statusFg: 'var(--warn)' },
+    { name: 'Кабель-канал', cp: 'ООО Профиль', pct: 0, color: 'var(--ink-3)', label: 'Ожидает', dates: '27.06 → 12.07', status: 'Ожидает', statusBg: 'var(--glass-fill-strong)', statusFg: 'var(--ink-2)' },
+    { name: 'Автоматы ABB', cp: 'ИП Кузнецов', pct: 100, color: 'var(--expense)', label: '✕', dates: '01.06 → 25.06', status: 'Просрочено', statusBg: 'rgba(255,59,48,.16)', statusFg: 'var(--expense)' },
 ];
 
 const tx = [
@@ -69,21 +71,36 @@ const tx = [
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
-            <!-- Сигнал: неразнесённые строки выписки -->
-            <div class="glass pressable col-span-2 flex items-center justify-between gap-3 p-4 lg:col-span-6">
-                <div class="flex items-center gap-3">
-                    <span class="flex h-[38px] w-[38px] items-center justify-center rounded-control" style="background: var(--glass-fill-strong); color: var(--warn)">
-                        <Icon name="alert" :size="20" />
-                    </span>
-                    <div>
-                        <div class="text-[15px] font-semibold">Неразнесённые строки выписки</div>
-                        <div class="text-[13px] text-ink-2">{{ unrec.count }} операций · {{ money(unrec.amount) }} ждут сверки</div>
-                    </div>
+        <!-- Сигнал: неразнесённые строки выписки -->
+        <div class="glass pressable mb-3 flex items-center justify-between gap-3 p-4">
+            <div class="flex items-center gap-3">
+                <span class="flex h-[38px] w-[38px] items-center justify-center rounded-control" style="background: var(--glass-fill-strong); color: var(--warn)">
+                    <Icon name="alert" :size="20" />
+                </span>
+                <div>
+                    <div class="text-[15px] font-semibold">Неразнесённые строки выписки</div>
+                    <div class="text-[13px] text-ink-2">{{ unrec.count }} операций · {{ money(unrec.amount) }} ждут сверки</div>
                 </div>
-                <button class="pressable ink-btn whitespace-nowrap px-4 py-2 text-[14px] font-semibold">Свести</button>
             </div>
+            <button class="pressable ink-btn whitespace-nowrap px-4 py-2 text-[14px] font-semibold">Свести</button>
+        </div>
 
+        <!-- Поставки: каждая — отдельный виджет фиксированного размера -->
+        <div class="mb-3 flex flex-wrap gap-3">
+            <div
+                v-for="s in shipments"
+                :key="s.name"
+                class="glass pressable flex w-[186px] flex-col items-center p-4 text-center"
+            >
+                <div class="text-[11px] text-ink-3">{{ s.cp }}</div>
+                <div class="mb-2 text-[14px] font-semibold leading-tight">{{ s.name }}</div>
+                <Ring :pct="s.pct" :color="s.color" :label="s.label" />
+                <div class="mt-2 text-[11px] text-ink-2">{{ s.dates }}</div>
+                <span class="pill mt-2" :style="`background:${s.statusBg};color:${s.statusFg}`">{{ s.status }}</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
             <!-- Деньги по счетам (Apple Card style) -->
             <Widget title="Деньги по счетам" class="col-span-2 lg:col-span-3">
                 <div class="mb-4 flex items-center justify-between">
@@ -108,19 +125,8 @@ const tx = [
                 </div>
             </Widget>
 
-            <!-- Трекер поставок -->
-            <Widget title="Трекер поставок" class="col-span-2 lg:col-span-3">
-                <div class="flex justify-around">
-                    <div v-for="s in shipments" :key="s.name" class="flex flex-col items-center gap-2 text-center">
-                        <Ring :pct="s.pct" :color="s.color" />
-                        <div class="text-[13px] font-medium leading-tight">{{ s.name }}</div>
-                        <div class="text-[11px] text-ink-3">{{ s.cp }}</div>
-                    </div>
-                </div>
-            </Widget>
-
             <!-- Банковская лента (Apple Card) -->
-            <Widget title="Последние операции" class="col-span-2 lg:col-span-6">
+            <Widget title="Последние операции" class="col-span-2 lg:col-span-3">
                 <div class="flex flex-col">
                     <div
                         v-for="t in tx"
