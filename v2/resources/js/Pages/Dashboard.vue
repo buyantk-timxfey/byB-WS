@@ -7,74 +7,23 @@ import Icon from '@/Components/Icon.vue';
 import Sparkline from '@/Components/Sparkline.vue';
 import Calendar from '@/Components/Calendar.vue';
 
-const money = (n: number) => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
+const money = (n: number) => new Intl.NumberFormat('ru-RU').format(Math.round(n)) + ' ₽';
 
-const kpis = [
-    { label: 'Выручка', value: '1 284 000 ₽', delta: '+12%', down: false, spark: [26, 28, 27, 34, 31, 40, 42, 48], color: 'var(--income)' },
-    { label: 'Прибыль', value: '312 400 ₽', delta: '+8%', down: false, spark: [22, 24, 23, 30, 27, 33, 35, 40], color: 'var(--income)' },
-    { label: 'Маржа', value: '24.3%', delta: '+1.2пп', down: false, spark: [20, 19, 22, 21, 24, 23, 26, 28], color: 'var(--income)' },
-    { label: 'ROI', value: '38%', delta: '+3пп', down: false, spark: [21, 23, 22, 26, 28, 27, 32, 34], color: 'var(--income)' },
-    { label: 'Закупки', value: '972 000 ₽', delta: '+6%', down: true, spark: [30, 28, 31, 26, 27, 24, 25, 22], color: 'var(--expense)' },
-];
+const props = defineProps<{
+    kpis: any[]; accounts: any[]; totalBalance: number; unrec: { count: number; amount: number };
+    shipments: any[]; warehouse: any; mailboxes: any[]; reminders: any[]; tx: any[]; calendarData?: any;
+}>();
 
-const accounts = [
-    { name: 'Тинькофф', balance: 842300 },
-    { name: 'Сбербанк', balance: 156800 },
-    { name: 'Касса', balance: 24500 },
-];
-const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
-const unrec = { count: 5, amount: 248500 };
-
+const kpis = props.kpis;
+const accounts = props.accounts;
+const totalBalance = props.totalBalance;
+const unrec = props.unrec;
+const shipments = props.shipments;
+const warehouse = props.warehouse;
+const mailboxes = props.mailboxes;
+const reminders = props.reminders;
+const tx = props.tx;
 const C = 214;
-const shipments = [
-    { cp: 'ИП Кузнецов', name: 'Автоматы ABB', kind: 'overdue', pct: 100, color: 'var(--expense)', dates: '01.06 → 25.06' },
-    { cp: 'ИП Сидоров', name: 'Насосы Grundfos', kind: 'pct', pct: 35, color: 'var(--warn)', dates: '20.06 → 10.07' },
-    { cp: 'ИП Орлов', name: 'Щиты ЩРН-48', kind: 'pct', pct: 48, color: 'var(--warn)', dates: '22.06 → 11.07' },
-    { cp: 'ООО Метком', name: 'Лотки металл.', kind: 'pct', pct: 60, color: 'var(--income)', dates: '18.06 → 08.07' },
-    { cp: 'ООО Электро', name: 'Партия кабеля', kind: 'pct', pct: 72, color: 'var(--income)', dates: '10.06 → 02.07' },
-    { cp: 'ООО Лайт', name: 'Светильники LED', kind: 'pct', pct: 90, color: 'var(--income)', dates: '12.06 → 03.07' },
-    { cp: 'ООО Профиль', name: 'Кабель-канал', kind: 'wait', pct: 0, color: 'var(--ink-3)', dates: '27.06 → 12.07' },
-    { cp: 'ООО Электро', name: 'Розетки Legrand', kind: 'wait', pct: 0, color: 'var(--ink-3)', dates: '28.06 → 14.07' },
-];
-
-const warehouse = {
-    frozen: 1480000, positions: 48,
-    stale: [
-        { name: 'Автоматы ABB', days: 95, cost: 142000, warn: true },
-        { name: 'Кабель ВВГ 3×2.5', days: 62, cost: 88000, warn: true },
-        { name: 'Светильники LED', days: 47, cost: 54000, warn: false },
-    ],
-};
-
-const mailboxes = [
-    { addr: 'info@bybuka.ru', unread: 3, letters: [
-        { from: 'ООО Электро', sub: 'Счёт на оплату №1242' },
-        { from: 'ИП Сидоров', sub: 'Отгрузка готова, трек 1Z…' },
-    ] },
-    { addr: 'zakaz@bybuka.ru', unread: 1, letters: [
-        { from: 'ООО Лайт', sub: 'Запрос КП на насосы Grundfos' },
-    ] },
-    { addr: 'buh@bybuka.ru', unread: 2, letters: [
-        { from: 'ФНС', sub: 'Уведомление о приёме декларации' },
-        { from: 'Банк Точка', sub: 'Выписка за июнь готова' },
-    ] },
-];
-
-const reminders = [
-    { kind: 'auto', dot: 'var(--expense)', title: 'ООО Электро · долг просрочен', sub: '5 дней · 184 000 ₽' },
-    { kind: 'auto', dot: 'var(--warn)', title: 'Автоматы ABB · ETA истёк', sub: 'поставка просрочена' },
-    { kind: 'auto', dot: '#0a84ff', title: 'Новая выписка', sub: '5 строк не разнесено' },
-    { kind: 'note', dot: '', title: 'Перезвонить в ООО Лайт по КП', sub: 'заметка' },
-    { kind: 'note', dot: '', title: 'Заказать упаковку', sub: 'заметка' },
-];
-
-const tx = [
-    { who: 'ООО Электро', cat: 'Продажа', amount: 184000, kind: 'in' },
-    { who: 'ИП Сидоров', cat: 'Закупка', amount: -96500, kind: 'out' },
-    { who: 'Аренда склада', cat: 'Расход', amount: -45000, kind: 'out' },
-    { who: 'ООО Лайт', cat: 'Продажа', amount: 62300, kind: 'in' },
-    { who: 'Эквайринг', cat: 'Комиссия', amount: -2245, kind: 'out' },
-];
 
 // ── Настройка виджетов: скрыть/показать + порядок (localStorage) ──
 const editMode = ref(false);
