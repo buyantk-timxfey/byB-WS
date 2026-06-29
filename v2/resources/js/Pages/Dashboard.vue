@@ -26,11 +26,16 @@ const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
 const unrec = { count: 5, amount: 248500 };
 
 const C = 214; // длина окружности r=34
+// Поставки в работе — сортировка по срочности (просрочено → скоро ETA → ожидает).
 const shipments = [
-    { cp: 'ООО Электро', name: 'Партия кабеля', kind: 'pct', pct: 72, color: 'var(--income)', dates: '10.06 → 02.07' },
-    { cp: 'ИП Сидоров', name: 'Насосы Grundfos', kind: 'pct', pct: 35, color: 'var(--warn)', dates: '20.06 → 10.07' },
-    { cp: 'ООО Профиль', name: 'Кабель-канал', kind: 'wait', pct: 0, color: 'var(--ink-3)', dates: '27.06 → 12.07' },
     { cp: 'ИП Кузнецов', name: 'Автоматы ABB', kind: 'overdue', pct: 100, color: 'var(--expense)', dates: '01.06 → 25.06' },
+    { cp: 'ИП Сидоров', name: 'Насосы Grundfos', kind: 'pct', pct: 35, color: 'var(--warn)', dates: '20.06 → 10.07' },
+    { cp: 'ИП Орлов', name: 'Щиты ЩРН-48', kind: 'pct', pct: 48, color: 'var(--warn)', dates: '22.06 → 11.07' },
+    { cp: 'ООО Метком', name: 'Лотки металл.', kind: 'pct', pct: 60, color: 'var(--income)', dates: '18.06 → 08.07' },
+    { cp: 'ООО Электро', name: 'Партия кабеля', kind: 'pct', pct: 72, color: 'var(--income)', dates: '10.06 → 02.07' },
+    { cp: 'ООО Лайт', name: 'Светильники LED', kind: 'pct', pct: 90, color: 'var(--income)', dates: '12.06 → 03.07' },
+    { cp: 'ООО Профиль', name: 'Кабель-канал', kind: 'wait', pct: 0, color: 'var(--ink-3)', dates: '27.06 → 12.07' },
+    { cp: 'ООО Электро', name: 'Розетки Legrand', kind: 'wait', pct: 0, color: 'var(--ink-3)', dates: '28.06 → 14.07' },
 ];
 
 const warehouse = {
@@ -86,19 +91,26 @@ const tx = [
             </div>
         </div>
 
-        <!-- Ряд 2: сигнал (M) + поставки (S) -->
+        <!-- Сигнал-баннер: неразнесённые строки -->
         <div class="sec">
-            <div class="glass w-pad wgt-m pressable" style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px">
+            <div class="glass banner pressable">
                 <div class="flex items-center gap-3" style="min-width:0">
                     <span class="chip" style="width:38px;height:38px;color:var(--warn)"><Icon name="alert" :size="20" /></span>
                     <div style="min-width:0">
-                        <div class="text-[14px] font-semibold">Неразнесённые строки</div>
-                        <div class="text-[12px] text-ink-2">{{ unrec.count }} операций · {{ money(unrec.amount) }}</div>
+                        <div class="text-[15px] font-semibold">Неразнесённые строки выписки</div>
+                        <div class="text-[13px] text-ink-2">{{ unrec.count }} операций · {{ money(unrec.amount) }} ждут сверки</div>
                     </div>
                 </div>
                 <button class="inkbtn pressable">Свести</button>
             </div>
+        </div>
 
+        <!-- Поставки: горизонтальная лента (сортировка по срочности) -->
+        <div class="ships-head">
+            <div><span class="ttl">Поставки в работе</span><span class="cnt">{{ shipments.length }}</span></div>
+            <a href="/shipments">Все →</a>
+        </div>
+        <div class="ships-scroll">
             <div v-for="s in shipments" :key="s.name" class="glass w-pad wgt-s shipw pressable">
                 <div class="cp">{{ s.cp }}</div>
                 <div class="nm">{{ s.name }}</div>

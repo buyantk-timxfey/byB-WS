@@ -97,6 +97,35 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
 /* Сигнал (M) */
 .signal{flex-direction:row;align-items:center;justify-content:space-between;gap:12px}
 
+/* Сигнал-баннер (full) */
+.banner{width:100%;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px}
+
+/* Поставки: горизонтальная лента */
+.ships-head{display:flex;align-items:center;justify-content:space-between;max-width:1240px;margin:0 auto 8px;padding:0 14px}
+.ships-head .ttl{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)}
+.ships-head .cnt{background:var(--glass-fill-strong);color:var(--ink);border-radius:999px;font-size:12px;font-weight:700;padding:1px 8px;margin-left:8px}
+.ships-head a{font-size:13px;font-weight:600;color:var(--ink-2);text-decoration:none}
+.ships-scroll{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;max-width:1240px;margin:0 auto 18px;padding:2px 14px 8px}
+.ships-scroll::-webkit-scrollbar{height:6px}
+.ships-scroll::-webkit-scrollbar-thumb{background:var(--glass-border);border-radius:3px}
+.ships-scroll .s{scroll-snap-align:start;flex:0 0 168px}
+
+/* Глобальный поиск (оверлей) */
+.search-ov{position:fixed;inset:0;z-index:80;display:none;justify-content:center;align-items:flex-start;padding-top:12vh;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.search-ov.open{display:flex}
+.search-box{width:min(640px,92vw);max-height:70vh;overflow:hidden;display:flex;flex-direction:column;border-radius:20px;padding:8px}
+.search-input{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.search-input input{flex:1;border:0;background:transparent;outline:none;color:var(--ink);font-size:17px;font-family:inherit}
+.search-input input::placeholder{color:var(--ink-3)}
+.search-input .kbd{font-size:11px;color:var(--ink-3);border:1px solid var(--glass-border);border-radius:6px;padding:2px 6px}
+.search-res{overflow-y:auto;padding:4px}
+.search-grp{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);padding:10px 12px 4px}
+.search-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:12px;cursor:pointer}
+.search-item:hover{background:var(--glass-fill)}
+.search-item .si-ic{width:30px;height:30px;border-radius:9px;background:var(--glass-fill-strong);display:flex;align-items:center;justify-content:center;color:var(--ink-2);flex:none}
+.search-item .si-t{font-size:15px;font-weight:500}
+.search-item .si-s{font-size:12px;color:var(--ink-3)}
+
 /* Заметки (L) */
 .addnote{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:13px;background:var(--glass-fill);color:var(--ink-3);font-size:13px;margin:8px 0 4px;cursor:text}
 .rdot{width:9px;height:9px;border-radius:50%;flex:none}
@@ -147,7 +176,7 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
     <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18v12H3zM3 7l9 6 9-6"/></svg>Почта</a>
   </nav>
   <div class="actions">
-    <button class="icbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/></svg></button>
+    <button class="icbtn" onclick="document.getElementById('search-ov').classList.add('open');setTimeout(function(){var i=document.getElementById('search-inp');if(i)i.focus()},50)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/></svg></button>
     <button class="icbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
   </div>
 </header>
@@ -163,22 +192,28 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
 
   </div>
 
+  <!-- Сигнал: баннер -->
   <div class="sec">
-  <!-- Сигнал (M) -->
-  <div class="w glass m signal">
-    <div style="display:flex;align-items:center;gap:12px;min-width:0">
-      <span class="chip" style="color:var(--warn);width:38px;height:38px"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
-      <div style="min-width:0"><div style="font-weight:600;font-size:14px">Неразнесённые строки</div><div style="font-size:12px;color:var(--ink-2)">5 операций · 248 500 ₽</div></div>
+    <div class="w glass banner">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0">
+        <span class="chip" style="color:var(--warn);width:38px;height:38px"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+        <div style="min-width:0"><div style="font-weight:600;font-size:15px">Неразнесённые строки выписки</div><div style="font-size:13px;color:var(--ink-2)">5 операций · 248 500 ₽ ждут сверки</div></div>
+      </div>
+      <button class="inkbtn">Свести</button>
     </div>
-    <button class="inkbtn">Свести</button>
   </div>
 
-  <!-- Поставки ×4 (S) -->
-  <div class="w glass s ship"><div class="cp">ООО Электро</div><div class="nm">Партия кабеля</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9"/><circle cx="50" cy="50" r="34" fill="none" stroke="var(--income)" stroke-width="9" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="60" transform="rotate(-90 50 50)"/></svg><span>72%</span></div><div class="dates">10.06 → 02.07</div></div>
-  <div class="w glass s ship"><div class="cp">ИП Сидоров</div><div class="nm">Насосы Grundfos</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9"/><circle cx="50" cy="50" r="34" fill="none" stroke="var(--warn)" stroke-width="9" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="139" transform="rotate(-90 50 50)"/></svg><span>35%</span></div><div class="dates">20.06 → 10.07</div></div>
-  <div class="w glass s ship"><div class="cp">ООО Профиль</div><div class="nm">Кабель-канал</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9"/></svg><span style="font-size:11px;color:var(--ink-2)">Ожидает</span></div><div class="dates">27.06 → 12.07</div></div>
-  <div class="w glass s ship"><div class="cp">ИП Кузнецов</div><div class="nm">Автоматы ABB</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--expense)" stroke-width="9"/></svg><span style="font-size:20px;font-weight:700;color:var(--expense)">×</span></div><div class="dates">01.06 → 25.06</div></div>
-
+  <!-- Поставки: горизонтальная лента (сортировка по срочности) -->
+  <div class="ships-head"><div><span class="ttl">Поставки в работе</span><span class="cnt">14</span></div><a href="#">Все →</a></div>
+  <div class="ships-scroll">
+    <div class="w glass s ship"><div class="cp">ИП Кузнецов</div><div class="nm">Автоматы ABB</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--expense)" stroke-width="9"/></svg><span style="font-size:20px;font-weight:700;color:var(--expense)">×</span></div><div class="dates">01.06 → 25.06</div></div>
+    <div class="w glass s ship"><div class="cp">ИП Сидоров</div><div class="nm">Насосы Grundfos</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9"/><circle cx="50" cy="50" r="34" fill="none" stroke="var(--warn)" stroke-width="9" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="139" transform="rotate(-90 50 50)"/></svg><span>35%</span></div><div class="dates">20.06 → 10.07</div></div>
+    <div class="w glass s ship"><div class="cp">ИП Орлов</div><div class="nm">Щиты ЩРН-48</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9"/><circle cx="50" cy="50" r="34" fill="none" stroke="var(--warn)" stroke-width="9" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="111" transform="rotate(-90 50 50)"/></svg><span>48%</span></div><div class="dates">22.06 → 11.07</div></div>
+    <div class="w glass s ship"><div class="cp">ООО Метком</div><div class="nm">Лотки металл.</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9"/><circle cx="50" cy="50" r="34" fill="none" stroke="var(--income)" stroke-width="9" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="86" transform="rotate(-90 50 50)"/></svg><span>60%</span></div><div class="dates">18.06 → 08.07</div></div>
+    <div class="w glass s ship"><div class="cp">ООО Электро</div><div class="nm">Партия кабеля</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9"/><circle cx="50" cy="50" r="34" fill="none" stroke="var(--income)" stroke-width="9" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="60" transform="rotate(-90 50 50)"/></svg><span>72%</span></div><div class="dates">10.06 → 02.07</div></div>
+    <div class="w glass s ship"><div class="cp">ООО Лайт</div><div class="nm">Светильники LED</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9"/><circle cx="50" cy="50" r="34" fill="none" stroke="var(--income)" stroke-width="9" stroke-linecap="round" stroke-dasharray="214" stroke-dashoffset="21" transform="rotate(-90 50 50)"/></svg><span>90%</span></div><div class="dates">12.06 → 03.07</div></div>
+    <div class="w glass s ship"><div class="cp">ООО Профиль</div><div class="nm">Кабель-канал</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9"/></svg><span style="font-size:11px;color:var(--ink-2)">Ожидает</span></div><div class="dates">27.06 → 12.07</div></div>
+    <div class="w glass s ship"><div class="cp">ООО Электро</div><div class="nm">Розетки Legrand</div><div class="ring"><svg viewBox="0 0 100 100" width="60" height="60"><circle cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9"/></svg><span style="font-size:11px;color:var(--ink-2)">Ожидает</span></div><div class="dates">28.06 → 14.07</div></div>
   </div>
 
   <div class="sec" style="max-width:1120px">
@@ -266,6 +301,37 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
   }
   g.innerHTML=h;
 })();
+</script>
+
+<!-- Глобальный поиск -->
+<div class="search-ov" id="search-ov" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="search-box glass-strong">
+    <div class="search-input">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--ink-3)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/></svg>
+      <input id="search-inp" placeholder="Поиск по системе…" autocomplete="off">
+      <span class="kbd">esc</span>
+    </div>
+    <div class="search-res">
+      <div class="search-grp">Контрагенты</div>
+      <div class="search-item"><span class="si-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9h0M9 13h0M9 17h0"/></svg></span><div><div class="si-t">ООО Электро</div><div class="si-s">Покупатель · долг 184 000 ₽</div></div></div>
+      <div class="search-item"><span class="si-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/></svg></span><div><div class="si-t">ИП Сидоров</div><div class="si-s">Поставщик</div></div></div>
+      <div class="search-grp">Товары</div>
+      <div class="search-item"><span class="si-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8"/></svg></span><div><div class="si-t">Кабель ВВГ 3×2.5</div><div class="si-s">остаток 320 м · 88 000 ₽</div></div></div>
+      <div class="search-grp">Документы</div>
+      <div class="search-item"><span class="si-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"/></svg></span><div><div class="si-t">Поступление ПОСТ-2026-0042</div><div class="si-s">ИП Сидоров · 96 500 ₽</div></div></div>
+      <div class="search-item"><span class="si-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6"/></svg></span><div><div class="si-t">Реализация РЕАЛ-2026-0118</div><div class="si-s">ООО Электро · 184 000 ₽</div></div></div>
+      <div class="search-grp">Действия</div>
+      <div class="search-item"><span class="si-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><div><div class="si-t">Новая продажа</div></div></div>
+      <div class="search-item"><span class="si-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span><div><div class="si-t">Импорт выписки</div></div></div>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('keydown',function(e){
+  var ov=document.getElementById('search-ov'); if(!ov) return;
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();ov.classList.add('open');var i=document.getElementById('search-inp');if(i)i.focus();}
+  if(e.key==='Escape')ov.classList.remove('open');
+});
 </script>
 
 <button class="themebtn" onclick="(function(){var r=document.documentElement;var t=r.getAttribute('data-theme');var n=t==='dark'?'light':(t==='light'?'dark':'dark');r.setAttribute('data-theme',n);this.textContent=n==='dark'?'☾ Тёмная':'☀ Светлая';}).call(this)">Сменить тему</button>

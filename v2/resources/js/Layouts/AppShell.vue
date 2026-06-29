@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import Icon from '@/Components/Icon.vue';
+import SearchPalette from '@/Components/SearchPalette.vue';
+
+const search = ref<InstanceType<typeof SearchPalette> | null>(null);
 
 const page = usePage();
 const url = computed(() => page.url);
@@ -60,7 +63,7 @@ const isActive = (href: string) => url.value.startsWith(href);
             </nav>
 
             <div class="flex items-center gap-1">
-                <button class="pressable flex h-[34px] w-[34px] items-center justify-center rounded-full text-ink-2 hover:text-ink">
+                <button class="pressable flex h-[34px] w-[34px] items-center justify-center rounded-full text-ink-2 hover:text-ink" @click="search?.show()">
                     <Icon name="search" :size="19" />
                 </button>
                 <button class="pressable flex h-[34px] w-[34px] items-center justify-center rounded-full text-ink-2 hover:text-ink">
@@ -72,5 +75,7 @@ const isActive = (href: string) => url.value.startsWith(href);
         <main class="mx-auto max-w-[1400px] px-3 pb-12">
             <slot />
         </main>
+
+        <SearchPalette ref="search" />
     </div>
 </template>

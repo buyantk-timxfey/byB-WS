@@ -209,3 +209,31 @@
 .addnote { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 13px; background: var(--glass-fill); color: var(--ink-3); font-size: 13px; margin: 8px 0 4px; cursor: text; }
 .rdot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .chk { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink-3); flex: none; }
+
+/* ── Сигнал-баннер ── */
+.banner { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; }
+
+/* ── Поставки: горизонтальная лента ── */
+.ships-head { display: flex; align-items: center; justify-content: space-between; max-width: 1240px; margin: 0 auto 8px; padding: 0 2px; }
+.ships-head .ttl { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); }
+.ships-head .cnt { background: var(--glass-fill-strong); color: var(--ink); border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 8px; margin-left: 8px; }
+.ships-head a { font-size: 13px; font-weight: 600; color: var(--ink-2); text-decoration: none; }
+.ships-scroll { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; max-width: 1240px; margin: 0 auto 18px; padding: 2px 2px 8px; }
+.ships-scroll::-webkit-scrollbar { height: 6px; }
+.ships-scroll::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+.ships-scroll .wgt-s { scroll-snap-align: start; flex: 0 0 168px; }
+
+/* ── Глобальный поиск ── */
+.search-ov { position: fixed; inset: 0; z-index: 80; display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; background: rgba(0,0,0,.35); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.search-box { width: min(640px, 92vw); max-height: 70vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 20px; padding: 8px; }
+.search-input { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.search-input input { flex: 1; border: 0; background: transparent; outline: none; color: var(--ink); font-size: 17px; font-family: inherit; }
+.search-input input::placeholder { color: var(--ink-3); }
+.search-input .kbd { font-size: 11px; color: var(--ink-3); border: 1px solid var(--glass-border); border-radius: 6px; padding: 2px 6px; }
+.search-res { overflow-y: auto; padding: 4px; }
+.search-grp { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); padding: 10px 12px 4px; }
+.search-item { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 12px; cursor: pointer; }
+.search-item:hover { background: var(--glass-fill); }
+.search-item .si-ic { width: 30px; height: 30px; border-radius: 9px; background: var(--glass-fill-strong); display: flex; align-items: center; justify-content: center; color: var(--ink-2); flex: none; }
+.search-item .si-t { font-size: 15px; font-weight: 500; }
+.search-item .si-s { font-size: 12px; color: var(--ink-3); }
