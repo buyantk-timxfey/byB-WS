@@ -50,14 +50,9 @@ Route::get('/settings', fn () => Inertia::render('Settings'))
 Route::get('/vehicle', fn () => Inertia::render('Transport'))
     ->middleware(['auth', 'verified'])->name('vehicle');
 
-// Разделы (пока заглушки — будут свёрстаны далее)
-$sections = [
-    'mail'        => 'Почта',
-];
-foreach ($sections as $slug => $title) {
-    Route::get("/{$slug}", fn () => Inertia::render('Stub', ['title' => $title]))
-        ->middleware(['auth', 'verified'])->name($slug);
-}
+// Почта — свёрстанная страница
+Route::get('/mail', fn () => Inertia::render('Mail'))
+    ->middleware(['auth', 'verified'])->name('mail');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

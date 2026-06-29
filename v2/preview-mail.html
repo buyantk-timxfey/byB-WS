@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>byBuka 2.0 — Почта</title>
+<style>
+:root{
+  --bg:#eef0f5;--ink:#0b0b0f;--ink-2:rgba(11,11,15,.6);--ink-3:rgba(11,11,15,.4);
+  --glass-fill:rgba(255,255,255,.45);--glass-fill-strong:rgba(255,255,255,.6);
+  --glass-border:rgba(255,255,255,.55);--glass-highlight:rgba(255,255,255,.9);
+  --shadow:0 8px 30px rgba(17,22,40,.1);--shadow-lg:0 20px 60px rgba(17,22,40,.14);
+  --income:#34c759;--expense:#ff3b30;--warn:#ff9f0a;--info:#0a84ff;
+  --orb-b:rgba(52,199,89,.3);--orb-d:rgba(255,159,10,.25);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme]){
+  --bg:#0b0b0f;--ink:#f5f6f8;--ink-2:rgba(245,246,248,.62);--ink-3:rgba(245,246,248,.4);
+  --glass-fill:rgba(255,255,255,.07);--glass-fill-strong:rgba(255,255,255,.12);
+  --glass-border:rgba(255,255,255,.12);--glass-highlight:rgba(255,255,255,.16);
+  --shadow:0 10px 40px rgba(0,0,0,.5);--shadow-lg:0 24px 70px rgba(0,0,0,.6);
+  --orb-b:rgba(52,199,89,.4);--orb-d:rgba(255,159,10,.3);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0b0f;--ink:#f5f6f8;--ink-2:rgba(245,246,248,.62);--ink-3:rgba(245,246,248,.4);
+  --glass-fill:rgba(255,255,255,.07);--glass-fill-strong:rgba(255,255,255,.12);
+  --glass-border:rgba(255,255,255,.12);--glass-highlight:rgba(255,255,255,.16);
+  --shadow:0 10px 40px rgba(0,0,0,.5);--shadow-lg:0 24px 70px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:light dark}
+body{min-height:100dvh;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.orbs i{position:absolute;border-radius:50%;filter:blur(80px);display:block}
+.ob{width:50vw;height:50vw;left:24vw;bottom:-18vw;background:radial-gradient(circle,var(--orb-b),transparent 70%)}
+.od{width:34vw;height:34vw;right:14vw;bottom:6vh;background:radial-gradient(circle,var(--orb-d),transparent 70%)}
+.glass{background:var(--glass-fill);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 var(--glass-highlight);border-radius:22px}
+.glass-strong{background:var(--glass-fill-strong);backdrop-filter:blur(40px) saturate(190%);-webkit-backdrop-filter:blur(40px) saturate(190%);border:1px solid var(--glass-border);box-shadow:var(--shadow-lg),inset 0 1px 0 var(--glass-highlight)}
+.topnav{position:sticky;top:12px;z-index:30;margin:12px auto 18px;max-width:1240px;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:999px}
+.brand{display:flex;align-items:center;gap:8px;padding-right:6px}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.brand .name{font-size:16px;font-weight:600;white-space:nowrap}
+.links{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+.links::-webkit-scrollbar{display:none}
+.links a{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap}
+.links a.active{background:var(--ink);color:var(--bg)}
+.wrap{max-width:1240px;margin:0 auto;padding:0 14px 30px}
+.pill{border-radius:999px;font-weight:600;font-size:12px;padding:3px 10px;display:inline-block}
+.pill--info{background:rgba(10,132,255,.16);color:#0a84ff}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar h1{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.btn-primary{display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;background:var(--ink);color:var(--bg);font-size:14px;font-weight:600;padding:9px 16px;border-radius:999px}
+.btn-ghost{border:1px solid var(--glass-border);background:var(--glass-fill);color:var(--ink);border-radius:12px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer}
+.ic{width:13px;height:13px;display:inline-block;vertical-align:-2px;opacity:.6}
+.mail-grid{display:grid;grid-template-columns:220px 320px 1fr;height:calc(100dvh - 150px);min-height:520px;overflow:hidden}
+.mbox{border-right:1px solid var(--glass-border);padding:14px 10px;overflow-y:auto}
+.mbox-acc{margin-bottom:16px}
+.mbox-email{font-size:12px;font-weight:700;color:var(--ink-2);padding:6px 8px}
+.mbox-f{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:transparent;color:var(--ink);font-size:14px;font-weight:500;padding:9px 10px;border-radius:10px;cursor:pointer}
+.mbox-f:hover{background:var(--glass-fill)}
+.mbox-f.on{background:var(--ink);color:var(--bg)}
+.mbox-c{font-size:11px;font-weight:700;background:var(--info);color:#fff;border-radius:999px;padding:1px 7px}
+.mbox-f.on .mbox-c{background:var(--bg);color:var(--ink)}
+.mlist{border-right:1px solid var(--glass-border);overflow-y:auto}
+.mitem{display:grid;grid-template-columns:36px 1fr auto;gap:10px;padding:13px 14px;border-bottom:1px solid var(--glass-border);cursor:pointer;position:relative}
+.mitem:hover{background:var(--glass-fill)}
+.mitem.on{background:var(--glass-fill-strong)}
+.mi-av{width:36px;height:36px;border-radius:50%;background:var(--glass-fill-strong);color:var(--ink-2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.mitem.unread .mi-av{background:rgba(10,132,255,.16);color:var(--info)}
+.mi-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.mi-from{font-size:14px;font-weight:600}
+.mitem.unread .mi-from{font-weight:700}
+.mi-time{font-size:11px;color:var(--ink-3);flex-shrink:0}
+.mi-subj{font-size:13px;font-weight:500;margin-top:1px}
+.mi-prev{font-size:12px;color:var(--ink-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi-dot{position:absolute;right:12px;top:16px;width:8px;height:8px;border-radius:50%;background:var(--info)}
+.mread{padding:22px 24px;overflow-y:auto;display:flex;flex-direction:column}
+.mr-subj{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.mr-meta{display:flex;align-items:center;gap:10px;margin:14px 0}
+.mr-av{width:40px;height:40px;border-radius:50%;background:rgba(10,132,255,.16);color:var(--info);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.mr-from{font-size:14px;font-weight:600}
+.mr-email{font-size:13px;font-weight:400;color:var(--ink-3)}
+.mr-to{font-size:12px;color:var(--ink-3);margin-top:1px}
+.mr-link{margin-left:auto}
+.mr-body{font-size:14px;line-height:1.6;white-space:pre-line;padding:12px 0;border-top:1px solid var(--glass-border);flex:1}
+.mr-attach{display:flex;flex-wrap:wrap;gap:8px;padding:12px 0;border-top:1px solid var(--glass-border)}
+.mr-file{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;background:var(--glass-fill);border:1px solid var(--glass-border);border-radius:10px;padding:8px 12px}
+.mr-actions{display:flex;gap:10px;padding-top:12px;border-top:1px solid var(--glass-border)}
+@media(max-width:900px){.mail-grid{grid-template-columns:1fr;height:auto}.mbox,.mread{display:none}}
+.themebtn{position:fixed;right:16px;bottom:16px;z-index:50;padding:10px 16px;border:1px solid var(--glass-border);border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;background:var(--glass-fill-strong);backdrop-filter:blur(30px);color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="orbs"><i class="ob"></i><i class="od"></i></div>
+
+<header class="topnav glass-strong">
+  <div class="brand"><div class="mark">bB</div><div class="name">byBuka</div></div>
+  <nav class="links">
+    <a href="#">Главная</a><a href="#">Поставки</a><a href="#">Продажи</a>
+    <a href="#">Склад</a><a href="#">Банк</a><a href="#">Финансы</a><a class="active" href="#">Почта</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="toolbar"><h1>Почта</h1><button class="btn-primary" style="margin-left:auto">+ Написать</button></div>
+
+  <div class="mail-grid glass">
+    <div class="mbox">
+      <div class="mbox-acc">
+        <div class="mbox-email">info@bybuka.ru</div>
+        <button class="mbox-f on"><span>Входящие</span><span class="mbox-c">3</span></button>
+        <button class="mbox-f"><span>Отправленные</span></button>
+        <button class="mbox-f"><span>Черновики</span><span class="mbox-c">1</span></button>
+      </div>
+      <div class="mbox-acc">
+        <div class="mbox-email">zakaz@bybuka.ru</div>
+        <button class="mbox-f"><span>Входящие</span><span class="mbox-c">2</span></button>
+        <button class="mbox-f"><span>Отправленные</span></button>
+      </div>
+    </div>
+
+    <div class="mlist" id="mlist"></div>
+
+    <div class="mread" id="mread"></div>
+  </div>
+</main>
+
+<button class="themebtn" onclick="(function(){var r=document.documentElement;var t=r.getAttribute('data-theme');var n=t==='dark'?'light':(t==='light'?'dark':'dark');r.setAttribute('data-theme',n);this.textContent=n==='dark'?'☾ Тёмная':'☀ Светлая';}).call(this)">Сменить тему</button>
+<script>
+var msgs=[
+ {id:1,from:'ИП Сидоров',email:'sidorov@mail.ru',subject:'Отгрузка насосов Grundfos',time:'11:24',unread:true,attach:1,party:'ИП Сидоров',preview:'Добрый день! Отгрузили сегодня, трек DL-882190…',body:'Добрый день!\n\nОтгрузили сегодня партию насосов Grundfos UPS 25-40, 5 шт. Трек-номер Деловых линий: DL-882190. Ориентировочно у вас 10.07.\n\nСчёт во вложении.\n\nС уважением, Сидоров А.'},
+ {id:2,from:'ООО Профиль',email:'sales@profil.ru',subject:'Счёт на кабель-канал №451',time:'09:50',unread:true,attach:2,party:'ООО Профиль',preview:'Направляем счёт №451 на оплату партии…',body:'Здравствуйте!\n\nНаправляем счёт №451 на оплату партии кабель-канала 40×40 — 200 шт. Сумма 214 000 ₽. Отгрузка в течение 3 дней после оплаты.\n\nДокументы во вложении.'},
+ {id:3,from:'Точка Банк',email:'noreply@tochka.com',subject:'Выписка за июнь готова',time:'вчера',unread:true,attach:1,party:'',preview:'Сформирована выписка по счёту 5512…',body:'Сформирована выписка по счёту •••• 5512 за период 01.06–30.06.2026. Файл 1CClientBankExchange во вложении — можно импортировать в byBuka.'},
+ {id:4,from:'ООО Строймонтаж',email:'buh@strojmontazh.ru',subject:'Оплата по ИН-0029',time:'вчера',unread:false,attach:0,party:'ООО Строймонтаж',preview:'Оплату произвели, проверьте поступление…',body:'Оплату по счёту ИН-0029 на 236 000 ₽ произвели сегодня. Просьба подтвердить поступление.'},
+ {id:5,from:'ИП Васильев',email:'vasilev@mail.ru',subject:'Запрос КП на автоматы ABB',time:'26 июн',unread:false,attach:0,party:'ИП Васильев',preview:'Нужно коммерческое на 100 шт автоматов…',body:'Здравствуйте! Нужно коммерческое предложение на 100 шт автоматов ABB SH201 C16. Сроки и цену пришлите, пожалуйста.'}
+];
+var sel=1;
+function ini(s){return s.replace(/^(ООО|ИП|ПАО|АО)\s+/,'').trim().slice(0,2).toUpperCase();}
+function renderList(){document.getElementById('mlist').innerHTML=msgs.map(function(m){return '<div class="mitem'+(m.id===sel?' on':'')+(m.unread?' unread':'')+'" onclick="open('+m.id+')"><div class="mi-av">'+ini(m.from)+'</div><div class="mi-main"><div class="mi-top"><span class="mi-from">'+m.from+'</span><span class="mi-time">'+m.time+'</span></div><div class="mi-subj">'+m.subject+(m.attach?' 📎':'')+'</div><div class="mi-prev">'+m.preview+'</div></div>'+(m.unread?'<span class="mi-dot"></span>':'')+'</div>';}).join('');}
+function renderRead(){var m=msgs.find(function(x){return x.id===sel;});if(!m)return;
+ var att=m.attach?('<div class="mr-attach">'+Array.from({length:m.attach}).map(function(_,i){return '<div class="mr-file">📄 вложение_'+(i+1)+'.pdf</div>';}).join('')+'</div>'):'';
+ document.getElementById('mread').innerHTML='<div class="mr-subj">'+m.subject+'</div><div class="mr-meta"><div class="mr-av">'+ini(m.from)+'</div><div><div class="mr-from">'+m.from+' <span class="mr-email">&lt;'+m.email+'&gt;</span></div><div class="mr-to">кому: info@bybuka.ru · '+m.time+'</div></div>'+(m.party?'<span class="pill pill--info mr-link">'+m.party+'</span>':'')+'</div><div class="mr-body">'+m.body+'</div>'+att+'<div class="mr-actions"><button class="btn-primary">Ответить</button><button class="btn-ghost">Переслать</button>'+(m.party?'<button class="btn-ghost">К контрагенту</button>':'')+'</div>';}
+function open(id){var m=msgs.find(function(x){return x.id===id;});if(m)m.unread=false;sel=id;renderList();renderRead();}
+renderList();renderRead();
+</script>
+</body>
+</html>
