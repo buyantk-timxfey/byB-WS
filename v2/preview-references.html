@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>byBuka 2.0 — Справочники</title>
+<style>
+:root{
+  --bg:#eef0f5;--ink:#0b0b0f;--ink-2:rgba(11,11,15,.6);--ink-3:rgba(11,11,15,.4);
+  --glass-fill:rgba(255,255,255,.45);--glass-fill-strong:rgba(255,255,255,.6);
+  --glass-border:rgba(255,255,255,.55);--glass-highlight:rgba(255,255,255,.9);
+  --shadow:0 8px 30px rgba(17,22,40,.1);--shadow-lg:0 20px 60px rgba(17,22,40,.14);
+  --income:#34c759;--expense:#ff3b30;--warn:#ff9f0a;--info:#0a84ff;
+  --orb-b:rgba(52,199,89,.3);--orb-d:rgba(255,159,10,.25);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme]){
+  --bg:#0b0b0f;--ink:#f5f6f8;--ink-2:rgba(245,246,248,.62);--ink-3:rgba(245,246,248,.4);
+  --glass-fill:rgba(255,255,255,.07);--glass-fill-strong:rgba(255,255,255,.12);
+  --glass-border:rgba(255,255,255,.12);--glass-highlight:rgba(255,255,255,.16);
+  --shadow:0 10px 40px rgba(0,0,0,.5);--shadow-lg:0 24px 70px rgba(0,0,0,.6);
+  --orb-b:rgba(52,199,89,.4);--orb-d:rgba(255,159,10,.3);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0b0f;--ink:#f5f6f8;--ink-2:rgba(245,246,248,.62);--ink-3:rgba(245,246,248,.4);
+  --glass-fill:rgba(255,255,255,.07);--glass-fill-strong:rgba(255,255,255,.12);
+  --glass-border:rgba(255,255,255,.12);--glass-highlight:rgba(255,255,255,.16);
+  --shadow:0 10px 40px rgba(0,0,0,.5);--shadow-lg:0 24px 70px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:light dark}
+body{min-height:100dvh;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.orbs{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.orbs i{position:absolute;border-radius:50%;filter:blur(80px);display:block}
+.ob{width:50vw;height:50vw;left:24vw;bottom:-18vw;background:radial-gradient(circle,var(--orb-b),transparent 70%)}
+.od{width:34vw;height:34vw;right:14vw;bottom:6vh;background:radial-gradient(circle,var(--orb-d),transparent 70%)}
+.tnum{font-variant-numeric:tabular-nums}
+.glass{background:var(--glass-fill);backdrop-filter:blur(30px) saturate(190%);-webkit-backdrop-filter:blur(30px) saturate(190%);border:1px solid var(--glass-border);box-shadow:var(--shadow),inset 0 1px 0 var(--glass-highlight);border-radius:22px}
+.glass-strong{background:var(--glass-fill-strong);backdrop-filter:blur(40px) saturate(190%);-webkit-backdrop-filter:blur(40px) saturate(190%);border:1px solid var(--glass-border);box-shadow:var(--shadow-lg),inset 0 1px 0 var(--glass-highlight)}
+.topnav{position:sticky;top:12px;z-index:30;margin:12px auto 18px;max-width:1240px;display:flex;align-items:center;gap:10px;padding:8px 10px 8px 14px;border-radius:999px}
+.brand{display:flex;align-items:center;gap:8px;padding-right:6px}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.brand .name{font-size:16px;font-weight:600;white-space:nowrap}
+.links{display:flex;align-items:center;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+.links::-webkit-scrollbar{display:none}
+.links a{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;color:var(--ink-2);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap}
+.links a.active{background:var(--ink);color:var(--bg)}
+.wrap{max-width:1240px;margin:0 auto;padding:0 14px 60px}
+.pill{border-radius:999px;font-weight:600;font-size:12px;padding:3px 10px;display:inline-block}
+.pill--neutral{background:var(--glass-fill-strong);color:var(--ink-2)}
+.pill--info{background:rgba(10,132,255,.16);color:#0a84ff}
+.pill--ok{background:rgba(52,199,89,.16);color:var(--income)}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.toolbar h1{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-right:auto}
+.tb-search{display:flex;align-items:center;gap:8px;background:var(--glass-fill);border:1px solid var(--glass-border);border-radius:999px;padding:7px 14px;min-width:200px;color:var(--ink-3);font-size:14px}
+.seg{display:flex;gap:2px;background:var(--glass-fill);border:1px solid var(--glass-border);border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--ink-2);font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.btn-primary{display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;background:var(--ink);color:var(--bg);font-size:14px;font-weight:600;padding:9px 16px;border-radius:999px}
+.btn-ghost{border:1px solid var(--glass-border);background:var(--glass-fill);color:var(--ink);border-radius:12px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer}
+.ref-tabs{width:fit-content;max-width:100%;overflow-x:auto;margin-bottom:16px}
+.ref-link{color:var(--info);text-decoration:none}
+.ref-link:hover{text-decoration:underline}
+.jcard{overflow:hidden}.jscroll{overflow-x:auto}
+.jtable{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+.jtable thead th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);padding:12px 16px;background:var(--glass-fill-strong);white-space:nowrap}
+.jtable thead th.num,.jtable td.num{text-align:right;font-variant-numeric:tabular-nums}
+.jtable tbody td{padding:13px 16px;border-top:1px solid var(--glass-border);white-space:nowrap}
+.jtable tbody tr.click{cursor:pointer}
+.jtable tbody tr.click:hover td{background:var(--glass-fill)}
+.tbl{display:none}.tbl.on{display:table}
+/* modal */
+.modal-ov{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-ov.open{display:flex}
+.modal-box{width:min(560px,100%);max-height:86vh;display:flex;flex-direction:column;border-radius:26px;overflow:hidden;animation:modal-in .26s cubic-bezier(.22,1,.36,1)}
+@keyframes modal-in{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@media(max-width:560px){.modal-ov.open{align-items:flex-end;padding:0}.modal-box{width:100%;max-height:92vh;border-radius:26px 26px 0 0;animation:sheet-in .3s cubic-bezier(.22,1,.36,1)}}
+.modal-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid var(--glass-border)}
+.modal-head .dt{font-size:18px;font-weight:700}
+.modal-head .ds{font-size:13px;color:var(--ink-2);margin-top:2px}
+.modal-x{margin-left:auto;width:32px;height:32px;border:0;background:var(--glass-fill);border-radius:999px;color:var(--ink-2);cursor:pointer;font-size:18px}
+.modal-body{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+.modal-foot{display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--glass-border)}
+.h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)}
+.card-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.ck{background:var(--glass-fill);border:1px solid var(--glass-border);border-radius:12px;padding:10px 12px}
+.ck-l{font-size:11px;color:var(--ink-2)}.ck-v{font-size:16px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.drill-row{display:flex;align-items:center;justify-content:space-between;padding:12px 4px;border-bottom:1px solid var(--glass-border)}
+.dr-doc{font-size:14px;font-weight:600}.dr-sub{font-size:12px;color:var(--ink-3);margin-top:2px}
+.dr-sum{font-weight:600;font-variant-numeric:tabular-nums}
+.themebtn{position:fixed;right:16px;bottom:16px;z-index:50;padding:10px 16px;border:1px solid var(--glass-border);border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;background:var(--glass-fill-strong);backdrop-filter:blur(30px);color:var(--ink)}
+@media(max-width:560px){.card-kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="orbs"><i class="ob"></i><i class="od"></i></div>
+
+<header class="topnav glass-strong">
+  <div class="brand"><div class="mark">bB</div><div class="name">byBuka</div></div>
+  <nav class="links">
+    <a href="#">Главная</a><a href="#">Поставки</a><a href="#">Продажи</a>
+    <a href="#">Склад</a><a href="#">Банк</a><a href="#">Финансы</a><a class="active" href="#">Справочники</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div class="toolbar">
+    <h1>Справочники</h1>
+    <div class="tb-search">Поиск…</div>
+    <button class="btn-primary">+ Добавить</button>
+  </div>
+
+  <div class="seg ref-tabs">
+    <button class="on" onclick="setT('cp',this)">Контрагенты</button>
+    <button onclick="setT('nom',this)">Номенклатура</button>
+    <button onclick="setT('car',this)">Перевозчики</button>
+    <button onclick="setT('acc',this)">Счета</button>
+    <button onclick="setT('art',this)">Статьи затрат</button>
+  </div>
+
+  <div class="jcard glass">
+    <div class="jscroll">
+      <!-- Контрагенты -->
+      <table class="jtable tbl on" id="t-cp">
+        <thead><tr><th>Тип</th><th>Наименование</th><th>ИНН</th><th>Контакт</th><th class="num">Сальдо</th></tr></thead>
+        <tbody>
+          <tr class="click" onclick="openCp()"><td><span class="pill pill--ok">Покупатель</span></td><td>ООО Строймонтаж</td><td class="tnum" style="color:var(--ink-2)">7701234567</td><td style="color:var(--ink-2)">+7 916 200-11-22</td><td class="num" style="color:var(--income)">+ 268 000 ₽ (нам)</td></tr>
+          <tr class="click" onclick="openCp()"><td><span class="pill pill--info">Поставщик</span></td><td>ИП Сидоров</td><td class="tnum" style="color:var(--ink-2)">7712345678</td><td style="color:var(--ink-2)">sidorov@mail.ru</td><td class="num" style="color:var(--expense)">− 46 500 ₽ (мы)</td></tr>
+          <tr class="click" onclick="openCp()"><td><span class="pill pill--ok">Покупатель</span></td><td>ИП Васильев</td><td class="tnum" style="color:var(--ink-2)">7723456789</td><td style="color:var(--ink-2)">+7 925 333-44-55</td><td class="num" style="color:var(--income)">+ 64 000 ₽ (нам)</td></tr>
+          <tr class="click" onclick="openCp()"><td><span class="pill pill--info">Поставщик</span></td><td>ООО Профиль</td><td class="tnum" style="color:var(--ink-2)">7734567890</td><td style="color:var(--ink-2)">sales@profil.ru</td><td class="num" style="color:var(--expense)">− 214 000 ₽ (мы)</td></tr>
+          <tr class="click" onclick="openCp()"><td><span class="pill pill--neutral">Оба</span></td><td>ИП Кузнецов</td><td class="tnum" style="color:var(--ink-2)">7745678901</td><td style="color:var(--ink-2)">+7 903 111-22-33</td><td class="num">—</td></tr>
+        </tbody>
+      </table>
+      <!-- Номенклатура -->
+      <table class="jtable tbl" id="t-nom">
+        <thead><tr><th>Наименование</th><th>Группа</th><th>Ед.</th><th>Артикул</th><th class="num">Остаток</th></tr></thead>
+        <tbody>
+          <tr class="click" onclick="openNom()"><td>Кабель-канал 40×40</td><td style="color:var(--ink-2)">Профиль</td><td style="color:var(--ink-2)">шт</td><td class="tnum" style="color:var(--ink-2)">КК-4040</td><td class="num">200</td></tr>
+          <tr class="click" onclick="openNom()"><td>Насос Grundfos UPS 25-40</td><td style="color:var(--ink-2)">Насосы</td><td style="color:var(--ink-2)">шт</td><td class="tnum" style="color:var(--ink-2)">GF-2540</td><td class="num">3</td></tr>
+          <tr class="click" onclick="openNom()"><td>Кабель ВВГ 3×2.5</td><td style="color:var(--ink-2)">Кабель</td><td style="color:var(--ink-2)">м</td><td class="tnum" style="color:var(--ink-2)">VVG-325</td><td class="num">150</td></tr>
+          <tr class="click" onclick="openNom()"><td>Автомат ABB SH201 C16</td><td style="color:var(--ink-2)">Автоматы</td><td style="color:var(--ink-2)">шт</td><td class="tnum" style="color:var(--ink-2)">ABB-C16</td><td class="num">40</td></tr>
+          <tr class="click" onclick="openNom()"><td>Светильник LED 36W</td><td style="color:var(--ink-2)">Освещение</td><td style="color:var(--ink-2)">шт</td><td class="tnum" style="color:var(--ink-2)">LED-36</td><td class="num" style="color:var(--expense)">−10</td></tr>
+        </tbody>
+      </table>
+      <!-- Перевозчики -->
+      <table class="jtable tbl" id="t-car">
+        <thead><tr><th>Название</th><th>Сайт</th><th>Комментарий</th></tr></thead>
+        <tbody>
+          <tr><td>СДЭК</td><td><a class="ref-link" href="https://cdek.ru" target="_blank">cdek.ru</a></td><td style="color:var(--ink-2)">основной по рознице</td></tr>
+          <tr><td>Деловые линии</td><td><a class="ref-link" href="https://dellin.ru" target="_blank">dellin.ru</a></td><td style="color:var(--ink-2)">крупногабарит</td></tr>
+          <tr><td>ПЭК</td><td><a class="ref-link" href="https://pecom.ru" target="_blank">pecom.ru</a></td><td style="color:var(--ink-2)">—</td></tr>
+          <tr><td>Байкал Сервис</td><td><a class="ref-link" href="https://baikalsr.ru" target="_blank">baikalsr.ru</a></td><td style="color:var(--ink-2)">—</td></tr>
+        </tbody>
+      </table>
+      <!-- Счета -->
+      <table class="jtable tbl" id="t-acc">
+        <thead><tr><th>Название</th><th>Тип</th><th class="num">Баланс</th></tr></thead>
+        <tbody>
+          <tr><td>Сбер · 7781</td><td><span class="pill pill--info">Банк</span></td><td class="num">1 284 500 ₽</td></tr>
+          <tr><td>Точка · 5512</td><td><span class="pill pill--info">Банк</span></td><td class="num">642 300 ₽</td></tr>
+          <tr><td>Альфа · 3390</td><td><span class="pill pill--info">Банк</span></td><td class="num">318 900 ₽</td></tr>
+          <tr><td>Касса</td><td><span class="pill pill--neutral">Касса</span></td><td class="num">35 000 ₽</td></tr>
+          <tr><td colspan="2">Итого по счетам</td><td class="num" style="font-weight:700">2 280 700 ₽</td></tr>
+        </tbody>
+      </table>
+      <!-- Статьи -->
+      <table class="jtable tbl" id="t-art">
+        <thead><tr><th>Статья</th><th>Тип</th></tr></thead>
+        <tbody>
+          <tr><td>Аренда</td><td><span class="pill pill--neutral">Пользовательская</span></td></tr>
+          <tr><td>Связь и интернет</td><td><span class="pill pill--neutral">Пользовательская</span></td></tr>
+          <tr><td>Транспорт / Топливо</td><td><span class="pill pill--neutral">Пользовательская</span></td></tr>
+          <tr><td>Эквайринг</td><td><span class="pill pill--info">Системная</span></td></tr>
+          <tr><td>Зарплата</td><td><span class="pill pill--info">Системная</span></td></tr>
+          <tr><td>Прочие расходы</td><td><span class="pill pill--neutral">Пользовательская</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Досье контрагента -->
+<div class="modal-ov" id="cpov" onclick="if(event.target===this)cl('cpov')">
+  <div class="modal-box glass-strong">
+    <div class="modal-head"><div><div class="dt">ООО Строймонтаж</div><div class="ds">Покупатель · ИНН 7701234567</div></div><button class="modal-x" onclick="cl('cpov')">×</button></div>
+    <div class="modal-body">
+      <div class="card-kpis">
+        <div class="ck"><div class="ck-l">Сальдо</div><div class="ck-v" style="color:var(--income)">+ 268 000 ₽</div></div>
+        <div class="ck"><div class="ck-l">Контакт</div><div class="ck-v" style="font-size:13px">+7 916 200-11-22</div></div>
+      </div>
+      <div>
+        <span class="h2">История документов</span>
+        <div class="drill-row"><div><div class="dr-doc">Продажа ИН-0029</div><div class="dr-sub">22.06.2026 · оплачено</div></div><div class="dr-sum">236 000 ₽</div></div>
+        <div class="drill-row"><div><div class="dr-doc">Продажа ИН-0031</div><div class="dr-sub">02.07.2026 · счёт</div></div><div class="dr-sum">268 000 ₽</div></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn-primary" style="flex:1;justify-content:center;border-radius:12px">Открыть в продажах</button><button class="btn-ghost">Изменить</button></div>
+  </div>
+</div>
+
+<!-- Карточка товара -->
+<div class="modal-ov" id="nomov" onclick="if(event.target===this)cl('nomov')">
+  <div class="modal-box glass-strong">
+    <div class="modal-head"><div><div class="dt">Кабель-канал 40×40</div><div class="ds">Профиль · шт · КК-4040</div></div><button class="modal-x" onclick="cl('nomov')">×</button></div>
+    <div class="modal-body">
+      <div class="card-kpis">
+        <div class="ck"><div class="ck-l">Остаток</div><div class="ck-v">200 шт</div></div>
+        <div class="ck"><div class="ck-l">Ср. закупка</div><div class="ck-v">1 070 ₽</div></div>
+        <div class="ck"><div class="ck-l">Ср. продажа</div><div class="ck-v">1 340 ₽</div></div>
+        <div class="ck"><div class="ck-l">Маржа</div><div class="ck-v">20,1 %</div></div>
+      </div>
+      <div>
+        <span class="h2">История цен</span>
+        <div class="drill-row"><div><div class="dr-doc">Закупка ИЛ-0044</div><div class="dr-sub">01.07.2026 · ООО Профиль</div></div><div class="dr-sum">1 070 ₽</div></div>
+        <div class="drill-row"><div><div class="dr-doc">Продажа ИЛ-0031</div><div class="dr-sub">02.07.2026 · ООО Строймонтаж</div></div><div class="dr-sum">1 340 ₽</div></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn-primary" style="flex:1;justify-content:center;border-radius:12px">Открыть на складе</button><button class="btn-ghost">Изменить</button></div>
+  </div>
+</div>
+
+<button class="themebtn" onclick="(function(){var r=document.documentElement;var t=r.getAttribute('data-theme');var n=t==='dark'?'light':(t==='light'?'dark':'dark');r.setAttribute('data-theme',n);this.textContent=n==='dark'?'☾ Тёмная':'☀ Светлая';}).call(this)">Сменить тему</button>
+<script>
+function setT(id,el){document.querySelectorAll('.tbl').forEach(function(t){t.classList.remove('on');});document.getElementById('t-'+id).classList.add('on');el.parentNode.querySelectorAll('button').forEach(function(b){b.classList.remove('on');});el.classList.add('on');}
+function openCp(){document.getElementById('cpov').classList.add('open');}
+function openNom(){document.getElementById('nomov').classList.add('open');}
+function cl(id){document.getElementById(id).classList.remove('open');}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){cl('cpov');cl('nomov');}});
+</script>
+</body>
+</html>

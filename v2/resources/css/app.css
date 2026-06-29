@@ -357,6 +357,11 @@
 .drop-t { font-size: 15px; font-weight: 600; }
 .drop-s { font-size: 13px; color: var(--ink-3); }
 
+/* ── Справочники ── */
+.ref-tabs { width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 16px; }
+.ref-link { color: var(--info, #0a84ff); text-decoration: none; }
+.ref-link:hover { text-decoration: underline; }
+
 /* ── Финансы / P&L ── */
 .fin-kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
 .fk { padding: 16px 18px; }

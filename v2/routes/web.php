@@ -38,13 +38,14 @@ Route::get('/bank', fn () => Inertia::render('Bank'))
 Route::get('/finances', fn () => Inertia::render('Finances'))
     ->middleware(['auth', 'verified'])->name('finances');
 
+// Справочники — свёрстанная страница
+Route::get('/references', fn () => Inertia::render('References'))
+    ->middleware(['auth', 'verified'])->name('references');
+
 // Разделы (пока заглушки — будут свёрстаны далее)
 $sections = [
-    'bank'        => 'Банк',
-    'finances'    => 'Финансы',
     'mail'        => 'Почта',
     'vehicle'     => 'Транспорт',
-    'references'  => 'Справочники',
     'settings'    => 'Настройки',
 ];
 foreach ($sections as $slug => $title) {
