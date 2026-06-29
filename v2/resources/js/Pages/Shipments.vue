@@ -4,7 +4,7 @@ import { Head } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
-import Modal from '@/Components/Modal.vue';
+import AppModal from '@/Components/AppModal.vue';
 
 const money = (n: number) => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
 
@@ -102,7 +102,7 @@ function create() {
         </div>
 
         <!-- Форма-документ -->
-        <Modal :open="open" :title="cur?.id || 'Новая поставка'" :subtitle="cur?.supplier" @close="open = false">
+        <AppModal :open="open" :title="cur?.id || 'Новая поставка'" :subtitle="cur?.supplier" @close="open = false">
             <template v-if="cur">
                 <div class="fld-row">
                     <div class="fld"><label>Поставщик</label><input :value="cur.supplier" placeholder="Выберите контрагента" /></div>
@@ -147,6 +147,6 @@ function create() {
                 <button class="btn-ghost pressable">Оплатить поставщику</button>
                 <button class="btn-ghost pressable">Вложения</button>
             </template>
-        </Modal>
+        </AppModal>
     </AppShell>
 </template>
