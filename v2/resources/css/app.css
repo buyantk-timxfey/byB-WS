@@ -357,6 +357,47 @@
 .drop-t { font-size: 15px; font-weight: 600; }
 .drop-s { font-size: 13px; color: var(--ink-3); }
 
+/* ── Финансы / P&L ── */
+.fin-kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
+.fk { padding: 16px 18px; }
+.fk-l { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.fk-v { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 2px; }
+.fk-s { font-size: 12px; color: var(--ink-3); }
+@media (max-width: 820px) { .fin-kpi { grid-template-columns: 1fr 1fr; } }
+.fin-tabs { width: fit-content; margin-bottom: 16px; }
+.fin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+@media (max-width: 920px) { .fin-grid { grid-template-columns: 1fr; } }
+.pnl { padding: 18px 20px; }
+.pnl-h { font-size: 15px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 8px; }
+.pnl-hint { font-size: 12px; font-weight: 500; color: var(--ink-3); margin-left: 4px; }
+.pnl-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 8px; border-radius: 10px; font-size: 14px; }
+.pnl-row[onclick], .pnl-row--in, .pnl-row--out { cursor: pointer; }
+.pnl-row--in:hover, .pnl-row--out:hover { background: var(--glass-fill); }
+.pnl-row .tnum { font-weight: 600; }
+.pnl-row--total { font-weight: 700; border-top: 1px solid var(--glass-border); margin-top: 2px; }
+.pnl-row--total .tnum { font-weight: 800; }
+.pnl-row--minor { color: var(--ink-2); font-size: 13px; }
+.pnl-sep { height: 8px; }
+.pnl-row--final { font-weight: 700; background: rgba(52,199,89,.1); border: 1px solid rgba(52,199,89,.3); margin-top: 4px; }
+.pnl-row--final .tnum { color: var(--income); font-weight: 800; }
+.pnl-foot { font-size: 12px; color: var(--ink-3); text-align: center; margin-top: 10px; }
+/* График */
+.chart-card { padding: 18px 20px; }
+.chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 240px; margin-top: 14px; }
+.cb { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 6px; }
+.cb-bar { width: 100%; max-width: 30px; background: linear-gradient(180deg, rgba(10,132,255,.85), rgba(10,132,255,.45)); border-radius: 7px 7px 3px 3px; position: relative; min-height: 4px; transition: height .4s cubic-bezier(.22,1,.36,1); }
+.cb-bar--last { background: linear-gradient(180deg, var(--income), rgba(52,199,89,.5)); }
+.cb-val { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.cb-m { font-size: 11px; color: var(--ink-3); }
+/* По месяцам */
+.mrow-total td { border-top: 1px solid var(--glass-border); background: var(--glass-fill); }
+/* Расшифровка */
+.drill-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 4px; border-bottom: 1px solid var(--glass-border); }
+.dr-doc { font-size: 14px; font-weight: 600; }
+.dr-sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.dr-sum { font-weight: 600; }
+.drill-total { display: flex; justify-content: space-between; padding: 14px 4px 4px; font-weight: 800; font-size: 15px; }
+
 /* Карточка товара */
 .card-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .ck { background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 12px; padding: 10px 12px; }

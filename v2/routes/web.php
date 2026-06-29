@@ -34,6 +34,10 @@ Route::get('/warehouse', fn () => Inertia::render('Warehouse'))
 Route::get('/bank', fn () => Inertia::render('Bank'))
     ->middleware(['auth', 'verified'])->name('bank');
 
+// Финансы — свёрстанная страница
+Route::get('/finances', fn () => Inertia::render('Finances'))
+    ->middleware(['auth', 'verified'])->name('finances');
+
 // Разделы (пока заглушки — будут свёрстаны далее)
 $sections = [
     'bank'        => 'Банк',
