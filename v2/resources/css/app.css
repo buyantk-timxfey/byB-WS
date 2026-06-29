@@ -371,10 +371,10 @@
 .switch span { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .2s cubic-bezier(.22,1,.36,1); }
 .switch.on { background: var(--income); }
 .switch.on span { transform: translateX(20px); }
-.rule { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 11px 0; border-top: 1px solid var(--glass-border); }
-.rule-m { font-size: 13px; font-weight: 600; }
-.rule-a { font-size: 12px; color: var(--ink-2); grid-column: 1; }
-.rule .link-btn { grid-row: 1 / span 2; align-self: center; }
+.rule { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "m btn" "a btn"; gap: 2px 12px; align-items: center; padding: 11px 0; border-top: 1px solid var(--glass-border); }
+.rule-m { grid-area: m; font-size: 13px; font-weight: 600; }
+.rule-a { grid-area: a; font-size: 12px; color: var(--ink-2); }
+.rule .link-btn, .rule .btn-ghost { grid-area: btn; align-self: center; }
 
 /* ── Почта (трёхпанельный клиент) ── */
 .mail-grid { display: grid; grid-template-columns: 220px 320px 1fr; height: calc(100dvh - 160px); min-height: 520px; overflow: hidden; }
@@ -392,6 +392,7 @@
 .mitem.on { background: var(--glass-fill-strong); }
 .mi-av { width: 36px; height: 36px; border-radius: 50%; background: var(--glass-fill-strong); color: var(--ink-2); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
 .mitem.unread .mi-av { background: rgba(10,132,255,.16); color: var(--info, #0a84ff); }
+.mi-main { min-width: 0; }
 .mi-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .mi-from { font-size: 14px; font-weight: 600; }
 .mitem.unread .mi-from { font-weight: 700; }
@@ -399,7 +400,7 @@
 .mi-subj { font-size: 13px; font-weight: 500; margin-top: 1px; display: flex; align-items: center; gap: 5px; }
 .mi-clip { color: var(--ink-3); }
 .mi-prev { font-size: 12px; color: var(--ink-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mi-dot { position: absolute; right: 12px; top: 16px; width: 8px; height: 8px; border-radius: 50%; background: var(--info, #0a84ff); }
+.mi-dot { align-self: center; width: 8px; height: 8px; border-radius: 50%; background: var(--info, #0a84ff); }
 .mread { padding: 22px 24px; overflow-y: auto; display: flex; flex-direction: column; }
 .mread--empty { align-items: center; justify-content: center; color: var(--ink-3); }
 .mr-subj { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
@@ -409,7 +410,7 @@
 .mr-email { font-size: 13px; font-weight: 400; color: var(--ink-3); }
 .mr-to { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
 .mr-link { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
-.mr-body { font-size: 14px; line-height: 1.6; white-space: pre-line; color: var(--ink); padding: 12px 0; border-top: 1px solid var(--glass-border); flex: 1; }
+.mr-body { font-size: 14px; line-height: 1.6; white-space: pre-line; color: var(--ink); padding: 12px 0; border-top: 1px solid var(--glass-border); }
 .mr-attach { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 0; border-top: 1px solid var(--glass-border); }
 .mr-file { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 10px; padding: 8px 12px; }
 .mr-actions { display: flex; gap: 10px; padding-top: 12px; border-top: 1px solid var(--glass-border); }
