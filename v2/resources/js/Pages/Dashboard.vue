@@ -23,6 +23,10 @@ const accounts = [
     { name: 'Сбербанк · Бизнес', balance: 156800 },
     { name: 'Касса', balance: 24500 },
 ];
+const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
+
+// Сигнал: неразнесённые строки выписки
+const unrec = { count: 5, amount: 248500 };
 
 const shipments = [
     { name: 'Партия кабеля', cp: 'ООО Электро', pct: 72, color: 'var(--income)' },
@@ -66,8 +70,26 @@ const tx = [
         </div>
 
         <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
+            <!-- Сигнал: неразнесённые строки выписки -->
+            <div class="glass pressable col-span-2 flex items-center justify-between gap-3 p-4 lg:col-span-6">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-[38px] w-[38px] items-center justify-center rounded-control" style="background: var(--glass-fill-strong); color: var(--warn)">
+                        <Icon name="alert" :size="20" />
+                    </span>
+                    <div>
+                        <div class="text-[15px] font-semibold">Неразнесённые строки выписки</div>
+                        <div class="text-[13px] text-ink-2">{{ unrec.count }} операций · {{ money(unrec.amount) }} ждут сверки</div>
+                    </div>
+                </div>
+                <button class="pressable ink-btn whitespace-nowrap px-4 py-2 text-[14px] font-semibold">Свести</button>
+            </div>
+
             <!-- Деньги по счетам (Apple Card style) -->
             <Widget title="Деньги по счетам" class="col-span-2 lg:col-span-3">
+                <div class="mb-4 flex items-center justify-between">
+                    <span class="text-[13px] text-ink-2">Всего на счетах</span>
+                    <span class="text-[26px] font-bold tracking-tight tnum">{{ money(totalBalance) }}</span>
+                </div>
                 <div class="flex flex-col gap-2">
                     <div
                         v-for="a in accounts"

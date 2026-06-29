@@ -68,6 +68,7 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
 .kpi h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);margin-bottom:12px}
 .kpi .sub{font-size:11px;color:var(--ink-3);margin-top:8px}
 .spark{width:100%;height:34px;display:block;margin-top:12px;overflow:visible}
+.inkbtn{border:0;cursor:pointer;background:var(--ink);color:var(--bg);font-size:14px;font-weight:600;padding:9px 18px;border-radius:999px;white-space:nowrap}
 .row{display:flex;align-items:center;justify-content:space-between}
 .acc{display:flex;flex-direction:column;gap:8px}
 .acc .item{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-radius:14px;background:var(--glass-fill)}
@@ -157,7 +158,17 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
 
   <div class="grid">
 
+    <!-- Сигнал: неразнесённые строки выписки -->
+    <div class="w glass" style="grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;gap:14px">
+      <div style="display:flex;align-items:center;gap:13px">
+        <span class="chip" style="color:var(--warn);width:38px;height:38px"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></span>
+        <div><div style="font-weight:600;font-size:15px">Неразнесённые строки выписки</div><div style="font-size:13px;color:var(--ink-2)">5 операций · 248 500 ₽ ждут сверки</div></div>
+      </div>
+      <button class="inkbtn">Свести</button>
+    </div>
+
     <div class="w glass col3"><h2>Деньги по счетам</h2>
+      <div class="row" style="margin-bottom:16px"><span style="font-size:13px;color:var(--ink-2)">Всего на счетах</span><span class="kpi-val tnum">1 023 600 ₽</span></div>
       <div class="acc">
         <div class="item"><div class="left"><span class="chip"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l3-3h11M16 13h2"/></svg></span>Тинькофф · Расчётный</div><span class="amt tnum">842 300 ₽</span></div>
         <div class="item"><div class="left"><span class="chip"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l3-3h11M16 13h2"/></svg></span>Сбербанк · Бизнес</div><span class="amt tnum">156 800 ₽</span></div>
