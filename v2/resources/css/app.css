@@ -376,6 +376,19 @@
 .rule-a { font-size: 12px; color: var(--ink-2); grid-column: 1; }
 .rule .link-btn { grid-row: 1 / span 2; align-self: center; }
 
+/* ── Транспорт ── */
+.veh-hero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
+@media (max-width: 820px) { .veh-hero { grid-template-columns: 1fr 1fr; } }
+.vh { padding: 16px 18px; }
+.vh-l { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.vh-v { font-size: 24px; font-weight: 700; letter-spacing: -.02em; margin: 4px 0 2px; }
+.vh-pct { font-size: 14px; font-weight: 500; color: var(--ink-3); }
+.vh-s { font-size: 12px; color: var(--ink-3); }
+.gauge { height: 8px; border-radius: 999px; background: var(--glass-fill-strong); overflow: hidden; margin: 8px 0 6px; }
+.gauge-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--income), rgba(52,199,89,.6)); transition: width .5s cubic-bezier(.22,1,.36,1); }
+.gauge-fill--low { background: linear-gradient(90deg, var(--expense), rgba(255,59,48,.6)); }
+.veh-tabs { width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 16px; }
+
 /* ── Справочники ── */
 .ref-tabs { width: fit-content; max-width: 100%; overflow-x: auto; margin-bottom: 16px; }
 .ref-link { color: var(--info, #0a84ff); text-decoration: none; }

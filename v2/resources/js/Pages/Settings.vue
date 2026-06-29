@@ -30,8 +30,9 @@ const devices = ref([
     { id: 2, name: 'iPhone 16 · Face ID', last: '2 дня назад', current: false },
 ]);
 
-// Бэкап
-const lastBackup = '29.06.2026, 03:00 · 4,2 МБ';
+// Обновление (ZIP-патч)
+const lastPatch = 'patch-20260629-finances · 14 файлов · 1 SQL';
+const lastPatchAt = '29.06.2026, 03:12';
 </script>
 
 <template>
@@ -107,14 +108,19 @@ const lastBackup = '29.06.2026, 03:00 · 4,2 МБ';
                 </div>
             </div>
 
-            <!-- Бэкап -->
+            <!-- Обновление (ZIP-патч) -->
             <div class="set-card glass">
-                <div class="set-h"><Icon name="doc" :size="18" /> Бэкап базы данных</div>
-                <div class="set-toggle">
-                    <div><div class="st-t">Последний бэкап</div><div class="st-s">{{ lastBackup }} · хранится 14 копий</div></div>
-                    <button class="btn-primary pressable" style="border-radius:12px">Сделать бэкап</button>
+                <div class="set-h"><Icon name="doc" :size="18" /> Обновление системы (ZIP-патч)</div>
+                <div class="set-hint">Загрузите патч сборки (.zip). Перед применением автоматически создаётся бэкап БД; SQL-миграции из патча выполняются по порядку.</div>
+                <div class="drop">
+                    <Icon name="doc" :size="26" class="text-ink-3" />
+                    <div class="drop-t">Перетащите patch-*.zip сюда</div>
+                    <div class="drop-s">или нажмите, чтобы выбрать файл</div>
                 </div>
-                <div class="set-hint">Автоматически выполняется кроном ежедневно. Можно запустить вручную.</div>
+                <div class="set-toggle">
+                    <div><div class="st-t">Последний патч</div><div class="st-s">{{ lastPatch }} · {{ lastPatchAt }}</div></div>
+                    <button class="btn-primary pressable" style="border-radius:12px">Применить патч</button>
+                </div>
             </div>
         </div>
     </AppShell>

@@ -46,10 +46,13 @@ Route::get('/references', fn () => Inertia::render('References'))
 Route::get('/settings', fn () => Inertia::render('Settings'))
     ->middleware(['auth', 'verified'])->name('settings');
 
+// Транспорт — свёрстанная страница
+Route::get('/vehicle', fn () => Inertia::render('Transport'))
+    ->middleware(['auth', 'verified'])->name('vehicle');
+
 // Разделы (пока заглушки — будут свёрстаны далее)
 $sections = [
     'mail'        => 'Почта',
-    'vehicle'     => 'Транспорт',
 ];
 foreach ($sections as $slug => $title) {
     Route::get("/{$slug}", fn () => Inertia::render('Stub', ['title' => $title]))
