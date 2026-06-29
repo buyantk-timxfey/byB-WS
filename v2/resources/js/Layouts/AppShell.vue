@@ -59,6 +59,12 @@ const isActive = (href: string) => url.value.startsWith(href);
                 <button class="pressable flex h-[34px] w-[34px] items-center justify-center rounded-full text-ink-2 hover:text-ink" @click="notif?.toggle()">
                     <Icon name="bell" :size="19" />
                 </button>
+                <Link href="/settings" class="pressable flex h-[34px] w-[34px] items-center justify-center rounded-full text-ink-2 hover:text-ink" :class="isActive('/settings') ? 'text-ink' : ''" title="Настройки">
+                    <Icon name="gear" :size="19" />
+                </Link>
+                <Link href="/logout" method="post" as="button" class="pressable flex h-[34px] w-[34px] items-center justify-center rounded-full text-ink-2 hover:text-ink" title="Выход">
+                    <Icon name="logout" :size="19" />
+                </Link>
             </div>
         </header>
 
