@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReferenceController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ShipmentController;
+use App\Http\Controllers\WarehouseController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -39,16 +41,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/sales/{sale}/pay', [SaleController::class, 'pay']);
 });
 
-// Склад — свёрстанная страница
-Route::get('/warehouse', fn () => Inertia::render('Warehouse'))
+// Склад — реальные данные (чтение из регистров)
+Route::get('/warehouse', [WarehouseController::class, 'index'])
     ->middleware(['auth', 'verified'])->name('warehouse');
 
 // Банк — свёрстанная страница
 Route::get('/bank', fn () => Inertia::render('Bank'))
     ->middleware(['auth', 'verified'])->name('bank');
 
-// Финансы — свёрстанная страница
-Route::get('/finances', fn () => Inertia::render('Finances'))
+// Финансы — реальные данные (P&L из оборотов)
+Route::get('/finances', [FinanceController::class, 'index'])
     ->middleware(['auth', 'verified'])->name('finances');
 
 // Справочники — реальные данные
