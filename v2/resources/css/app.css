@@ -170,3 +170,36 @@
         transition: none;
     }
 }
+
+/* ── Дашборд: виджеты фиксированных размеров (как iOS) ── */
+.sec { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; max-width: 1240px; margin: 0 auto 16px; }
+.wgt-s { width: 168px; height: 168px; }
+.wgt-m { width: 352px; height: 168px; }
+.wgt-l { width: 352px; height: 352px; }
+.w-pad { overflow: hidden; padding: 16px; display: flex; flex-direction: column; }
+.pill-down { background: rgba(255, 59, 48, 0.16) !important; color: var(--expense) !important; }
+.inkbtn { border: 0; cursor: pointer; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 600; padding: 9px 18px; border-radius: 999px; white-space: nowrap; }
+.kpinum { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin-top: 6px; }
+.kpi-spark { width: 100%; height: 30px; display: block; margin-top: auto; overflow: visible; }
+.shipw { align-items: center; text-align: center; }
+.shipw .cp { font-size: 11px; color: var(--ink-3); }
+.shipw .nm { font-size: 13px; font-weight: 600; line-height: 1.1; margin-bottom: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shipw .dts { font-size: 11px; color: var(--ink-2); margin-top: auto; }
+.ring-s { position: relative; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; margin: 2px auto; }
+.ring-s span { position: absolute; font-size: 13px; font-weight: 600; }
+.accw { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.accw .it { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 13px; background: var(--glass-fill); }
+.chip { width: 30px; height: 30px; border-radius: 9px; background: var(--glass-fill-strong); display: flex; align-items: center; justify-content: center; color: var(--ink-2); flex: none; }
+.txw { display: flex; flex-direction: column; margin-top: 4px; overflow: hidden; }
+.txw .t { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--glass-border); }
+.txw .t:last-child { border-bottom: 0; }
+.av { width: 34px; height: 34px; border-radius: 999px; background: var(--glass-fill-strong); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex: none; }
+.h2 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); }
+@media (max-width: 560px) {
+    .wgt-s { width: calc(50vw - 22px); height: calc(50vw - 22px); }
+    .wgt-m { width: calc(100vw - 24px); height: 158px; }
+    .wgt-l { width: calc(100vw - 24px); height: calc(100vw - 24px); }
+}
+.txw .left { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.txw .nm { font-size: 14px; font-weight: 500; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.txw .cat { font-size: 11px; color: var(--ink-3); }

@@ -1,40 +1,36 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
-import Widget from '@/Components/Widget.vue';
-import Ring from '@/Components/Ring.vue';
 import Icon from '@/Components/Icon.vue';
 import Sparkline from '@/Components/Sparkline.vue';
 import Calendar from '@/Components/Calendar.vue';
 
-// Демо-данные (Phase 0 — каркас UI; реальные данные подключим в Фазе 1).
+// Демо-данные (Phase 0 — каркас UI; реальные данные в Фазе 1).
 const money = (n: number) => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
 
-// KPI-виджеты: метрика, значение, дельта к прошлому месяцу, спарклайн (M/L).
 const kpis = [
     { label: 'Выручка', value: '1 284 000 ₽', delta: '+12%', down: false, spark: [26, 28, 27, 34, 31, 40, 42, 48], color: 'var(--income)' },
     { label: 'Прибыль', value: '312 400 ₽', delta: '+8%', down: false, spark: [22, 24, 23, 30, 27, 33, 35, 40], color: 'var(--income)' },
     { label: 'Маржа', value: '24.3%', delta: '+1.2пп', down: false, spark: [20, 19, 22, 21, 24, 23, 26, 28], color: 'var(--income)' },
     { label: 'ROI', value: '38%', delta: '+3пп', down: false, spark: [21, 23, 22, 26, 28, 27, 32, 34], color: 'var(--income)' },
-    { label: 'Закупки / расходы', value: '972 000 ₽', delta: '+6%', down: true, spark: [30, 28, 31, 26, 27, 24, 25, 22], color: 'var(--expense)' },
+    { label: 'Закупки', value: '972 000 ₽', delta: '+6%', down: true, spark: [30, 28, 31, 26, 27, 24, 25, 22], color: 'var(--expense)' },
 ];
 
 const accounts = [
-    { name: 'Тинькофф · Расчётный', balance: 842300 },
-    { name: 'Сбербанк · Бизнес', balance: 156800 },
+    { name: 'Тинькофф', balance: 842300 },
+    { name: 'Сбербанк', balance: 156800 },
     { name: 'Касса', balance: 24500 },
 ];
 const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
 
-// Сигнал: неразнесённые строки выписки
 const unrec = { count: 5, amount: 248500 };
 
-// Поставки — каждая отдельным виджетом фикс. размера. Состояния: transit/wait/overdue.
+const C = 214; // длина окружности r=34
 const shipments = [
-    { name: 'Партия кабеля', cp: 'ООО Электро', pct: 72, color: 'var(--income)', label: '72%', dates: '10.06 → 02.07', status: 'В пути', statusBg: 'rgba(52,199,89,.16)', statusFg: 'var(--income)' },
-    { name: 'Насосы Grundfos', cp: 'ИП Сидоров', pct: 35, color: 'var(--warn)', label: '35%', dates: '20.06 → 10.07', status: 'В пути', statusBg: 'rgba(255,159,10,.16)', statusFg: 'var(--warn)' },
-    { name: 'Кабель-канал', cp: 'ООО Профиль', pct: 0, color: 'var(--ink-3)', label: 'Ожидает', dates: '27.06 → 12.07', status: 'Ожидает', statusBg: 'var(--glass-fill-strong)', statusFg: 'var(--ink-2)' },
-    { name: 'Автоматы ABB', cp: 'ИП Кузнецов', pct: 100, color: 'var(--expense)', label: '✕', dates: '01.06 → 25.06', status: 'Просрочено', statusBg: 'rgba(255,59,48,.16)', statusFg: 'var(--expense)' },
+    { cp: 'ООО Электро', name: 'Партия кабеля', kind: 'pct', pct: 72, color: 'var(--income)', dates: '10.06 → 02.07' },
+    { cp: 'ИП Сидоров', name: 'Насосы Grundfos', kind: 'pct', pct: 35, color: 'var(--warn)', dates: '20.06 → 10.07' },
+    { cp: 'ООО Профиль', name: 'Кабель-канал', kind: 'wait', pct: 0, color: 'var(--ink-3)', dates: '27.06 → 12.07' },
+    { cp: 'ИП Кузнецов', name: 'Автоматы ABB', kind: 'overdue', pct: 100, color: 'var(--expense)', dates: '01.06 → 25.06' },
 ];
 
 const tx = [
@@ -50,114 +46,89 @@ const tx = [
     <Head title="Дашборд" />
 
     <AppShell>
-        <!-- KPI-ряд: метрики со спарклайнами -->
-        <div class="mb-3 flex flex-wrap gap-3">
-            <div
-                v-for="k in kpis"
-                :key="k.label"
-                class="glass pressable flex min-w-[220px] flex-1 flex-col p-4"
-            >
-                <h2 class="mb-3 text-[13px] font-semibold uppercase tracking-wide text-ink-2">{{ k.label }}</h2>
+        <!-- Ряд 1: KPI (S) -->
+        <div class="sec">
+            <div v-for="k in kpis" :key="k.label" class="glass w-pad wgt-s pressable">
                 <div class="flex items-center justify-between">
-                    <span class="text-[26px] font-bold tracking-tight tnum">{{ k.value }}</span>
-                    <span
-                        class="pill"
-                        :style="k.down
-                            ? 'background: rgba(255,59,48,.16); color: var(--expense)'
-                            : 'background: rgba(52,199,89,.16); color: var(--income)'"
-                    >{{ k.delta }}</span>
+                    <span class="h2">{{ k.label }}</span>
+                    <span class="pill" :class="{ 'pill-down': k.down }" :style="k.down ? '' : 'background:rgba(52,199,89,.16);color:var(--income)'">{{ k.delta }}</span>
                 </div>
-                <Sparkline :data="k.spark" :color="k.color" class="mt-3" />
-                <div class="mt-2 text-[11px] text-ink-3">к прошлому месяцу</div>
+                <div class="kpinum tnum">{{ k.value }}</div>
+                <Sparkline :data="k.spark" :color="k.color" class="kpi-spark" />
             </div>
         </div>
 
-        <!-- Сигнал: неразнесённые строки выписки -->
-        <div class="glass pressable mb-3 flex items-center justify-between gap-3 p-4">
-            <div class="flex items-center gap-3">
-                <span class="flex h-[38px] w-[38px] items-center justify-center rounded-control" style="background: var(--glass-fill-strong); color: var(--warn)">
-                    <Icon name="alert" :size="20" />
-                </span>
-                <div>
-                    <div class="text-[15px] font-semibold">Неразнесённые строки выписки</div>
-                    <div class="text-[13px] text-ink-2">{{ unrec.count }} операций · {{ money(unrec.amount) }} ждут сверки</div>
-                </div>
-            </div>
-            <button class="pressable ink-btn whitespace-nowrap px-4 py-2 text-[14px] font-semibold">Свести</button>
-        </div>
-
-        <!-- Поставки: каждая — отдельный виджет фиксированного размера -->
-        <div class="mb-3 flex flex-wrap gap-3">
-            <div
-                v-for="s in shipments"
-                :key="s.name"
-                class="glass pressable flex w-[186px] flex-col items-center p-4 text-center"
-            >
-                <div class="text-[11px] text-ink-3">{{ s.cp }}</div>
-                <div class="mb-2 text-[14px] font-semibold leading-tight">{{ s.name }}</div>
-                <Ring :pct="s.pct" :color="s.color" :label="s.label" />
-                <div class="mt-2 text-[11px] text-ink-2">{{ s.dates }}</div>
-                <span class="pill mt-2" :style="`background:${s.statusBg};color:${s.statusFg}`">{{ s.status }}</span>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
-            <!-- Деньги по счетам (Apple Card style) -->
-            <Widget title="Деньги по счетам" class="col-span-2 lg:col-span-3">
-                <div class="mb-4 flex items-center justify-between">
-                    <span class="text-[13px] text-ink-2">Всего на счетах</span>
-                    <span class="text-[26px] font-bold tracking-tight tnum">{{ money(totalBalance) }}</span>
-                </div>
-                <div class="flex flex-col gap-2">
-                    <div
-                        v-for="a in accounts"
-                        :key="a.name"
-                        class="flex items-center justify-between rounded-control px-3 py-2.5"
-                        style="background: var(--glass-fill)"
-                    >
-                        <div class="flex items-center gap-3">
-                            <span class="flex h-8 w-8 items-center justify-center rounded-control text-ink-2" style="background: var(--glass-fill-strong)">
-                                <Icon name="wallet" :size="18" />
-                            </span>
-                            <span class="text-[15px] font-medium">{{ a.name }}</span>
-                        </div>
-                        <span class="text-[15px] font-semibold tnum">{{ money(a.balance) }}</span>
+        <!-- Ряд 2: сигнал (M) + поставки (S) -->
+        <div class="sec">
+            <div class="glass w-pad wgt-m pressable" style="flex-direction:row;align-items:center;justify-content:space-between;gap:12px">
+                <div class="flex items-center gap-3" style="min-width:0">
+                    <span class="chip" style="width:38px;height:38px;color:var(--warn)"><Icon name="alert" :size="20" /></span>
+                    <div style="min-width:0">
+                        <div class="text-[14px] font-semibold">Неразнесённые строки</div>
+                        <div class="text-[12px] text-ink-2">{{ unrec.count }} операций · {{ money(unrec.amount) }}</div>
                     </div>
                 </div>
-            </Widget>
+                <button class="inkbtn pressable">Свести</button>
+            </div>
 
-            <!-- Календарь ETA поставок -->
-            <Calendar class="col-span-2 lg:col-span-3" />
+            <div v-for="s in shipments" :key="s.name" class="glass w-pad wgt-s shipw pressable">
+                <div class="cp">{{ s.cp }}</div>
+                <div class="nm">{{ s.name }}</div>
+                <div class="ring-s">
+                    <svg viewBox="0 0 100 100" width="60" height="60">
+                        <circle v-if="s.kind !== 'overdue'" cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9" />
+                        <circle v-if="s.kind === 'pct'" cx="50" cy="50" r="34" fill="none" :stroke="s.color" stroke-width="9" stroke-linecap="round" :stroke-dasharray="C" :stroke-dashoffset="C * (1 - s.pct / 100)" transform="rotate(-90 50 50)" />
+                        <circle v-if="s.kind === 'overdue'" cx="50" cy="50" r="34" fill="none" stroke="var(--expense)" stroke-width="9" />
+                    </svg>
+                    <span v-if="s.kind === 'pct'">{{ s.pct }}%</span>
+                    <span v-else-if="s.kind === 'wait'" style="font-size:11px;color:var(--ink-2)">Ожидает</span>
+                    <span v-else style="font-size:20px;font-weight:700;color:var(--expense)">×</span>
+                </div>
+                <div class="dts">{{ s.dates }}</div>
+            </div>
+        </div>
 
-            <!-- Банковская лента (Apple Card) -->
-            <Widget title="Последние операции" class="col-span-2 lg:col-span-6">
-                <div class="flex flex-col">
-                    <div
-                        v-for="t in tx"
-                        :key="t.who + t.amount"
-                        class="flex items-center justify-between border-b border-[var(--glass-border)] py-2.5 last:border-0"
-                    >
-                        <div class="flex items-center gap-3">
-                            <span
-                                class="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-semibold"
-                                style="background: var(--glass-fill-strong)"
-                            >
-                                {{ t.who.slice(0, 2).toUpperCase() }}
-                            </span>
-                            <div>
-                                <div class="text-[15px] font-medium leading-tight">{{ t.who }}</div>
-                                <div class="text-[12px] text-ink-3">{{ t.cat }}</div>
+        <!-- Ряд 3: крупные виджеты (L) -->
+        <div class="sec">
+            <!-- Деньги по счетам -->
+            <div class="glass w-pad wgt-l">
+                <span class="h2">Деньги по счетам</span>
+                <div class="flex items-center justify-between" style="margin-top:6px">
+                    <span class="text-[12px] text-ink-2">Всего</span>
+                    <span class="tnum" style="font-size:24px;font-weight:700">{{ money(totalBalance) }}</span>
+                </div>
+                <div class="accw">
+                    <div v-for="a in accounts" :key="a.name" class="it">
+                        <div class="flex items-center gap-3" style="min-width:0">
+                            <span class="chip"><Icon name="wallet" :size="16" /></span>
+                            <span class="text-[14px] font-medium">{{ a.name }}</span>
+                        </div>
+                        <span class="text-[14px] font-semibold tnum">{{ money(a.balance) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Календарь ETA -->
+            <Calendar class="wgt-l overflow-hidden" />
+
+            <!-- Последние операции (Apple Card) -->
+            <div class="glass w-pad wgt-l">
+                <span class="h2">Последние операции</span>
+                <div class="txw">
+                    <div v-for="t in tx" :key="t.who + t.amount" class="t">
+                        <div class="left">
+                            <span class="av">{{ t.who.slice(0, 2).toUpperCase() }}</span>
+                            <div style="min-width:0">
+                                <div class="nm">{{ t.who }}</div>
+                                <div class="cat">{{ t.cat }}</div>
                             </div>
                         </div>
-                        <span
-                            class="text-[15px] font-semibold tnum"
-                            :style="{ color: t.kind === 'in' ? 'var(--income)' : 'var(--ink)' }"
-                        >
+                        <span class="text-[14px] font-semibold tnum" :style="{ color: t.kind === 'in' ? 'var(--income)' : 'var(--ink)' }">
                             {{ t.kind === 'in' ? '+' : '' }}{{ money(t.amount) }}
                         </span>
                     </div>
                 </div>
-            </Widget>
+            </div>
         </div>
     </AppShell>
 </template>
