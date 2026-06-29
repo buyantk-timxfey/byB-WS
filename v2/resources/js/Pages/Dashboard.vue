@@ -33,6 +33,16 @@ const shipments = [
     { cp: 'ИП Кузнецов', name: 'Автоматы ABB', kind: 'overdue', pct: 100, color: 'var(--expense)', dates: '01.06 → 25.06' },
 ];
 
+const warehouse = {
+    frozen: 1480000,
+    positions: 48,
+    stale: [
+        { name: 'Автоматы ABB', days: 95, cost: 142000, warn: true },
+        { name: 'Кабель ВВГ 3×2.5', days: 62, cost: 88000, warn: true },
+        { name: 'Светильники LED', days: 47, cost: 54000, warn: false },
+    ],
+};
+
 const tx = [
     { who: 'ООО Электро', cat: 'Продажа', amount: 184000, kind: 'in' },
     { who: 'ИП Сидоров', cat: 'Закупка', amount: -96500, kind: 'out' },
@@ -89,7 +99,7 @@ const tx = [
         </div>
 
         <!-- Ряд 3: крупные виджеты (L) -->
-        <div class="sec">
+        <div class="sec" style="max-width:760px">
             <!-- Деньги по счетам -->
             <div class="glass w-pad wgt-l">
                 <span class="h2">Деньги по счетам</span>
@@ -126,6 +136,27 @@ const tx = [
                         <span class="text-[14px] font-semibold tnum" :style="{ color: t.kind === 'in' ? 'var(--income)' : 'var(--ink)' }">
                             {{ t.kind === 'in' ? '+' : '' }}{{ money(t.amount) }}
                         </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Склад -->
+            <div class="glass w-pad wgt-l">
+                <span class="h2">Склад</span>
+                <div class="text-[12px] text-ink-2" style="margin-top:8px">Замороженные деньги</div>
+                <div class="tnum" style="font-size:24px;font-weight:700">{{ money(warehouse.frozen) }}</div>
+                <div class="text-[12px] text-ink-3" style="margin-top:2px">{{ warehouse.positions }} позиций на складе</div>
+                <div class="h2" style="margin:14px 0 4px">Залежалое · 30+ дней</div>
+                <div class="txw">
+                    <div v-for="p in warehouse.stale" :key="p.name" class="t">
+                        <div class="left">
+                            <span class="av" :style="p.warn ? 'color:var(--warn)' : 'color:var(--ink-2)'">{{ p.days }}</span>
+                            <div style="min-width:0">
+                                <div class="nm">{{ p.name }}</div>
+                                <div class="cat">дней на складе</div>
+                            </div>
+                        </div>
+                        <span class="text-[14px] font-semibold tnum">{{ money(p.cost) }}</span>
                     </div>
                 </div>
             </div>
