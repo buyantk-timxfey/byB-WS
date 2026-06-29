@@ -4,14 +4,18 @@ import AppShell from '@/Layouts/AppShell.vue';
 import Widget from '@/Components/Widget.vue';
 import Ring from '@/Components/Ring.vue';
 import Icon from '@/Components/Icon.vue';
+import Sparkline from '@/Components/Sparkline.vue';
 
 // Демо-данные (Phase 0 — каркас UI; реальные данные подключим в Фазе 1).
 const money = (n: number) => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
 
+// KPI-виджеты: метрика, значение, дельта к прошлому месяцу, спарклайн (M/L).
 const kpis = [
-    { label: 'Выручка', value: 1284000, delta: '+12%' },
-    { label: 'Прибыль', value: 312400, delta: '+8%' },
-    { label: 'Маржа', value: '24.3%', delta: '+1.2пп' },
+    { label: 'Выручка', value: '1 284 000 ₽', delta: '+12%', down: false, spark: [26, 28, 27, 34, 31, 40, 42, 48], color: 'var(--income)' },
+    { label: 'Прибыль', value: '312 400 ₽', delta: '+8%', down: false, spark: [22, 24, 23, 30, 27, 33, 35, 40], color: 'var(--income)' },
+    { label: 'Маржа', value: '24.3%', delta: '+1.2пп', down: false, spark: [20, 19, 22, 21, 24, 23, 26, 28], color: 'var(--income)' },
+    { label: 'ROI', value: '38%', delta: '+3пп', down: false, spark: [21, 23, 22, 26, 28, 27, 32, 34], color: 'var(--income)' },
+    { label: 'Закупки / расходы', value: '972 000 ₽', delta: '+6%', down: true, spark: [30, 28, 31, 26, 27, 24, 25, 22], color: 'var(--expense)' },
 ];
 
 const accounts = [
@@ -39,24 +43,29 @@ const tx = [
     <Head title="Дашборд" />
 
     <AppShell>
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
-            <!-- KPI -->
-            <Widget
+        <!-- KPI-ряд: метрики со спарклайнами -->
+        <div class="mb-3 flex flex-wrap gap-3">
+            <div
                 v-for="k in kpis"
                 :key="k.label"
-                :title="k.label"
-                class="col-span-1 lg:col-span-2"
+                class="glass pressable flex min-w-[220px] flex-1 flex-col p-4"
             >
-                <div class="flex items-end justify-between">
-                    <span class="text-[26px] font-bold tracking-tight tnum">
-                        {{ typeof k.value === 'number' ? money(k.value) : k.value }}
-                    </span>
-                    <span class="pill" style="background: rgba(52, 199, 89, 0.16); color: var(--income)">
-                        {{ k.delta }}
-                    </span>
+                <h2 class="mb-3 text-[13px] font-semibold uppercase tracking-wide text-ink-2">{{ k.label }}</h2>
+                <div class="flex items-center justify-between">
+                    <span class="text-[26px] font-bold tracking-tight tnum">{{ k.value }}</span>
+                    <span
+                        class="pill"
+                        :style="k.down
+                            ? 'background: rgba(255,59,48,.16); color: var(--expense)'
+                            : 'background: rgba(52,199,89,.16); color: var(--income)'"
+                    >{{ k.delta }}</span>
                 </div>
-            </Widget>
+                <Sparkline :data="k.spark" :color="k.color" class="mt-3" />
+                <div class="mt-2 text-[11px] text-ink-3">к прошлому месяцу</div>
+            </div>
+        </div>
 
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
             <!-- Деньги по счетам (Apple Card style) -->
             <Widget title="Деньги по счетам" class="col-span-2 lg:col-span-3">
                 <div class="flex flex-col gap-2">

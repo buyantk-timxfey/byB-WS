@@ -62,6 +62,12 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
 .col2{grid-column:span 2}.col3{grid-column:span 3}
 .kpi-val{font-size:27px;font-weight:700;letter-spacing:-.02em}
 .pill{border-radius:999px;font-weight:600;font-size:12px;padding:3px 10px;background:rgba(52,199,89,.16);color:var(--income)}
+.pill.down{background:rgba(255,59,48,.16);color:var(--expense)}
+.kpis{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px}
+.kpi{flex:1 1 230px;padding:18px;display:flex;flex-direction:column}
+.kpi h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);margin-bottom:12px}
+.kpi .sub{font-size:11px;color:var(--ink-3);margin-top:8px}
+.spark{width:100%;height:34px;display:block;margin-top:12px;overflow:visible}
 .row{display:flex;align-items:center;justify-content:space-between}
 .acc{display:flex;flex-direction:column;gap:8px}
 .acc .item{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-radius:14px;background:var(--glass-fill)}
@@ -116,10 +122,40 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);
 </header>
 
 <main class="container">
+  <div class="kpis">
+    <div class="kpi glass">
+      <h2>Выручка</h2>
+      <div class="row"><span class="kpi-val tnum">1 284 000 ₽</span><span class="pill">+12%</span></div>
+      <svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points="0,28 17,26 34,27 51,20 68,22 85,14 102,12 120,6" fill="none" stroke="var(--income)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>
+      <div class="sub">к прошлому месяцу</div>
+    </div>
+    <div class="kpi glass">
+      <h2>Прибыль</h2>
+      <div class="row"><span class="kpi-val tnum">312 400 ₽</span><span class="pill">+8%</span></div>
+      <svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points="0,26 17,24 34,25 51,18 68,21 85,16 102,15 120,10" fill="none" stroke="var(--income)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>
+      <div class="sub">к прошлому месяцу</div>
+    </div>
+    <div class="kpi glass">
+      <h2>Маржа</h2>
+      <div class="row"><span class="kpi-val tnum">24.3%</span><span class="pill">+1.2пп</span></div>
+      <svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points="0,22 17,24 34,20 51,21 68,18 85,19 102,16 120,14" fill="none" stroke="var(--income)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>
+      <div class="sub">к прошлому месяцу</div>
+    </div>
+    <div class="kpi glass">
+      <h2>ROI</h2>
+      <div class="row"><span class="kpi-val tnum">38%</span><span class="pill">+3пп</span></div>
+      <svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points="0,24 17,22 34,23 51,19 68,17 85,18 102,13 120,11" fill="none" stroke="var(--income)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>
+      <div class="sub">к прошлому месяцу</div>
+    </div>
+    <div class="kpi glass">
+      <h2>Закупки / расходы</h2>
+      <div class="row"><span class="kpi-val tnum">972 000 ₽</span><span class="pill down">+6%</span></div>
+      <svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><polyline points="0,18 17,20 34,17 51,22 68,21 85,24 102,23 120,26" fill="none" stroke="var(--expense)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>
+      <div class="sub">к прошлому месяцу</div>
+    </div>
+  </div>
+
   <div class="grid">
-    <div class="w glass col2"><h2>Выручка</h2><div class="row"><span class="kpi-val tnum">1 284 000 ₽</span><span class="pill">+12%</span></div></div>
-    <div class="w glass col2"><h2>Прибыль</h2><div class="row"><span class="kpi-val tnum">312 400 ₽</span><span class="pill">+8%</span></div></div>
-    <div class="w glass col2"><h2>Маржа</h2><div class="row"><span class="kpi-val tnum">24.3%</span><span class="pill">+1.2пп</span></div></div>
 
     <div class="w glass col3"><h2>Деньги по счетам</h2>
       <div class="acc">
