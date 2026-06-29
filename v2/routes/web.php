@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReferenceController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ShipmentController;
 use Illuminate\Foundation\Application;
@@ -29,9 +30,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/shipments/{shipment}', [ShipmentController::class, 'destroy']);
 });
 
-// Продажи — свёрстанная страница
-Route::get('/sales', fn () => Inertia::render('Sales'))
-    ->middleware(['auth', 'verified'])->name('sales');
+// Продажи — реальные данные
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/sales', [SaleController::class, 'index'])->name('sales');
+    Route::post('/sales', [SaleController::class, 'store']);
+    Route::put('/sales/{sale}', [SaleController::class, 'update']);
+    Route::delete('/sales/{sale}', [SaleController::class, 'destroy']);
+    Route::post('/sales/{sale}/pay', [SaleController::class, 'pay']);
+});
 
 // Склад — свёрстанная страница
 Route::get('/warehouse', fn () => Inertia::render('Warehouse'))

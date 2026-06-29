@@ -1,58 +1,80 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
+import { money, date as fdate } from '@/lib/format';
 
-const money = (n: number) => new Intl.NumberFormat('ru-RU').format(n) + ' ₽';
-
-type Item = { name: string; qty: number; price: number; cost: number };
-type Sale = {
-    id: string; date: string; buyer: string; sum: number; paid: number; cost: number;
-    status: 'Счёт' | 'Отгружено' | 'Отменено'; comment: string; account: string;
-    source: string; items: Item[];
+type Item = { nomenclature_id: number | null; qty: number; price: number; cost?: number };
+type Row = {
+    id: number; number: string; date: string; buyer: string; counterparty_id: number | null;
+    account_id: number | null; status: string; sum: number; cost: number; profit: number;
+    paid: number; posted: boolean; items: Item[];
 };
 
-const data = ref<Sale[]>([
-    { id: 'ИЛ-0031', date: '02.07.2026', buyer: 'ООО Строймонтаж', sum: 268000, paid: 0, cost: 214000, status: 'Счёт', comment: '', account: '', source: '', items: [{ name: 'Кабель-канал 40×40', qty: 200, price: 1340, cost: 1070 }] },
-    { id: 'ИН-0030', date: '27.06.2026', buyer: 'ИП Васильев', sum: 124000, paid: 60000, cost: 96500, status: 'Отгружено', comment: '', account: 'Точка · 5512', source: 'ИН-0043', items: [{ name: 'Насос Grundfos UPS 25-40', qty: 5, price: 24800, cost: 19300 }] },
-    { id: 'ИН-0029', date: '22.06.2026', buyer: 'ООО Строймонтаж', sum: 236000, paid: 236000, cost: 191000, status: 'Отгружено', comment: '', account: 'Сбер · 7781', source: 'ИН-0042', items: [{ name: 'Кабель ВВГ 3×2.5', qty: 320, price: 737, cost: 597 }] },
-    { id: 'ИН-0028', date: '18.06.2026', buyer: 'ИП Громов', sum: 186000, paid: 186000, cost: 145200, status: 'Отгружено', comment: '', account: 'Сбер · 7781', source: 'ИН-0041', items: [{ name: 'Автомат ABB SH201 C16', qty: 100, price: 1860, cost: 1452 }] },
-    { id: 'ИН-0027', date: '14.06.2026', buyer: 'ООО Энергосети', sum: 98000, paid: 0, cost: 83400, status: 'Отменено', comment: 'Отказ покупателя', account: '', source: '', items: [{ name: 'Лоток 100×50', qty: 60, price: 1633, cost: 1390 }] },
-]);
+const props = defineProps<{
+    rows: Row[];
+    buyers: { id: number; name: string }[];
+    goods: { id: number; name: string; unit: string }[];
+    accounts: { id: number; name: string }[];
+}>();
 
 const seg = ref<'all' | 'Счёт' | 'Отгружено' | 'Отменено'>('all');
 const q = ref('');
-
-const rows = computed(() => data.value.filter((s) => {
+const filtered = computed(() => props.rows.filter((s) => {
     if (seg.value !== 'all' && s.status !== seg.value) return false;
-    if (q.value && !(`${s.id} ${s.buyer}`.toLowerCase().includes(q.value.toLowerCase()))) return false;
+    if (q.value && !(`${s.number} ${s.buyer}`.toLowerCase().includes(q.value.toLowerCase()))) return false;
     return true;
 }));
-
-// Итоги: только проведённые (Отгружено) дают выручку/прибыль
-const shipped = computed(() => rows.value.filter((s) => s.status === 'Отгружено'));
+const shipped = computed(() => filtered.value.filter((s) => s.status === 'Отгружено'));
 const totalRevenue = computed(() => shipped.value.reduce((a, s) => a + s.sum, 0));
-const totalProfit = computed(() => shipped.value.reduce((a, s) => a + (s.sum - s.cost), 0));
+const totalProfit = computed(() => shipped.value.reduce((a, s) => a + s.profit, 0));
 const avgCheck = computed(() => shipped.value.length ? Math.round(totalRevenue.value / shipped.value.length) : 0);
 const totalDebt = computed(() => shipped.value.reduce((a, s) => a + (s.sum - s.paid), 0));
 
-const statusVariant = (s: Sale['status']) => s === 'Отгружено' ? 'ok' : s === 'Счёт' ? 'info' : 'neutral';
-const payText = (s: Sale) => s.paid >= s.sum ? 'Оплачено' : s.paid > 0 ? 'Частично' : 'Не оплачено';
-const payVariant = (s: Sale) => s.paid >= s.sum ? 'ok' : s.paid > 0 ? 'warn' : 'bad';
-const margin = (s: Sale) => s.sum ? Math.round(((s.sum - s.cost) / s.sum) * 100) : 0;
+const statusVariant = (s: string) => s === 'Отгружено' ? 'ok' : s === 'Счёт' ? 'info' : 'neutral';
+const payText = (s: Row) => s.paid >= s.sum && s.sum > 0 ? 'Оплачено' : s.paid > 0 ? 'Частично' : 'Не оплачено';
+const payVariant = (s: Row) => s.paid >= s.sum && s.sum > 0 ? 'ok' : s.paid > 0 ? 'warn' : 'bad';
+const margin = (s: Row) => s.sum ? Math.round((s.profit / s.sum) * 100) : 0;
 
 const open = ref(false);
-const cur = ref<Sale | null>(null);
-function openDoc(s: Sale) { cur.value = s; open.value = true; }
+const editingId = ref<number | null>(null);
+const form = useForm<{ date: string; counterparty_id: number | null; account_id: number | null; status: string; comment: string; items: Item[] }>({
+    date: '', counterparty_id: null, account_id: null, status: 'Счёт', comment: '', items: [],
+});
+const formSum = computed(() => form.items.reduce((a, i) => a + (Number(i.qty) || 0) * (Number(i.price) || 0), 0));
+
 function create() {
-    cur.value = { id: 'ИН-0032', date: '', buyer: '', sum: 0, paid: 0, cost: 0, status: 'Счёт', comment: '', account: '', source: '', items: [] };
+    editingId.value = null;
+    form.reset();
+    form.date = new Date().toISOString().slice(0, 10);
     open.value = true;
 }
-const curProfit = computed(() => cur.value ? cur.value.sum - cur.value.cost : 0);
-const curMargin = computed(() => cur.value && cur.value.sum ? Math.round((curProfit.value / cur.value.sum) * 100) : 0);
+function openDoc(s: Row) {
+    editingId.value = s.id;
+    form.date = s.date ?? '';
+    form.counterparty_id = s.counterparty_id;
+    form.account_id = s.account_id;
+    form.status = s.status;
+    form.comment = '';
+    form.items = s.items.map((i) => ({ nomenclature_id: i.nomenclature_id, qty: i.qty, price: i.price }));
+    open.value = true;
+}
+function addItem() { form.items.push({ nomenclature_id: null, qty: 1, price: 0 }); }
+function removeItem(i: number) { form.items.splice(i, 1); }
+function submit() {
+    const opts = { onSuccess: () => { open.value = false; } };
+    if (editingId.value) form.put(`/sales/${editingId.value}`, opts);
+    else form.post('/sales', opts);
+}
+function destroy() {
+    if (editingId.value && confirm('Удалить продажу?')) router.delete(`/sales/${editingId.value}`, { onSuccess: () => { open.value = false; } });
+}
+function payNow() {
+    if (editingId.value) router.post(`/sales/${editingId.value}/pay`, {}, { onSuccess: () => { open.value = false; } });
+}
 </script>
 
 <template>
@@ -77,29 +99,27 @@ const curMargin = computed(() => cur.value && cur.value.sum ? Math.round((curPro
             <div class="jscroll">
                 <table class="jtable">
                     <thead>
-                        <tr>
-                            <th>№</th><th>Дата</th><th>Покупатель</th>
-                            <th class="num">Сумма</th><th>Оплата</th>
-                            <th class="num">Прибыль</th><th>Статус</th>
-                        </tr>
+                        <tr><th>№</th><th>Дата</th><th>Покупатель</th><th class="num">Сумма</th><th>Оплата</th><th class="num">Прибыль</th><th>Статус</th></tr>
                     </thead>
                     <tbody>
-                        <tr v-for="s in rows" :key="s.id" @click="openDoc(s)">
-                            <td>{{ s.id }}</td>
-                            <td class="text-ink-2">{{ s.date }}</td>
+                        <tr v-for="s in filtered" :key="s.id" @click="openDoc(s)">
+                            <td>{{ s.number }}</td>
+                            <td class="text-ink-2">{{ fdate(s.date) }}</td>
                             <td>{{ s.buyer }}</td>
                             <td class="num">{{ money(s.sum) }}</td>
                             <td><StatusPill :text="payText(s)" :variant="payVariant(s)" /></td>
-                            <td class="num" :class="s.status === 'Отменено' ? 'text-ink-3' : ''">
-                                <span v-if="s.status !== 'Отменено'" :style="{ color: 'var(--income)' }">{{ money(s.sum - s.cost) }}</span>
-                                <span v-else>—</span>
-                                <span v-if="s.status !== 'Отменено'" class="text-ink-3" style="font-size:12px"> · {{ margin(s) }}%</span>
+                            <td class="num">
+                                <template v-if="s.status === 'Отгружено'">
+                                    <span :style="{ color: 'var(--income)' }">{{ money(s.profit) }}</span>
+                                    <span class="text-ink-3" style="font-size:12px"> · {{ margin(s) }}%</span>
+                                </template>
+                                <span v-else class="text-ink-3">—</span>
                             </td>
                             <td><StatusPill :text="s.status" :variant="statusVariant(s.status)" /></td>
                         </tr>
-                        <tr v-if="!rows.length"><td colspan="7"><div class="j-empty">Ничего не найдено</div></td></tr>
+                        <tr v-if="!filtered.length"><td colspan="7"><div class="j-empty">Продаж пока нет — создайте первую</div></td></tr>
                     </tbody>
-                    <tfoot v-if="rows.length">
+                    <tfoot v-if="filtered.length">
                         <tr>
                             <td colspan="3">Выручка (отгружено): {{ shipped.length }}</td>
                             <td class="num">{{ money(totalRevenue) }}</td>
@@ -112,49 +132,59 @@ const curMargin = computed(() => cur.value && cur.value.sum ? Math.round((curPro
             </div>
         </div>
 
-        <!-- Форма-документ: Реализация -->
-        <AppModal :open="open" :title="cur?.id || 'Новая продажа'" :subtitle="cur?.buyer" @close="open = false">
-            <template v-if="cur">
-                <div class="fld-row">
-                    <div class="fld"><label>Покупатель</label><input :value="cur.buyer" placeholder="Выберите контрагента" /></div>
-                    <div class="fld"><label>Статус</label>
-                        <select :value="cur.status"><option>Счёт</option><option>Отгружено</option><option>Отменено</option></select>
-                    </div>
+        <AppModal :open="open" :title="editingId ? 'Продажа' : 'Новая продажа'" @close="open = false">
+            <div class="fld-row">
+                <div class="fld"><label>Покупатель</label>
+                    <select v-model="form.counterparty_id">
+                        <option :value="null">— выбрать —</option>
+                        <option v-for="c in buyers" :key="c.id" :value="c.id">{{ c.name }}</option>
+                    </select>
                 </div>
-                <div class="fld-row">
-                    <div class="fld"><label>Дата</label><input :value="cur.date" placeholder="дд.мм.гггг" /></div>
-                    <div class="fld"><label>Счёт зачисления</label><input :value="cur.account" placeholder="—" /></div>
+                <div class="fld"><label>Статус</label>
+                    <select v-model="form.status"><option>Счёт</option><option>Отгружено</option><option>Отменено</option></select>
                 </div>
-                <div class="fld"><label>Источник-поставка (опц.)</label><input :value="cur.source" placeholder="№ поставки" /></div>
+            </div>
+            <div class="fld-row">
+                <div class="fld"><label>Дата</label><input v-model="form.date" type="date" /></div>
+                <div class="fld"><label>Счёт зачисления</label>
+                    <select v-model="form.account_id"><option :value="null">—</option><option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option></select>
+                </div>
+            </div>
 
-                <div>
-                    <div class="items-h">
-                        <span class="h2">Позиции</span>
-                        <button class="btn-ghost" style="padding:6px 12px;font-size:13px">+ Товар</button>
-                    </div>
-                    <div v-for="(it, i) in cur.items" :key="i" class="item-row item-row--sale">
-                        <div><div class="nm">{{ it.name }}</div><div class="sub">{{ it.qty }} × {{ money(it.price) }} · с/с {{ money(it.cost) }}</div></div>
-                        <div class="num text-ink-2">{{ it.qty }}</div>
-                        <div class="num">{{ money(it.qty * it.price) }}</div>
-                        <div class="text-ink-3" style="text-align:center">✕</div>
-                    </div>
-                    <div v-if="!cur.items.length" class="text-ink-3" style="padding:12px 0;font-size:14px">Добавьте товары со склада (списываются по FIFO)</div>
+            <div>
+                <div class="items-h">
+                    <span class="h2">Позиции (списываются по FIFO)</span>
+                    <button class="btn-ghost" style="padding:6px 12px;font-size:13px" @click="addItem">+ Товар</button>
                 </div>
+                <div v-for="(it, i) in form.items" :key="i" class="sale-item">
+                    <select v-model="it.nomenclature_id">
+                        <option :value="null">— товар —</option>
+                        <option v-for="g in goods" :key="g.id" :value="g.id">{{ g.name }}</option>
+                    </select>
+                    <input v-model.number="it.qty" type="number" placeholder="кол-во" />
+                    <input v-model.number="it.price" type="number" placeholder="цена" />
+                    <button class="link-btn link-btn--bad" @click="removeItem(i)">✕</button>
+                </div>
+                <div v-if="!form.items.length" class="text-ink-3" style="padding:12px 0;font-size:14px">Добавьте товары со склада</div>
+            </div>
 
-                <div class="sale-sums">
-                    <div class="ss-row"><span class="text-ink-2 text-[14px]">Выручка</span><span class="tnum text-[15px] font-semibold">{{ money(cur.sum) }}</span></div>
-                    <div class="ss-row"><span class="text-ink-2 text-[14px]">Себестоимость (FIFO)</span><span class="tnum text-[15px] text-ink-2">{{ money(cur.cost) }}</span></div>
-                    <div class="ss-row ss-row--total"><span class="text-[14px] font-semibold">Прибыль · {{ curMargin }}%</span><span class="tnum text-[18px] font-bold" :style="{ color: 'var(--income)' }">{{ money(curProfit) }}</span></div>
-                </div>
-            </template>
+            <div class="flex items-center justify-between" style="padding-top:6px;border-top:1px solid var(--glass-border)">
+                <span class="text-ink-2 text-[14px]">Выручка</span>
+                <span class="tnum text-[18px] font-bold">{{ money(formSum) }}</span>
+            </div>
 
             <template #footer>
-                <button class="btn-primary pressable" style="flex:1;justify-content:center">
-                    {{ cur && cur.status === 'Счёт' ? 'Провести (Отгрузить)' : 'Сохранить' }}
+                <button class="btn-primary pressable" style="flex:1;justify-content:center" :disabled="form.processing" @click="submit">
+                    {{ form.status === 'Счёт' ? 'Сохранить счёт' : 'Провести (Отгрузить)' }}
                 </button>
-                <button class="btn-ghost pressable">Оплачено сразу</button>
-                <button class="btn-ghost pressable">Цепочка</button>
+                <button v-if="editingId" class="btn-ghost pressable" @click="payNow">Оплачено сразу</button>
+                <button v-if="editingId" class="btn-ghost pressable" @click="destroy">Удалить</button>
             </template>
         </AppModal>
     </AppShell>
 </template>
+
+<style scoped>
+.sale-item { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--glass-border); }
+.sale-item select, .sale-item input { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 8px 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
+</style>
