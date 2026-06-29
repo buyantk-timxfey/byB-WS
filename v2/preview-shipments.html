@@ -122,11 +122,11 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);font-family:-apple-
       <table class="jtable">
         <thead><tr><th>№</th><th>Дата</th><th>Поставщик</th><th>Название</th><th class="num">Сумма</th><th>Оплата</th><th>Статус</th><th>ETA</th></tr></thead>
         <tbody>
-          <tr onclick="openDoc()"><td>ПОСТ-2026-0044</td><td style="color:var(--ink-2)">01.07.2026</td><td>ООО Профиль</td><td>Кабель-канал</td><td class="num">214 000 ₽</td><td><span class="pill pill--bad">Не оплачено</span></td><td><span class="pill pill--neutral">Ожидает отправки</span></td><td style="color:var(--ink-2)">12.07.2026</td></tr>
-          <tr onclick="openDoc()"><td>ПОСТ-2026-0043</td><td style="color:var(--ink-2)">28.06.2026</td><td>ИП Сидоров</td><td>Насосы Grundfos</td><td class="num">96 500 ₽</td><td><span class="pill pill--warn">Частично</span></td><td><span class="pill pill--info">В пути</span></td><td style="color:var(--ink-2)">10.07.2026</td></tr>
-          <tr onclick="openDoc()"><td>ПОСТ-2026-0042</td><td style="color:var(--ink-2)">20.06.2026</td><td>ИП Сидоров</td><td>Партия кабеля</td><td class="num">184 000 ₽</td><td><span class="pill pill--ok">Оплачено</span></td><td><span class="pill pill--ok">Завершено</span></td><td style="color:var(--ink-2)">02.07.2026</td></tr>
-          <tr onclick="openDoc()"><td>ПОСТ-2026-0041</td><td style="color:var(--ink-2)">15.06.2026</td><td>ИП Кузнецов</td><td>Автоматы ABB <span class="pill pill--bad ml2">Проблема</span></td><td class="num">142 000 ₽</td><td><span class="pill pill--ok">Оплачено</span></td><td><span class="pill pill--ok">Завершено</span></td><td style="color:var(--ink-2)">25.06.2026</td></tr>
-          <tr onclick="openDoc()"><td>ПОСТ-2026-0040</td><td style="color:var(--ink-2)">12.06.2026</td><td>ООО Метком</td><td>Лотки металлические</td><td class="num">78 000 ₽</td><td><span class="pill pill--bad">Не оплачено</span></td><td><span class="pill pill--info">В пути</span></td><td style="color:var(--ink-2)">08.07.2026</td></tr>
+          <tr onclick="openDoc()"><td>ИЛ-0044</td><td style="color:var(--ink-2)">01.07.2026</td><td>ООО Профиль</td><td>Кабель-канал</td><td class="num">214 000 ₽</td><td><span class="pill pill--bad">Не оплачено</span></td><td><span class="pill pill--neutral">Ожидает отправки</span></td><td style="color:var(--ink-2)">12.07.2026</td></tr>
+          <tr onclick="openDoc()"><td>ИН-0043</td><td style="color:var(--ink-2)">28.06.2026</td><td>ИП Сидоров</td><td>Насосы Grundfos</td><td class="num">96 500 ₽</td><td><span class="pill pill--warn">Частично</span></td><td><span class="pill pill--info">В пути</span></td><td style="color:var(--ink-2)">10.07.2026</td></tr>
+          <tr onclick="openDoc()"><td>ИН-0042</td><td style="color:var(--ink-2)">20.06.2026</td><td>ИП Сидоров</td><td>Партия кабеля</td><td class="num">184 000 ₽</td><td><span class="pill pill--ok">Оплачено</span></td><td><span class="pill pill--ok">Завершено</span></td><td style="color:var(--ink-2)">02.07.2026</td></tr>
+          <tr onclick="openDoc()"><td>ИН-0041</td><td style="color:var(--ink-2)">15.06.2026</td><td>ИП Кузнецов</td><td>Автоматы ABB <span class="pill pill--bad ml2">Проблема</span></td><td class="num">142 000 ₽</td><td><span class="pill pill--ok">Оплачено</span></td><td><span class="pill pill--ok">Завершено</span></td><td style="color:var(--ink-2)">25.06.2026</td></tr>
+          <tr onclick="openDoc()"><td>ИН-0040</td><td style="color:var(--ink-2)">12.06.2026</td><td>ООО Метком</td><td>Лотки металлические</td><td class="num">78 000 ₽</td><td><span class="pill pill--bad">Не оплачено</span></td><td><span class="pill pill--info">В пути</span></td><td style="color:var(--ink-2)">08.07.2026</td></tr>
         </tbody>
         <tfoot><tr><td colspan="4">Итого: 5</td><td class="num">714 500 ₽</td><td colspan="3">Долг поставщикам: 338 500 ₽</td></tr></tfoot>
       </table>
@@ -138,7 +138,7 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);font-family:-apple-
 <div class="drawer-ov" id="dov" onclick="if(event.target===this)closeDoc()">
   <div class="drawer glass-strong">
     <div class="drawer-head">
-      <div><div class="dt">ПОСТ-2026-0043</div><div class="ds">ИП Сидоров</div></div>
+      <div><div class="dt">ИН-0043</div><div class="ds">ИП Сидоров</div></div>
       <button class="drawer-x" onclick="closeDoc()">×</button>
     </div>
     <div class="drawer-body">
@@ -166,7 +166,7 @@ body{min-height:100dvh;background:var(--bg);color:var(--ink);font-family:-apple-
     </div>
     <div class="drawer-foot">
       <button class="btn-primary" style="flex:1;justify-content:center">Сохранить</button>
-      <button class="btn-ghost">Оплатить</button>
+      <button class="btn-ghost">Оплатить поставщику</button>
       <button class="btn-ghost">Вложения</button>
     </div>
   </div>
