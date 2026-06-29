@@ -45,16 +45,50 @@ class DashboardController extends Controller
             (float) Turnover::where('type', 'income')->whereBetween('date', [$a, $b])->sum('amount')
             - (float) Turnover::whereIn('type', ['cogs', 'acquiring', 'expense'])->whereBetween('date', [$a, $b])->sum('amount')) / 1000));
 
+        // Прошлый месяц — для динамики KPI
+        $pm = $now->copy()->subMonthNoOverflow();
+        $pa = $pm->copy()->startOfMonth()->toDateString();
+        $pb = $pm->copy()->endOfMonth()->toDateString();
+        $sumP = fn ($t) => (float) Turnover::where('type', $t)->whereBetween('date', [$pa, $pb])->sum('amount');
+        $revP = $sumP('income');
+        $grossP = $revP - $sumP('cogs') - $sumP('acquiring') - $sumP('expense');
+        $purchP = (float) Shipment::whereNotNull('posted_at')->whereBetween('date', [$pa, $pb])->get()->sum(fn ($s) => $s->total());
+        $marginP = $revP > 0 ? $grossP / $revP * 100 : 0;
+        $margin = $revenue > 0 ? $gross / $revenue * 100 : 0;
+
+        // дельта в % (для сумм) и в пп (для процентных метрик)
+        $dPct = function (float $cur, float $prev): array {
+            if ($prev <= 0) {
+                return ['', false];
+            }
+            $d = round(($cur - $prev) / $prev * 100);
+            return [($d >= 0 ? '+' : '−').abs($d).'%', $d < 0];
+        };
+        $dPp = function (float $cur, float $prev): array {
+            $d = round($cur - $prev, 1);
+            if (abs($d) < 0.05) {
+                return ['', false];
+            }
+            return [($d >= 0 ? '+' : '−').number_format(abs($d), 1, ',', '').' пп', $d < 0];
+        };
+        [$revD, $revDown] = $dPct($revenue, $revP);
+        [$grD, $grDown] = $dPct($gross, $grossP);
+        [$mD, $mDown] = $dPp($margin, $marginP);
+        [$pD, $pDownRaw] = $dPct($purchases, $purchP);
+
         $kpis = [
-            ['label' => 'Выручка', 'value' => $this->m($revenue), 'delta' => '', 'down' => false, 'spark' => $incSpark, 'color' => 'var(--income)'],
-            ['label' => 'Прибыль', 'value' => $this->m($gross), 'delta' => '', 'down' => false, 'spark' => $profSpark, 'color' => 'var(--income)'],
-            ['label' => 'Маржа', 'value' => ($revenue > 0 ? round($gross / $revenue * 100, 1) : 0).'%', 'delta' => '', 'down' => false, 'spark' => $profSpark, 'color' => 'var(--income)'],
-            ['label' => 'ROI', 'value' => (($cogs + $acq + $exp) > 0 ? round($gross / ($cogs + $acq + $exp) * 100) : 0).'%', 'delta' => '', 'down' => false, 'spark' => $profSpark, 'color' => 'var(--income)'],
-            ['label' => 'Закупки', 'value' => $this->m($purchases), 'delta' => '', 'down' => true, 'spark' => $incSpark, 'color' => 'var(--expense)'],
+            ['label' => 'Выручка', 'value' => $this->m($revenue), 'delta' => $revD, 'down' => $revDown, 'sub' => 'пред. мес: '.$this->m($revP), 'spark' => $incSpark, 'color' => 'var(--income)'],
+            ['label' => 'Прибыль', 'value' => $this->m($gross), 'delta' => $grD, 'down' => $grDown, 'sub' => 'пред. мес: '.$this->m($grossP), 'spark' => $profSpark, 'color' => 'var(--income)'],
+            ['label' => 'Маржа', 'value' => round($margin, 1).'%', 'delta' => $mD, 'down' => $mDown, 'sub' => 'пред. мес: '.round($marginP, 1).'%', 'spark' => $profSpark, 'color' => 'var(--income)'],
+            ['label' => 'ROI', 'value' => (($cogs + $acq + $exp) > 0 ? round($gross / ($cogs + $acq + $exp) * 100) : 0).'%', 'delta' => '', 'down' => false, 'sub' => 'прибыль / затраты', 'spark' => $profSpark, 'color' => 'var(--income)'],
+            ['label' => 'Закупки', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true, 'sub' => 'пред. мес: '.$this->m($purchP), 'spark' => $incSpark, 'color' => 'var(--expense)'],
         ];
 
         $accounts = Account::orderByDesc('opening_balance')->get()->map(fn ($a) => ['name' => $a->name, 'balance' => $a->balance()]);
         $unrecLines = BankLine::whereIn('status', ['unmatched', 'partial'])->get();
+        // Приход/расход за месяц (по строкам выписки)
+        $monthIn = (float) BankLine::whereBetween('date', [$from, $to])->where('amount', '>', 0)->sum('amount');
+        $monthOut = abs((float) BankLine::whereBetween('date', [$from, $to])->where('amount', '<', 0)->sum('amount'));
 
         // Трекер поставок (кроме завершённых)
         $shipments = Shipment::with('counterparty:id,name')->where('status', '!=', 'Завершено')
@@ -126,6 +160,8 @@ class DashboardController extends Controller
             'kpis' => $kpis,
             'accounts' => $accounts,
             'totalBalance' => $accounts->sum('balance'),
+            'monthIn' => $monthIn,
+            'monthOut' => $monthOut,
             'unrec' => ['count' => $unrecLines->count(), 'amount' => (float) $unrecLines->sum(fn ($l) => abs($l->amount))],
             'shipments' => $shipments,
             'warehouse' => ['frozen' => round($frozen), 'positions' => $positions, 'stale' => $stale],

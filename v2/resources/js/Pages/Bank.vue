@@ -61,6 +61,12 @@ function ignore() {
     if (!cur.value) return;
     router.post(`/bank/lines/${cur.value.id}/ignore`, {}, { onSuccess: () => { open.value = false; } });
 }
+function removeLine() {
+    if (!cur.value) return;
+    if (confirm('Удалить операцию? Связанные проводки тоже снимутся.')) {
+        router.delete(`/bank/lines/${cur.value.id}`, { onSuccess: () => { open.value = false; } });
+    }
+}
 
 // ── Импорт ──
 const imp = ref(false);
@@ -167,6 +173,7 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
             <template #footer>
                 <button class="btn-primary pressable" style="flex:1;justify-content:center" :disabled="!sel" @click="applyReconcile">Разнести</button>
                 <button class="btn-ghost pressable" @click="ignore">Игнорировать</button>
+                <button class="btn-ghost pressable" style="color:var(--expense)" @click="removeLine">Удалить</button>
             </template>
         </AppModal>
 

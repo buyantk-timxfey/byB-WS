@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/bank/import', [BankController::class, 'import']);
     Route::post('/bank/lines/{line}/reconcile', [BankController::class, 'reconcile']);
     Route::post('/bank/lines/{line}/ignore', [BankController::class, 'ignore']);
+    Route::delete('/bank/lines/{line}', [BankController::class, 'destroyLine']);
 });
 
 // Финансы — реальные данные (P&L из оборотов)

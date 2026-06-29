@@ -179,8 +179,9 @@
 .w-pad { overflow: hidden; padding: 16px; display: flex; flex-direction: column; }
 .pill-down { background: rgba(255, 59, 48, 0.16) !important; color: var(--expense) !important; }
 .inkbtn { border: 0; cursor: pointer; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 600; padding: 9px 18px; border-radius: 999px; white-space: nowrap; }
-.kpinum { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin-top: 6px; }
-.kpi-spark { width: 100%; height: 30px; display: block; margin-top: auto; overflow: visible; }
+.kpinum { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin-top: 4px; }
+.kpi-sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.kpi-spark { width: 100%; height: 34px; display: block; margin-top: auto; overflow: visible; }
 .shipw { align-items: center; text-align: center; }
 .shipw .cp { font-size: 11px; color: var(--ink-3); }
 .shipw .nm { font-size: 13px; font-weight: 600; line-height: 1.1; margin-bottom: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

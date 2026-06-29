@@ -10,13 +10,15 @@ import Calendar from '@/Components/Calendar.vue';
 const money = (n: number) => new Intl.NumberFormat('ru-RU').format(Math.round(n)) + ' ₽';
 
 const props = defineProps<{
-    kpis: any[]; accounts: any[]; totalBalance: number; unrec: { count: number; amount: number };
+    kpis: any[]; accounts: any[]; totalBalance: number; monthIn: number; monthOut: number; unrec: { count: number; amount: number };
     shipments: any[]; warehouse: any; mailboxes: any[]; reminders: any[]; tx: any[]; calendarData?: any;
 }>();
 
 const kpis = props.kpis;
 const accounts = props.accounts;
 const totalBalance = props.totalBalance;
+const monthIn = props.monthIn;
+const monthOut = props.monthOut;
 const shipments = props.shipments;
 const warehouse = props.warehouse;
 const mailboxes = props.mailboxes;
@@ -80,12 +82,13 @@ const go = (url: string) => { if (!editMode.value) router.visit(url); };
                 <template v-for="k in kpis" :key="k.label">
                     <div v-if="isVis('kpi:' + k.label)" class="wwrap">
                         <button v-if="editMode" class="whide" @click.stop="hide('kpi:' + k.label)">×</button>
-                        <div class="glass w-pad wgt-s pressable" @click="go('/finances')">
+                        <div class="glass w-pad wgt-s pressable kpi-card" @click="go('/finances')">
                             <div class="flex items-center justify-between">
                                 <span class="h2">{{ k.label }}</span>
-                                <span class="pill" :class="{ 'pill-down': k.down }" :style="k.down ? '' : 'background:rgba(52,199,89,.16);color:var(--income)'">{{ k.delta }}</span>
+                                <span v-if="k.delta" class="pill" :class="{ 'pill-down': k.down }" :style="k.down ? '' : 'background:rgba(52,199,89,.16);color:var(--income)'">{{ k.delta }}</span>
                             </div>
                             <div class="kpinum tnum">{{ k.value }}</div>
+                            <div v-if="k.sub" class="kpi-sub">{{ k.sub }}</div>
                             <Sparkline :data="k.spark" :color="k.color" class="kpi-spark" />
                         </div>
                     </div>
@@ -141,8 +144,8 @@ const go = (url: string) => { if (!editMode.value) router.visit(url); };
                                 </div>
                             </div>
                             <div style="margin-top:auto;padding-top:14px;border-top:1px solid var(--glass-border)" class="flex gap-2.5">
-                                <div class="flex-1"><div class="text-[11px] text-ink-3">Приход / мес</div><div class="tnum" style="font-size:15px;font-weight:700;color:var(--income)">+1 284 000 ₽</div></div>
-                                <div class="flex-1"><div class="text-[11px] text-ink-3">Расход / мес</div><div class="tnum" style="font-size:15px;font-weight:700;color:var(--expense)">−972 000 ₽</div></div>
+                                <div class="flex-1"><div class="text-[11px] text-ink-3">Приход / мес</div><div class="tnum" style="font-size:15px;font-weight:700;color:var(--income)">+ {{ money(monthIn) }}</div></div>
+                                <div class="flex-1"><div class="text-[11px] text-ink-3">Расход / мес</div><div class="tnum" style="font-size:15px;font-weight:700;color:var(--expense)">− {{ money(monthOut) }}</div></div>
                             </div>
                         </div>
 

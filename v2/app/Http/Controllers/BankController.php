@@ -143,6 +143,19 @@ class BankController extends Controller
         return back();
     }
 
+    // Удалить операцию выписки вместе с её проводками (взаиморасчёты/обороты)
+    public function destroyLine(BankLine $line)
+    {
+        DB::transaction(function () use ($line) {
+            \App\Models\Settlement::where('doc_type', 'bank_line')->where('doc_id', $line->id)->delete();
+            \App\Models\Turnover::where('doc_type', 'bank_line')->where('doc_id', $line->id)->delete();
+            $line->matches()->delete();
+            $line->delete();
+        });
+
+        return back();
+    }
+
     private function matchLabel(BankLine $l): ?string
     {
         $m = $l->matches->first();
