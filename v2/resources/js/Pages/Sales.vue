@@ -7,7 +7,7 @@ import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
 import { money, date as fdate } from '@/lib/format';
 
-type Item = { nomenclature_id: number | null; qty: number; price: number; cost?: number };
+type Item = { nomenclature_id: number | null; qty: number | null; price: number | null; cost?: number };
 type Row = {
     id: number; number: string; date: string; buyer: string; counterparty_id: number | null;
     account_id: number | null; payment_method: string | null; status: string; sum: number; cost: number; profit: number;
@@ -52,12 +52,14 @@ const formSum = computed(() => form.items.reduce((a, i) => a + (Number(i.qty) ||
 const feeRate = computed(() => form.payment_method === 'Эквайринг' ? props.rates.card : form.payment_method === 'СБП' ? props.rates.sbp : 0);
 const feeAmount = computed(() => Math.round(formSum.value * feeRate.value) / 100);
 const netAmount = computed(() => formSum.value - feeAmount.value);
+const rub2 = (n: number) => new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' ₽';
 
 function create() {
     editingId.value = null;
     form.reset();
     form.date = new Date().toISOString().slice(0, 10);
     form.account_id = props.defaultAccountId;
+    form.items = [{ nomenclature_id: null, qty: null, price: null }];
     open.value = true;
 }
 function openDoc(s: Row) {
@@ -71,7 +73,7 @@ function openDoc(s: Row) {
     form.items = s.items.map((i) => ({ nomenclature_id: i.nomenclature_id, qty: i.qty, price: i.price }));
     open.value = true;
 }
-function addItem() { form.items.push({ nomenclature_id: null, qty: 1, price: 0 }); }
+function addItem() { form.items.push({ nomenclature_id: null, qty: null, price: null }); }
 function removeItem(i: number) { form.items.splice(i, 1); }
 function submit() {
     const opts = { onSuccess: () => { open.value = false; } };
@@ -194,11 +196,11 @@ function payNow() {
                 </div>
                 <div v-if="feeRate > 0" class="st-line st-fee">
                     <span>Комиссия · {{ form.payment_method }} ({{ feeRate }}%)</span>
-                    <span class="tnum">−{{ money(feeAmount) }}</span>
+                    <span class="tnum">−{{ rub2(feeAmount) }}</span>
                 </div>
                 <div v-if="feeRate > 0" class="st-line">
                     <span class="text-ink-2 text-[14px]">К зачислению</span>
-                    <span class="tnum text-[15px] font-bold">{{ money(netAmount) }}</span>
+                    <span class="tnum text-[15px] font-bold">{{ rub2(netAmount) }}</span>
                 </div>
                 <div v-if="feeRate > 0" class="st-note">Подсказка для разнесения выписки — расход эквайринга учитывается из банка, не дублируется.</div>
             </div>
