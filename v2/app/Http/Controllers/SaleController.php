@@ -10,6 +10,7 @@ use App\Models\Nomenclature;
 use App\Models\Sale;
 use App\Services\BankReconcile;
 use App\Services\DocNumber;
+use App\Models\Setting;
 use App\Services\Posting\SalePosting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,7 @@ class SaleController extends Controller
                     'counterparty_id' => $s->counterparty_id,
                     'account_id' => $s->account_id,
                     'status' => $s->status,
+                    'payment_method' => $s->payment_method,
                     'sum' => $s->total(),
                     'cost' => $s->cost(),
                     'profit' => $s->profit(),
@@ -46,11 +48,19 @@ class SaleController extends Controller
                 ];
             });
 
+        $defaultAccount = Account::where('name', 'Альфа-Банк')->value('id')
+            ?? Account::orderBy('id')->value('id');
+
         return Inertia::render('Sales', [
             'rows' => $rows,
             'buyers' => Counterparty::whereIn('type', ['Покупатель', 'Оба'])->orderBy('name')->get(['id', 'name']),
             'goods' => Nomenclature::orderBy('name')->get(['id', 'name', 'unit']),
             'accounts' => Account::orderBy('name')->get(['id', 'name']),
+            'defaultAccountId' => $defaultAccount,
+            'rates' => [
+                'card' => (float) Setting::get('acquiring_card_rate', 1.22),
+                'sbp' => (float) Setting::get('acquiring_sbp_rate', 0.7),
+            ],
         ]);
     }
 
@@ -63,6 +73,7 @@ class SaleController extends Controller
                 'date' => $data['date'],
                 'counterparty_id' => $data['counterparty_id'] ?? null,
                 'account_id' => $data['account_id'] ?? null,
+                'payment_method' => $data['payment_method'] ?? null,
                 'status' => $data['status'],
                 'comment' => $data['comment'] ?? null,
             ]);
@@ -86,6 +97,7 @@ class SaleController extends Controller
                 'date' => $data['date'],
                 'counterparty_id' => $data['counterparty_id'] ?? null,
                 'account_id' => $data['account_id'] ?? null,
+                'payment_method' => $data['payment_method'] ?? null,
                 'status' => $data['status'],
                 'comment' => $data['comment'] ?? null,
             ]);
@@ -142,6 +154,7 @@ class SaleController extends Controller
             'date' => 'required|date',
             'counterparty_id' => 'nullable|exists:counterparties,id',
             'account_id' => 'nullable|exists:accounts,id',
+            'payment_method' => 'nullable|in:Эквайринг,СБП,Без комиссии',
             'status' => 'required|in:Счёт,Отгружено,Отменено',
             'comment' => 'nullable|string',
             'items' => 'array',

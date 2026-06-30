@@ -10,7 +10,7 @@ import { money, date as fdate } from '@/lib/format';
 type Item = { nomenclature_id: number | null; qty: number; price: number; cost?: number };
 type Row = {
     id: number; number: string; date: string; buyer: string; counterparty_id: number | null;
-    account_id: number | null; status: string; sum: number; cost: number; profit: number;
+    account_id: number | null; payment_method: string | null; status: string; sum: number; cost: number; profit: number;
     paid: number; posted: boolean; items: Item[];
 };
 
@@ -19,6 +19,8 @@ const props = defineProps<{
     buyers: { id: number; name: string }[];
     goods: { id: number; name: string; unit: string }[];
     accounts: { id: number; name: string }[];
+    defaultAccountId: number | null;
+    rates: { card: number; sbp: number };
 }>();
 
 const seg = ref<'all' | 'Счёт' | 'Отгружено' | 'Отменено'>('all');
@@ -41,15 +43,21 @@ const margin = (s: Row) => s.sum ? Math.round((s.profit / s.sum) * 100) : 0;
 
 const open = ref(false);
 const editingId = ref<number | null>(null);
-const form = useForm<{ date: string; counterparty_id: number | null; account_id: number | null; status: string; comment: string; items: Item[] }>({
-    date: '', counterparty_id: null, account_id: null, status: 'Счёт', comment: '', items: [],
+const form = useForm<{ date: string; counterparty_id: number | null; account_id: number | null; payment_method: string; status: string; comment: string; items: Item[] }>({
+    date: '', counterparty_id: null, account_id: null, payment_method: 'Без комиссии', status: 'Счёт', comment: '', items: [],
 });
 const formSum = computed(() => form.items.reduce((a, i) => a + (Number(i.qty) || 0) * (Number(i.price) || 0), 0));
+
+// Касса → ожидаемая комиссия (подсказка для разнесения выписки, расход не создаётся)
+const feeRate = computed(() => form.payment_method === 'Эквайринг' ? props.rates.card : form.payment_method === 'СБП' ? props.rates.sbp : 0);
+const feeAmount = computed(() => Math.round(formSum.value * feeRate.value) / 100);
+const netAmount = computed(() => formSum.value - feeAmount.value);
 
 function create() {
     editingId.value = null;
     form.reset();
     form.date = new Date().toISOString().slice(0, 10);
+    form.account_id = props.defaultAccountId;
     open.value = true;
 }
 function openDoc(s: Row) {
@@ -57,6 +65,7 @@ function openDoc(s: Row) {
     form.date = s.date ?? '';
     form.counterparty_id = s.counterparty_id;
     form.account_id = s.account_id;
+    form.payment_method = (s as any).payment_method ?? 'Без комиссии';
     form.status = s.status;
     form.comment = '';
     form.items = s.items.map((i) => ({ nomenclature_id: i.nomenclature_id, qty: i.qty, price: i.price }));
@@ -146,9 +155,19 @@ function payNow() {
             </div>
             <div class="fld-row">
                 <div class="fld"><label>Дата</label><input v-model="form.date" type="date" /></div>
+                <div class="fld"><label>Касса</label>
+                    <select v-model="form.payment_method">
+                        <option>Эквайринг</option>
+                        <option>СБП</option>
+                        <option>Без комиссии</option>
+                    </select>
+                </div>
+            </div>
+            <div class="fld-row">
                 <div class="fld"><label>Счёт зачисления</label>
                     <select v-model="form.account_id"><option :value="null">—</option><option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option></select>
                 </div>
+                <div class="fld"></div>
             </div>
 
             <div>
@@ -168,9 +187,20 @@ function payNow() {
                 <div v-if="!form.items.length" class="text-ink-3" style="padding:12px 0;font-size:14px">Добавьте товары со склада</div>
             </div>
 
-            <div class="flex items-center justify-between" style="padding-top:6px;border-top:1px solid var(--glass-border)">
-                <span class="text-ink-2 text-[14px]">Выручка</span>
-                <span class="tnum text-[18px] font-bold">{{ money(formSum) }}</span>
+            <div class="sale-totals">
+                <div class="st-line">
+                    <span class="text-ink-2 text-[14px]">Выручка</span>
+                    <span class="tnum text-[18px] font-bold">{{ money(formSum) }}</span>
+                </div>
+                <div v-if="feeRate > 0" class="st-line st-fee">
+                    <span>Комиссия · {{ form.payment_method }} ({{ feeRate }}%)</span>
+                    <span class="tnum">−{{ money(feeAmount) }}</span>
+                </div>
+                <div v-if="feeRate > 0" class="st-line">
+                    <span class="text-ink-2 text-[14px]">К зачислению</span>
+                    <span class="tnum text-[15px] font-bold">{{ money(netAmount) }}</span>
+                </div>
+                <div v-if="feeRate > 0" class="st-note">Подсказка для разнесения выписки — расход эквайринга учитывается из банка, не дублируется.</div>
             </div>
 
             <template #footer>
@@ -187,4 +217,8 @@ function payNow() {
 <style scoped>
 .sale-item { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--glass-border); }
 .sale-item select, .sale-item input { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 8px 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
+.sale-totals { padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 4px; }
+.sale-totals .st-line { display: flex; align-items: center; justify-content: space-between; }
+.sale-totals .st-fee { color: var(--expense); font-size: 13px; }
+.sale-totals .st-note { font-size: 11px; color: var(--ink-3); line-height: 1.35; padding-top: 2px; }
 </style>
