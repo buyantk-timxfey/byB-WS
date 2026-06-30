@@ -38,10 +38,11 @@ function cleanupGoods() {
 // ── Форма (поля переключаются по типу) ──
 const open = ref(false);
 const editingId = ref<number | null>(null);
+const accountColors = ['#0a84ff', '#ef3124', '#34c759', '#ff9f0a', '#af52de', '#5e5ce6', '#ff375f', '#64748b'];
 const form = useForm<Record<string, any>>({
     type: 'Оба', name: '', inn: '', contact: '', comment: '',
     group_id: null, unit: 'шт', article: '',
-    site: '', note: '', account_type: 'Банк', bank: '', last4: '', opening_balance: 0,
+    site: '', note: '', last4: '', color: accountColors[0],
 });
 
 function create() {
@@ -53,14 +54,14 @@ function edit(x: any) {
     editingId.value = x.id;
     form.reset();
     Object.assign(form, x);
-    if (dir.value === 'accounts') form.account_type = x.type;       // не конфликтовать с counterparty.type
+    if (dir.value === 'accounts' && !x.color) form.color = accountColors[0];
     open.value = true;
 }
 function payload() {
     if (dir.value === 'counterparties') return { type: form.type, name: form.name, inn: form.inn, contact: form.contact, comment: form.comment };
     if (dir.value === 'nomenclature') return { name: form.name, group_id: form.group_id, unit: form.unit, article: form.article, comment: form.comment };
     if (dir.value === 'carriers') return { name: form.name, site: form.site, note: form.note };
-    if (dir.value === 'accounts') return { name: form.name, type: form.account_type, bank: form.bank, last4: form.last4, opening_balance: form.opening_balance };
+    if (dir.value === 'accounts') return { name: form.name, last4: form.last4, color: form.color };
     return { name: form.name };
 }
 function submit() {
@@ -179,15 +180,15 @@ function destroy() {
                 <div class="fld"><label>Комментарий</label><input v-model="form.note" /></div>
             </template>
             <template v-else-if="dir === 'accounts'">
+                <div class="fld"><label>Название</label><input v-model="form.name" placeholder="Сбер · 7781" /></div>
                 <div class="fld-row">
-                    <div class="fld"><label>Название</label><input v-model="form.name" placeholder="Сбер · 7781" /></div>
-                    <div class="fld"><label>Тип</label><select v-model="form.account_type"><option>Банк</option><option>Касса</option></select></div>
+                    <div class="fld"><label>Последние 4</label><input v-model="form.last4" placeholder="7781" /></div>
+                    <div class="fld"><label>Цвет карточки</label>
+                        <div class="acc-colors">
+                            <button v-for="c in accountColors" :key="c" type="button" class="acc-color" :class="{ on: form.color === c }" :style="{ background: c }" @click="form.color = c"></button>
+                        </div>
+                    </div>
                 </div>
-                <div class="fld-row">
-                    <div class="fld"><label>Банк</label><input v-model="form.bank" /></div>
-                    <div class="fld"><label>Последние 4</label><input v-model="form.last4" /></div>
-                </div>
-                <div class="fld"><label>Начальный остаток</label><input v-model.number="form.opening_balance" type="number" /></div>
             </template>
             <template v-else>
                 <div class="fld"><label>Название статьи</label><input v-model="form.name" /></div>
@@ -200,3 +201,10 @@ function destroy() {
         </AppModal>
     </AppShell>
 </template>
+
+<style scoped>
+.acc-colors { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; height: 42px; }
+.acc-color { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; outline: none; transition: transform .1s; }
+.acc-color:hover { transform: scale(1.12); }
+.acc-color.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--glass-bg, #fff); }
+</style>

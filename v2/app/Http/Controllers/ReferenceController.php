@@ -33,7 +33,7 @@ class ReferenceController extends Controller
                 'name' => 'required|string|max:255', 'site' => 'nullable|string|max:255', 'note' => 'nullable|string',
             ]],
             'accounts' => [Account::class, [
-                'name' => 'required|string|max:255', 'type' => 'required|in:Банк,Касса',
+                'name' => 'required|string|max:255', 'type' => 'nullable|in:Банк,Касса',
                 'bank' => 'nullable|string|max:255', 'last4' => 'nullable|string|max:8',
                 'opening_balance' => 'nullable|numeric', 'color' => 'nullable|string|max:32', 'comment' => 'nullable|string',
             ]],
