@@ -38,6 +38,14 @@ class NotificationController extends Controller
             $out[] = ['dot' => '#0a84ff', 't' => 'Новая выписка', 's' => $un.' строк не разнесено', 'url' => '/bank'];
         }
 
+        // Контрагенты без ИНН (например, быстро созданные) — просьба дозаполнить
+        $incomplete = \App\Models\Counterparty::where(function ($q) {
+            $q->whereNull('inn')->orWhere('inn', '');
+        })->orderByDesc('id')->limit(5)->get();
+        foreach ($incomplete as $c) {
+            $out[] = ['dot' => 'var(--warn)', 't' => 'Заполните контрагента', 's' => $c->name.' — нет ИНН', 'url' => '/references'];
+        }
+
         return response()->json(['items' => $out, 'count' => count($out)]);
     }
 }
