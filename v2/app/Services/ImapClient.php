@@ -18,6 +18,7 @@ class ImapClient
         private string $user,
         private string $pass,
         private bool $ssl = true,
+        private int $timeout = 6,
     ) {}
 
     public function connect(): void
@@ -27,14 +28,14 @@ class ImapClient
         ]]);
         $proto = $this->ssl ? 'ssl' : 'tcp';
         $sock = @stream_socket_client(
-            $proto.'://'.$this->host.':'.$this->port, $errno, $errstr, 20,
+            $proto.'://'.$this->host.':'.$this->port, $errno, $errstr, $this->timeout,
             STREAM_CLIENT_CONNECT, $ctx
         );
         if (! $sock) {
             throw new RuntimeException('подключение не удалось ('.($errstr ?: 'нет ответа').')');
         }
         $this->sock = $sock;
-        stream_set_timeout($this->sock, 20);
+        stream_set_timeout($this->sock, $this->timeout);
         fgets($this->sock); // приветствие сервера
     }
 

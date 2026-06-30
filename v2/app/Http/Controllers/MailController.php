@@ -138,8 +138,9 @@ class MailController extends Controller
     public function sync(MailAccount $account)
     {
         $domain = substr((string) strrchr($account->email, '@'), 1);
+        // На шаред-хостинге почта обычно доступна локально; пробуем по очереди, коротким таймаутом.
         $candidates = array_values(array_unique(array_filter([
-            $account->imap_host, 'mail.'.$domain, 'imap.'.$domain,
+            $account->imap_host, 'localhost', gethostname() ?: null, 'mail.'.$domain,
         ])));
         $port = $account->imap_port ?: 993;
         $user = $account->login ?: $account->email;
@@ -148,7 +149,7 @@ class MailController extends Controller
         $lastError = 'не удалось подключиться';
         foreach ($candidates as $host) {
             try {
-                $c = new ImapClient($host, $port, $user, (string) $account->password, (bool) $account->use_ssl);
+                $c = new ImapClient($host, $port, $user, (string) $account->password, (bool) $account->use_ssl, 4);
                 $c->connect();
                 $c->login();
                 $client = $c;
