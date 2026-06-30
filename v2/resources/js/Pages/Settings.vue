@@ -9,6 +9,8 @@ const props = defineProps<{
     rules: any[];
     articles: { id: number; name: string }[];
     devices: any[];
+    mailAccounts: any[];
+    imapAvailable: boolean;
     lastPatch: string | null;
 }>();
 
@@ -35,6 +37,23 @@ const actionLabel = (a: string) => ({
 const ruleForm = useForm({ match_field: 'purpose', match_value: '', action_type: 'expense_article', article_id: null as number | null, priority: 100 });
 const addRule = () => ruleForm.post('/settings/rules', { onSuccess: () => ruleForm.reset() });
 const delRule = (id: number) => router.delete(`/settings/rules/${id}`);
+
+// ── Почтовые ящики ──
+const mailEditId = ref<number | null>(null);
+const mailForm = useForm({ email: '', imap_host: '', imap_port: 993, smtp_host: '', smtp_port: 465, login: '', password: '', use_ssl: true });
+function editMail(a: any) {
+    mailEditId.value = a.id;
+    mailForm.email = a.email; mailForm.imap_host = a.imap_host ?? ''; mailForm.imap_port = a.imap_port ?? 993;
+    mailForm.smtp_host = a.smtp_host ?? ''; mailForm.smtp_port = a.smtp_port ?? 465;
+    mailForm.login = a.login ?? ''; mailForm.password = ''; mailForm.use_ssl = !!a.use_ssl;
+}
+function resetMail() { mailEditId.value = null; mailForm.reset(); }
+function saveMail() {
+    const opts = { onSuccess: () => resetMail() };
+    if (mailEditId.value) mailForm.put(`/mail/accounts/${mailEditId.value}`, opts);
+    else mailForm.post('/mail/accounts', opts);
+}
+function delMail(id: number) { if (confirm('Удалить почтовый ящик?')) router.delete(`/mail/accounts/${id}`, { onSuccess: () => resetMail() }); }
 
 function changePin() {
     const pin = window.prompt('Новый PIN (4–8 цифр):');
@@ -139,6 +158,42 @@ function applyPatch() {
                 <div v-if="!devices.length" class="set-hint">Устройства не привязаны.</div>
             </div>
 
+            <!-- Почта -->
+            <div class="set-card glass">
+                <div class="set-h"><Icon name="mail" :size="18" /> Почтовые ящики</div>
+                <div class="set-hint">IMAP — для чтения входящих, SMTP — для отправки. Пароль хранится в зашифрованном виде.</div>
+                <div v-if="!imapAvailable" class="set-hint" style="color:var(--warn)">IMAP-расширение PHP на сервере недоступно — чтение писем работать не будет, отправка по SMTP доступна.</div>
+
+                <div class="rule" v-for="a in mailAccounts" :key="a.id">
+                    <div class="rule-m">{{ a.email }}</div>
+                    <div class="rule-a">{{ a.imap_host || '—' }} · {{ a.smtp_host || '—' }}</div>
+                    <button class="link-btn" @click="editMail(a)">Изменить</button>
+                    <button class="link-btn link-btn--bad" @click="delMail(a.id)">Удалить</button>
+                </div>
+                <div v-if="!mailAccounts.length" class="set-hint">Ящики не добавлены.</div>
+
+                <div class="mail-form">
+                    <div class="mf-title">{{ mailEditId ? 'Изменить ящик' : 'Добавить ящик' }}</div>
+                    <div class="set-grid">
+                        <div class="fld"><label>Email</label><input v-model="mailForm.email" placeholder="info@bybuka.ru" /></div>
+                        <div class="fld"><label>Логин</label><input v-model="mailForm.login" placeholder="если отличается от email" /></div>
+                        <div class="fld"><label>IMAP-хост</label><input v-model="mailForm.imap_host" placeholder="imap.mail.ru" /></div>
+                        <div class="fld"><label>IMAP-порт</label><input v-model.number="mailForm.imap_port" type="number" /></div>
+                        <div class="fld"><label>SMTP-хост</label><input v-model="mailForm.smtp_host" placeholder="smtp.mail.ru" /></div>
+                        <div class="fld"><label>SMTP-порт</label><input v-model.number="mailForm.smtp_port" type="number" /></div>
+                        <div class="fld"><label>Пароль {{ mailEditId ? '(оставьте пустым — без изменений)' : '' }}</label><input v-model="mailForm.password" type="password" /></div>
+                    </div>
+                    <div class="set-toggle">
+                        <div><div class="st-t">SSL/TLS</div><div class="st-s">шифрованное соединение (обычно вкл.)</div></div>
+                        <button class="switch" :class="{ on: mailForm.use_ssl }" @click="mailForm.use_ssl = !mailForm.use_ssl"><span></span></button>
+                    </div>
+                    <div class="mf-actions">
+                        <button class="btn-primary pressable" style="border-radius:12px" :disabled="mailForm.processing || !mailForm.email" @click="saveMail">{{ mailEditId ? 'Сохранить' : 'Добавить' }}</button>
+                        <button v-if="mailEditId" class="btn-ghost pressable" @click="resetMail">Отмена</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Обновление (ZIP-патч) -->
             <div class="set-card glass">
                 <div class="set-h"><Icon name="doc" :size="18" /> Обновление системы (ZIP-патч)</div>
@@ -163,4 +218,7 @@ function applyPatch() {
 .rule-add { display: grid; grid-template-columns: 1fr 1.4fr 1fr 40px; gap: 8px; align-items: center; padding-top: 12px; margin-top: 8px; border-top: 1px solid var(--glass-border); }
 .rule-add select, .rule-add input { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 8px 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
 .rule-add .btn-ghost { padding: 8px 0; text-align: center; }
+.mail-form { padding-top: 12px; margin-top: 8px; border-top: 1px solid var(--glass-border); }
+.mail-form .mf-title { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 10px; }
+.mail-form .mf-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
 </style>

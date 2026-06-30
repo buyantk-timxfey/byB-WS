@@ -85,6 +85,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/mail', [MailController::class, 'index'])->name('mail');
     Route::post('/mail/accounts', [MailController::class, 'storeAccount']);
+    Route::put('/mail/accounts/{account}', [MailController::class, 'updateAccount']);
+    Route::delete('/mail/accounts/{account}', [MailController::class, 'destroyAccount']);
     Route::post('/mail/compose', [MailController::class, 'compose']);
     Route::post('/mail/{message}/read', [MailController::class, 'markRead']);
     Route::delete('/mail/{message}', [MailController::class, 'destroy']);

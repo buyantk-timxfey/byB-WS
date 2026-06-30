@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import AppModal from '@/Components/AppModal.vue';
@@ -29,11 +29,6 @@ const compose = ref(false);
 const cForm = useForm({ account_id: props.accounts[0]?.id ?? null, to: '', subject: '', body: '', doc_type: '', doc_id: null });
 function send() { cForm.post('/mail/compose', { onSuccess: () => { compose.value = false; cForm.reset(); } }); }
 
-// Добавить ящик
-const acc = ref(false);
-const aForm = useForm({ email: '', imap_host: '', imap_port: 993, smtp_host: '', smtp_port: 465, login: '', password: '', use_ssl: true });
-function addAccount() { aForm.post('/mail/accounts', { onSuccess: () => { acc.value = false; aForm.reset(); } }); }
-
 function sync() { if (activeAccountId.value) router.post(`/mail/accounts/${activeAccountId.value}/sync`); }
 </script>
 
@@ -43,12 +38,12 @@ function sync() { if (activeAccountId.value) router.post(`/mail/accounts/${activ
         <div class="toolbar">
             <h1>Почта</h1>
             <button v-if="imapAvailable && accounts.length" class="btn-ghost pressable" style="margin-left:auto" @click="sync"><Icon name="search" :size="15" /> Синхр.</button>
-            <button class="btn-ghost pressable" :style="!(imapAvailable && accounts.length) ? 'margin-left:auto' : ''" @click="acc = true">+ Ящик</button>
-            <button class="btn-primary pressable" @click="compose = true" :disabled="!accounts.length"><Icon name="plus" :size="17" /> Написать</button>
+            <button class="btn-primary pressable" :style="!(imapAvailable && accounts.length) ? 'margin-left:auto' : ''" @click="compose = true" :disabled="!accounts.length"><Icon name="plus" :size="17" /> Написать</button>
         </div>
 
         <div v-if="!accounts.length" class="jcard glass" style="padding:40px;text-align:center;color:var(--ink-3)">
-            Почтовые ящики не настроены. Нажмите «+ Ящик», чтобы добавить IMAP/SMTP-аккаунт.
+            Почтовые ящики не настроены. Добавьте IMAP/SMTP-аккаунт в разделе
+            <Link href="/settings" class="link-btn">Настройки → Почтовые ящики</Link>.
         </div>
 
         <div v-else class="mail-grid glass">
@@ -109,26 +104,6 @@ function sync() { if (activeAccountId.value) router.post(`/mail/accounts/${activ
             </template>
         </AppModal>
 
-        <!-- Добавить ящик -->
-        <AppModal :open="acc" title="Почтовый ящик" subtitle="IMAP для чтения, SMTP для отправки" @close="acc = false">
-            <div class="fld"><label>Email</label><input v-model="aForm.email" /></div>
-            <div class="fld-row">
-                <div class="fld"><label>IMAP-хост</label><input v-model="aForm.imap_host" placeholder="imap.mail.ru" /></div>
-                <div class="fld"><label>Порт</label><input v-model.number="aForm.imap_port" type="number" /></div>
-            </div>
-            <div class="fld-row">
-                <div class="fld"><label>SMTP-хост</label><input v-model="aForm.smtp_host" placeholder="smtp.mail.ru" /></div>
-                <div class="fld"><label>Порт</label><input v-model.number="aForm.smtp_port" type="number" /></div>
-            </div>
-            <div class="fld-row">
-                <div class="fld"><label>Логин</label><input v-model="aForm.login" /></div>
-                <div class="fld"><label>Пароль</label><input v-model="aForm.password" type="password" /></div>
-            </div>
-            <template #footer>
-                <button class="btn-primary pressable" style="flex:1;justify-content:center" @click="addAccount">Сохранить</button>
-                <button class="btn-ghost pressable" @click="acc = false">Отмена</button>
-            </template>
-        </AppModal>
     </AppShell>
 </template>
 

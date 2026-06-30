@@ -48,6 +48,28 @@ class MailController extends Controller
         return back();
     }
 
+    public function updateAccount(Request $r, MailAccount $account)
+    {
+        $d = $r->validate([
+            'email' => 'required|email', 'imap_host' => 'nullable|string', 'imap_port' => 'nullable|integer',
+            'smtp_host' => 'nullable|string', 'smtp_port' => 'nullable|integer',
+            'login' => 'nullable|string', 'password' => 'nullable|string', 'use_ssl' => 'boolean',
+        ]);
+        if (empty($d['password'])) {
+            unset($d['password']);   // пустой пароль — не перезаписывать существующий
+        }
+        $account->update($d);
+
+        return back();
+    }
+
+    public function destroyAccount(MailAccount $account)
+    {
+        $account->delete();
+
+        return back();
+    }
+
     public function compose(Request $r)
     {
         $d = $r->validate([

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ExpenseArticle;
+use App\Models\MailAccount;
 use App\Models\ReconRule;
 use App\Models\Setting;
 use App\Models\WebauthnCredential;
@@ -29,6 +30,8 @@ class SettingController extends Controller
             'rules' => ReconRule::with('article:id,name')->orderBy('priority')->get(),
             'articles' => ExpenseArticle::orderBy('name')->get(['id', 'name']),
             'devices' => WebauthnCredential::where('user_id', auth()->id())->get(['id', 'name', 'last_used_at']),
+            'mailAccounts' => MailAccount::orderBy('email')->get(['id', 'email', 'imap_host', 'imap_port', 'smtp_host', 'smtp_port', 'login', 'use_ssl']),
+            'imapAvailable' => function_exists('imap_open'),
             'lastPatch' => Setting::get('last_patch'),
         ]);
     }
