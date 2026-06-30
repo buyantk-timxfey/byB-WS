@@ -31,7 +31,7 @@ class SettingController extends Controller
             'articles' => ExpenseArticle::orderBy('name')->get(['id', 'name']),
             'devices' => WebauthnCredential::where('user_id', auth()->id())->get(['id', 'name', 'last_used_at']),
             'mailAccounts' => MailAccount::orderBy('email')->get(['id', 'email', 'imap_host', 'imap_port', 'smtp_host', 'smtp_port', 'login', 'use_ssl']),
-            'imapAvailable' => function_exists('imap_open'),
+            'imapAvailable' => true,   // чтение через собственный IMAP-клиент, расширение PHP не требуется
             'lastPatch' => Setting::get('last_patch'),
         ]);
     }

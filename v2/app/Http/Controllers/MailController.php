@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MailAccount;
 use App\Models\MailMessage;
+use App\Services\ImapClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
@@ -32,7 +33,7 @@ class MailController extends Controller
         return Inertia::render('Mail', [
             'accounts' => $accounts,
             'messages' => $messages,
-            'imapAvailable' => function_exists('imap_open'),
+            'imapAvailable' => true,   // чтение через собственный IMAP-клиент, расширение PHP не нужно
         ]);
     }
 
@@ -133,41 +134,119 @@ class MailController extends Controller
         return back();
     }
 
-    // Синхронизация INBOX по IMAP (если расширение доступно на сервере)
+    // Синхронизация INBOX через собственный IMAP-клиент на сокетах (без расширения imap).
     public function sync(MailAccount $account)
     {
-        if (! function_exists('imap_open')) {
-            return back()->withErrors(['imap' => 'IMAP-расширение PHP недоступно на сервере.']);
-        }
-        $host = $account->imap_host ?: ('mail.'.substr((string) strrchr($account->email, '@'), 1));
+        $domain = substr((string) strrchr($account->email, '@'), 1);
+        $candidates = array_values(array_unique(array_filter([
+            $account->imap_host, 'mail.'.$domain, 'imap.'.$domain,
+        ])));
         $port = $account->imap_port ?: 993;
-        // как в старой CRM: /imap/ssl/novalidate-cert + отключённый GSSAPI + 1 повтор
-        $mbox = '{'.$host.':'.$port.'/imap/ssl/novalidate-cert}INBOX';
-        $imap = @imap_open($mbox, $account->login ?: $account->email, $account->password, 0, 1, ['DISABLE_AUTHENTICATOR' => 'GSSAPI']);
-        if (! $imap) {
-            return back()->withErrors(['imap' => 'IMAP: '.imap_last_error()]);
-        }
-        $ids = imap_search($imap, 'ALL') ?: [];
-        $ids = array_slice(array_reverse($ids), 0, 30);
-        foreach ($ids as $num) {
-            $o = imap_headerinfo($imap, $num);
-            $uid = (string) imap_uid($imap, $num);
-            if (MailMessage::where('account_id', $account->id)->where('uid', $uid)->exists()) {
-                continue;
+        $user = $account->login ?: $account->email;
+
+        $client = null;
+        $lastError = 'не удалось подключиться';
+        foreach ($candidates as $host) {
+            try {
+                $c = new ImapClient($host, $port, $user, (string) $account->password, (bool) $account->use_ssl);
+                $c->connect();
+                $c->login();
+                $client = $c;
+                if ($host !== $account->imap_host) {
+                    $account->update(['imap_host' => $host]);   // запомнить рабочий сервер
+                }
+                break;
+            } catch (\Throwable $e) {
+                $lastError = $e->getMessage();
             }
-            $body = imap_fetchbody($imap, $num, '1');
-            MailMessage::create([
-                'account_id' => $account->id, 'folder' => 'INBOX', 'uid' => $uid,
-                'from_name' => isset($o->from[0]->personal) ? imap_utf8($o->from[0]->personal) : null,
-                'from_email' => ($o->from[0]->mailbox ?? '').'@'.($o->from[0]->host ?? ''),
-                'subject' => isset($o->subject) ? imap_utf8($o->subject) : null,
-                'preview' => mb_substr(trim((string) $body), 0, 120),
-                'body' => $body, 'date' => isset($o->date) ? date('Y-m-d H:i:s', strtotime($o->date)) : now(),
-                'is_read' => ($o->Unseen ?? 'U') !== 'U',
-            ]);
         }
-        imap_close($imap);
+        if (! $client) {
+            return back()->withErrors(['imap' => 'Почта: '.$lastError]);
+        }
+
+        try {
+            $client->selectInbox();
+            foreach (array_reverse($client->recentUids(30)) as $uid) {
+                if (MailMessage::where('account_id', $account->id)->where('uid', (string) $uid)->exists()) {
+                    continue;
+                }
+                $msg = $client->fetch($uid);
+                [$fromName, $fromEmail, $subject, $date] = $this->parseHeader($msg['header']);
+                $body = $this->decodeBody($msg['body']);
+                MailMessage::create([
+                    'account_id' => $account->id, 'folder' => 'INBOX', 'uid' => (string) $uid,
+                    'from_name' => $fromName, 'from_email' => $fromEmail, 'subject' => $subject,
+                    'preview' => mb_substr(trim($body), 0, 120), 'body' => $body,
+                    'date' => $date, 'is_read' => $msg['seen'],
+                ]);
+            }
+            $client->close();
+        } catch (\Throwable $e) {
+            $client->close();
+
+            return back()->withErrors(['imap' => 'Почта: '.$e->getMessage()]);
+        }
 
         return back();
+    }
+
+    // Разбор заголовков письма: имя/почта отправителя, тема, дата.
+    private function parseHeader(string $raw): array
+    {
+        $raw = (string) preg_replace('/\r?\n[ \t]+/', ' ', $raw); // развернуть сложенные строки
+        $from = $subject = $date = '';
+        foreach (preg_split('/\r?\n/', $raw) as $line) {
+            if (preg_match('/^From:\s*(.+)$/i', $line, $m)) {
+                $from = trim($m[1]);
+            } elseif (preg_match('/^Subject:\s*(.+)$/i', $line, $m)) {
+                $subject = trim($m[1]);
+            } elseif (preg_match('/^Date:\s*(.+)$/i', $line, $m)) {
+                $date = trim($m[1]);
+            }
+        }
+        $fromName = '';
+        $fromEmail = $from;
+        if (preg_match('/^(.*)<([^>]+)>/', $from, $m)) {
+            $fromName = $this->mime(trim($m[1], " \"'"));
+            $fromEmail = trim($m[2]);
+        }
+        $dt = $date ? date('Y-m-d H:i:s', strtotime($date) ?: time()) : now();
+
+        return [$fromName ?: null, $fromEmail ?: null, $this->mime($subject) ?: null, $dt];
+    }
+
+    private function mime(string $s): string
+    {
+        if ($s === '') {
+            return '';
+        }
+        $d = @mb_decode_mimeheader($s);
+
+        return $d !== false && $d !== '' ? $d : $s;
+    }
+
+    // Декод тела: quoted-printable / base64, приведение к UTF-8, очистка HTML для текста.
+    private function decodeBody(string $b): string
+    {
+        $b = trim($b);
+        if ($b === '') {
+            return '';
+        }
+        $out = quoted_printable_decode($b);
+        $compact = (string) preg_replace('/\s+/', '', $b);
+        if ($compact !== '' && strlen($compact) % 4 === 0 && preg_match('/^[A-Za-z0-9+\/=]+$/', $compact)) {
+            $dec = base64_decode($compact, true);
+            if ($dec !== false && $dec !== '') {
+                $out = $dec;
+            }
+        }
+        if (! mb_check_encoding($out, 'UTF-8')) {
+            $out = (string) @mb_convert_encoding($out, 'UTF-8', 'Windows-1251, ISO-8859-1, UTF-8');
+        }
+        if (preg_match('/<\/?(html|body|div|p|br|table|span)\b/i', $out)) {
+            $out = trim((string) preg_replace('/[ \t]*\R+[ \t]*/u', "\n", strip_tags($out)));
+        }
+
+        return $out;
     }
 }
