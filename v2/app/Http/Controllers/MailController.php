@@ -166,21 +166,162 @@ class MailController extends Controller
         return back();
     }
 
-    // Синхронизация INBOX через собственный IMAP-клиент на сокетах (без расширения imap).
+    // Синхронизация: PHP imap-расширение (приоритет, как в старой CRM) → сокеты (fallback).
     public function sync(MailAccount $account)
     {
+        if (function_exists('imap_open')) {
+            return $this->syncViaExtension($account);
+        }
+
+        return $this->syncViaSockets($account);
+    }
+
+    private function syncViaExtension(MailAccount $account)
+    {
+        $port = $account->imap_port ?: 993;
+        $user = $account->login ?: $account->email;
+
+        // Пробуем сохранённый хост, затем MX-определённый
         $domain = substr((string) strrchr($account->email, '@'), 1);
+        [$mxHost] = $this->detectProvider($domain);
+        $hosts = array_values(array_unique(array_filter([$account->imap_host, $mxHost])));
 
-        // MX-кандидат (важно для доменов на внешних провайдерах, напр. bybuka.ru → imap.mail.ru)
+        $imap = null;
+        $lastErr = 'не удалось подключиться';
+        foreach ($hosts as $host) {
+            $mb = '{' . $host . ':' . $port . '/imap/ssl/novalidate-cert}INBOX';
+            $conn = @imap_open($mb, $user, (string) $account->password, 0, 1, ['DISABLE_AUTHENTICATOR' => 'GSSAPI']);
+            if ($conn) {
+                $imap = $conn;
+                if ($host !== $account->imap_host) {
+                    $account->update(['imap_host' => $host]);
+                }
+                break;
+            }
+            $lastErr = imap_last_error() ?: $lastErr;
+        }
+
+        if (! $imap) {
+            return back()->withErrors(['imap' => 'Почта: ' . $lastErr]);
+        }
+
+        try {
+            $total = imap_num_msg($imap);
+            if ($total > 0) {
+                $start = max(1, $total - 29);
+                $overview = imap_fetch_overview($imap, "$start:$total", 0) ?: [];
+                foreach (array_reverse($overview) as $msg) {
+                    $uid = $msg->uid;
+                    if (MailMessage::where('account_id', $account->id)->where('uid', (string) $uid)->exists()) {
+                        continue;
+                    }
+                    $subject = $this->imapMimeDecode($msg->subject ?? '');
+                    $from    = $this->imapMimeDecode($msg->from ?? '');
+                    [$fromName, $fromEmail] = $this->parseFromStr($from);
+                    $body = '';
+                    try {
+                        $structure = imap_fetchstructure($imap, $uid, FT_UID);
+                        $body = $this->fetchPlainBody($imap, $uid, $structure);
+                    } catch (\Throwable) {}
+
+                    MailMessage::create([
+                        'account_id' => $account->id, 'folder' => 'INBOX', 'uid' => (string) $uid,
+                        'from_name'  => $fromName ?: null, 'from_email' => $fromEmail ?: null,
+                        'subject'    => $subject ?: null,
+                        'preview'    => mb_substr(trim($body), 0, 120), 'body' => $body,
+                        'date'       => $msg->date ? date('Y-m-d H:i:s', strtotime($msg->date) ?: time()) : now(),
+                        'is_read'    => (bool) ($msg->seen ?? false),
+                    ]);
+                }
+            }
+            imap_close($imap);
+        } catch (\Throwable $e) {
+            @imap_close($imap);
+
+            return back()->withErrors(['imap' => 'Почта: ' . $e->getMessage()]);
+        }
+
+        return back();
+    }
+
+    private function imapMimeDecode(string $s): string
+    {
+        if ($s === '' || ! function_exists('imap_mime_header_decode')) {
+            return $s;
+        }
+        $parts = imap_mime_header_decode($s);
+        $out = '';
+        foreach ($parts as $p) {
+            $charset = ($p->charset === 'default') ? 'UTF-8' : $p->charset;
+            $out .= @mb_convert_encoding($p->text, 'UTF-8', $charset ?: 'UTF-8');
+        }
+
+        return $out;
+    }
+
+    private function parseFromStr(string $from): array
+    {
+        if (preg_match('/^(.*?)<([^>]+)>/', trim($from), $m)) {
+            return [trim($m[1], " \"'\t"), trim($m[2])];
+        }
+
+        return ['', $from];
+    }
+
+    private function fetchPlainBody($imap, int $uid, $structure, string $partNum = ''): string
+    {
+        $type = (int) ($structure->type ?? 0);
+        if ($type === 1) {
+            foreach (($structure->parts ?? []) as $i => $part) {
+                $num  = $partNum ? "$partNum." . ($i + 1) : (string) ($i + 1);
+                $body = $this->fetchPlainBody($imap, $uid, $part, $num);
+                if ($body !== '') {
+                    return $body;
+                }
+            }
+
+            return '';
+        }
+        if ($type !== 0) {
+            return '';
+        }
+        $subtype = strtolower($structure->subtype ?? 'plain');
+        if ($subtype !== 'plain' && $subtype !== 'html') {
+            return '';
+        }
+        $encoding = $structure->encoding ?? 0;
+        $charset  = 'UTF-8';
+        foreach (($structure->parameters ?? []) as $p) {
+            if (strcasecmp($p->attribute, 'charset') === 0) {
+                $charset = $p->value;
+                break;
+            }
+        }
+        $raw  = imap_fetchbody($imap, $uid, $partNum ?: '1', FT_UID | FT_PEEK);
+        $body = match ((int) $encoding) {
+            3       => base64_decode($raw),
+            4       => quoted_printable_decode($raw),
+            default => $raw,
+        };
+        $body = (string) @mb_convert_encoding($body, 'UTF-8', $charset);
+        if ($subtype === 'html') {
+            $body = trim((string) preg_replace('/[ \t]*\R+[ \t]*/u', "\n", strip_tags($body)));
+        }
+
+        return $body;
+    }
+
+    private function syncViaSockets(MailAccount $account)
+    {
+        $domain = substr((string) strrchr($account->email, '@'), 1);
         [$mxImap] = $this->detectProvider($domain);
-
         $candidates = array_values(array_unique(array_filter([
             $account->imap_host, $mxImap, 'localhost', gethostname() ?: null, 'mail.'.$domain,
         ])));
         $port = $account->imap_port ?: 993;
         $user = $account->login ?: $account->email;
 
-        $client = null;
+        $client    = null;
         $lastError = 'не удалось подключиться';
         foreach ($candidates as $host) {
             try {
@@ -189,7 +330,7 @@ class MailController extends Controller
                 $c->login();
                 $client = $c;
                 if ($host !== $account->imap_host) {
-                    $account->update(['imap_host' => $host]);   // запомнить рабочий сервер
+                    $account->update(['imap_host' => $host]);
                 }
                 break;
             } catch (\Throwable $e) {

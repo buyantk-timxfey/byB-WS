@@ -48,7 +48,7 @@ function sync() {
         <div class="toolbar">
             <h1>Почта</h1>
             <button v-if="imapAvailable && accounts.length" class="btn-ghost pressable" style="margin-left:auto" :disabled="syncing" @click="sync">
-                <Icon :name="syncing ? 'loader' : 'refresh'" :size="15" :style="syncing ? 'animation:spin 1s linear infinite' : ''" />
+                <Icon name="refresh" :size="15" :style="syncing ? 'animation:spin 1s linear infinite' : ''" />
                 {{ syncing ? 'Синхронизация…' : 'Синхр.' }}
             </button>
             <button class="btn-primary pressable" :style="!(imapAvailable && accounts.length) ? 'margin-left:auto' : ''" @click="compose = true" :disabled="!accounts.length"><Icon name="plus" :size="17" /> Написать</button>
