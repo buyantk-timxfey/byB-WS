@@ -162,9 +162,11 @@ function applyPatch() {
                 <div class="set-hint">Введите email (он же логин) и пароль от почты. Сервер (IMAP/SMTP) подставляется автоматически по домену. Пароль хранится в зашифрованном виде.</div>
                 <div v-if="!imapAvailable" class="set-hint" style="color:var(--warn)">IMAP-расширение PHP на сервере недоступно — чтение писем работать не будет, отправка по SMTP доступна.</div>
 
-                <div class="rule" v-for="a in mailAccounts" :key="a.id">
-                    <div class="rule-m">{{ a.email }}</div>
-                    <div class="rule-a">{{ a.imap_host || '—' }}</div>
+                <div class="mail-acc" v-for="a in mailAccounts" :key="a.id">
+                    <div class="ma-info">
+                        <div class="ma-email">{{ a.email }}</div>
+                        <div class="ma-host">{{ a.imap_host || '—' }}</div>
+                    </div>
                     <button class="link-btn" @click="editMail(a)">Изменить</button>
                     <button class="link-btn link-btn--bad" @click="delMail(a.id)">Удалить</button>
                 </div>
@@ -210,4 +212,8 @@ function applyPatch() {
 .mail-form { padding-top: 12px; margin-top: 8px; border-top: 1px solid var(--glass-border); }
 .mail-form .mf-title { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 10px; }
 .mail-form .mf-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+.mail-acc { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--glass-border); }
+.mail-acc .ma-info { flex: 1; min-width: 0; }
+.mail-acc .ma-email { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mail-acc .ma-host { font-size: 12px; color: var(--ink-2); }
 </style>
