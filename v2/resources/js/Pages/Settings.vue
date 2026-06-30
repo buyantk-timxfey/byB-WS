@@ -40,12 +40,10 @@ const delRule = (id: number) => router.delete(`/settings/rules/${id}`);
 
 // ── Почтовые ящики ──
 const mailEditId = ref<number | null>(null);
-const mailForm = useForm({ email: '', imap_host: '', imap_port: 993, smtp_host: '', smtp_port: 465, login: '', password: '', use_ssl: true });
+const mailForm = useForm({ email: '', password: '' });
 function editMail(a: any) {
     mailEditId.value = a.id;
-    mailForm.email = a.email; mailForm.imap_host = a.imap_host ?? ''; mailForm.imap_port = a.imap_port ?? 993;
-    mailForm.smtp_host = a.smtp_host ?? ''; mailForm.smtp_port = a.smtp_port ?? 465;
-    mailForm.login = a.login ?? ''; mailForm.password = ''; mailForm.use_ssl = !!a.use_ssl;
+    mailForm.email = a.email; mailForm.password = '';
 }
 function resetMail() { mailEditId.value = null; mailForm.reset(); }
 function saveMail() {
@@ -161,12 +159,12 @@ function applyPatch() {
             <!-- Почта -->
             <div class="set-card glass">
                 <div class="set-h"><Icon name="mail" :size="18" /> Почтовые ящики</div>
-                <div class="set-hint">IMAP — для чтения входящих, SMTP — для отправки. Пароль хранится в зашифрованном виде.</div>
+                <div class="set-hint">Введите email (он же логин) и пароль от почты. Сервер (IMAP/SMTP) подставляется автоматически по домену. Пароль хранится в зашифрованном виде.</div>
                 <div v-if="!imapAvailable" class="set-hint" style="color:var(--warn)">IMAP-расширение PHP на сервере недоступно — чтение писем работать не будет, отправка по SMTP доступна.</div>
 
                 <div class="rule" v-for="a in mailAccounts" :key="a.id">
                     <div class="rule-m">{{ a.email }}</div>
-                    <div class="rule-a">{{ a.imap_host || '—' }} · {{ a.smtp_host || '—' }}</div>
+                    <div class="rule-a">{{ a.imap_host || '—' }}</div>
                     <button class="link-btn" @click="editMail(a)">Изменить</button>
                     <button class="link-btn link-btn--bad" @click="delMail(a.id)">Удалить</button>
                 </div>
@@ -175,17 +173,8 @@ function applyPatch() {
                 <div class="mail-form">
                     <div class="mf-title">{{ mailEditId ? 'Изменить ящик' : 'Добавить ящик' }}</div>
                     <div class="set-grid">
-                        <div class="fld"><label>Email</label><input v-model="mailForm.email" placeholder="info@bybuka.ru" /></div>
-                        <div class="fld"><label>Логин</label><input v-model="mailForm.login" placeholder="если отличается от email" /></div>
-                        <div class="fld"><label>IMAP-хост</label><input v-model="mailForm.imap_host" placeholder="imap.mail.ru" /></div>
-                        <div class="fld"><label>IMAP-порт</label><input v-model.number="mailForm.imap_port" type="number" /></div>
-                        <div class="fld"><label>SMTP-хост</label><input v-model="mailForm.smtp_host" placeholder="smtp.mail.ru" /></div>
-                        <div class="fld"><label>SMTP-порт</label><input v-model.number="mailForm.smtp_port" type="number" /></div>
-                        <div class="fld"><label>Пароль {{ mailEditId ? '(оставьте пустым — без изменений)' : '' }}</label><input v-model="mailForm.password" type="password" /></div>
-                    </div>
-                    <div class="set-toggle">
-                        <div><div class="st-t">SSL/TLS</div><div class="st-s">шифрованное соединение (обычно вкл.)</div></div>
-                        <button class="switch" :class="{ on: mailForm.use_ssl }" @click="mailForm.use_ssl = !mailForm.use_ssl"><span></span></button>
+                        <div class="fld"><label>Email (логин)</label><input v-model="mailForm.email" placeholder="info@bybuka.ru" /></div>
+                        <div class="fld"><label>Пароль {{ mailEditId ? '(пусто — без изменений)' : '' }}</label><input v-model="mailForm.password" type="password" /></div>
                     </div>
                     <div class="mf-actions">
                         <button class="btn-primary pressable" style="border-radius:12px" :disabled="mailForm.processing || !mailForm.email" @click="saveMail">{{ mailEditId ? 'Сохранить' : 'Добавить' }}</button>

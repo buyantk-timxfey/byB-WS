@@ -38,24 +38,33 @@ class MailController extends Controller
 
     public function storeAccount(Request $r)
     {
-        $d = $r->validate([
-            'email' => 'required|email', 'imap_host' => 'nullable|string', 'imap_port' => 'nullable|integer',
-            'smtp_host' => 'nullable|string', 'smtp_port' => 'nullable|integer',
-            'login' => 'nullable|string', 'password' => 'nullable|string', 'use_ssl' => 'boolean',
-        ]);
-        MailAccount::create($d);
+        $d = $r->validate(['email' => 'required|email', 'password' => 'required|string', 'login' => 'nullable|string']);
+        MailAccount::create($this->withDefaults($d));
 
         return back();
     }
 
+    // Сервер почты выводится из домена (mail.<домен>), SSL 993/143-аналог — как в старой CRM.
+    // Пользователь вводит только email (логин) и пароль.
+    private function withDefaults(array $d): array
+    {
+        $domain = substr((string) strrchr($d['email'], '@'), 1);
+        $d['login'] = ($d['login'] ?? '') ?: $d['email'];
+        $d['imap_host'] = 'mail.'.$domain;
+        $d['imap_port'] = 993;
+        $d['smtp_host'] = 'mail.'.$domain;
+        $d['smtp_port'] = 465;
+        $d['use_ssl'] = true;
+
+        return $d;
+    }
+
     public function updateAccount(Request $r, MailAccount $account)
     {
-        $d = $r->validate([
-            'email' => 'required|email', 'imap_host' => 'nullable|string', 'imap_port' => 'nullable|integer',
-            'smtp_host' => 'nullable|string', 'smtp_port' => 'nullable|integer',
-            'login' => 'nullable|string', 'password' => 'nullable|string', 'use_ssl' => 'boolean',
-        ]);
-        if (empty($d['password'])) {
+        $d = $r->validate(['email' => 'required|email', 'password' => 'nullable|string', 'login' => 'nullable|string']);
+        $hasPassword = ! empty($d['password']);
+        $d = $this->withDefaults($d);
+        if (! $hasPassword) {
             unset($d['password']);   // пустой пароль — не перезаписывать существующий
         }
         $account->update($d);
@@ -127,13 +136,16 @@ class MailController extends Controller
     // Синхронизация INBOX по IMAP (если расширение доступно на сервере)
     public function sync(MailAccount $account)
     {
-        if (! function_exists('imap_open') || ! $account->imap_host) {
-            return back()->withErrors(['imap' => 'IMAP недоступен на сервере или не настроен.']);
+        if (! function_exists('imap_open')) {
+            return back()->withErrors(['imap' => 'IMAP-расширение PHP недоступно на сервере.']);
         }
-        $mbox = '{'.$account->imap_host.':'.($account->imap_port ?: 993).'/imap'.($account->use_ssl ? '/ssl' : '').'}INBOX';
-        $imap = @imap_open($mbox, $account->login ?: $account->email, $account->password);
+        $host = $account->imap_host ?: ('mail.'.substr((string) strrchr($account->email, '@'), 1));
+        $port = $account->imap_port ?: 993;
+        // как в старой CRM: /imap/ssl/novalidate-cert + отключённый GSSAPI + 1 повтор
+        $mbox = '{'.$host.':'.$port.'/imap/ssl/novalidate-cert}INBOX';
+        $imap = @imap_open($mbox, $account->login ?: $account->email, $account->password, 0, 1, ['DISABLE_AUTHENTICATOR' => 'GSSAPI']);
         if (! $imap) {
-            return back()->withErrors(['imap' => 'Не удалось подключиться к IMAP.']);
+            return back()->withErrors(['imap' => 'IMAP: '.imap_last_error()]);
         }
         $ids = imap_search($imap, 'ALL') ?: [];
         $ids = array_slice(array_reverse($ids), 0, 30);
