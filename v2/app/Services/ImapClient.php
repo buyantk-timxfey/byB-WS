@@ -51,6 +51,10 @@ class ImapClient
 
     public function select(string $folder): void
     {
+        // IMAP требует modified UTF-7 для имён папок с не-ASCII символами
+        if (preg_match('/[^\x00-\x7F]/', $folder)) {
+            $folder = (string) mb_convert_encoding($folder, 'UTF7-IMAP', 'UTF-8');
+        }
         $this->command('SELECT '.$this->quote($folder));
     }
 
@@ -60,8 +64,8 @@ class ImapClient
         $resp    = $this->command('LIST "" "*"');
         $folders = [];
         foreach (preg_split('/\r?\n/', $resp) as $line) {
-            // Формат: * LIST (\flags) "/" folderName
-            if (preg_match('/^\* LIST\s+\S+\s+"[^"]*"\s+(.+)$/i', $line, $m)) {
+            // Формат: * LIST (\flags) "/" folderName   или   * LIST () NIL folderName
+            if (preg_match('/^\* LIST\s+\([^)]*\)\s+(?:"[^"]*"|NIL)\s+(.+)$/i', $line, $m)) {
                 $name = trim($m[1], "\" \t\r\n");
                 if ($name !== '') {
                     $folders[] = $name;

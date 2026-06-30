@@ -517,7 +517,19 @@ class MailController extends Controller
             try {
                 $rawFolders = $client->listFolders();
                 if ($rawFolders) {
-                    $account->update(['folders' => $this->mapRawFolders($rawFolders)]);
+                    $detectedFolders = $this->mapRawFolders($rawFolders);
+                    $account->update(['folders' => $detectedFolders]);
+                    // Если был передан английский псевдоним (из дефолтов), меняем на реальное имя
+                    $aliases = ['Sent' => 'Отправленные', 'Drafts' => 'Черновики', 'Spam' => 'Спам', 'Trash' => 'Корзина', 'Junk' => 'Спам'];
+                    if (isset($aliases[$targetFolder])) {
+                        $wantLabel = $aliases[$targetFolder];
+                        foreach ($detectedFolders as $f) {
+                            if ($f['label'] === $wantLabel) {
+                                $targetFolder = $f['name'];
+                                break;
+                            }
+                        }
+                    }
                 }
             } catch (\Throwable) {}
 
