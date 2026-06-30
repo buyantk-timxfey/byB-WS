@@ -45,19 +45,51 @@ class MailController extends Controller
         return back();
     }
 
-    // Сервер почты выводится из домена (mail.<домен>), SSL 993/143-аналог — как в старой CRM.
-    // Пользователь вводит только email (логин) и пароль.
     private function withDefaults(array $d): array
     {
         $domain = substr((string) strrchr($d['email'], '@'), 1);
         $d['login'] = ($d['login'] ?? '') ?: $d['email'];
-        $d['imap_host'] = 'mail.'.$domain;
+        [$imapHost, $smtpHost] = $this->detectProvider($domain);
+        $d['imap_host'] = $imapHost;
         $d['imap_port'] = 993;
-        $d['smtp_host'] = 'mail.'.$domain;
+        $d['smtp_host'] = $smtpHost;
         $d['smtp_port'] = 465;
         $d['use_ssl'] = true;
 
         return $d;
+    }
+
+    // Определяет IMAP/SMTP серверы по домену: список известных провайдеров + MX-запрос.
+    private function detectProvider(string $domain): array
+    {
+        $known = [
+            'mail.ru'     => ['imap.mail.ru',              'smtp.mail.ru'],
+            'inbox.ru'    => ['imap.mail.ru',              'smtp.mail.ru'],
+            'list.ru'     => ['imap.mail.ru',              'smtp.mail.ru'],
+            'bk.ru'       => ['imap.mail.ru',              'smtp.mail.ru'],
+            'yandex.ru'   => ['imap.yandex.ru',            'smtp.yandex.ru'],
+            'ya.ru'       => ['imap.yandex.ru',            'smtp.yandex.ru'],
+            'gmail.com'   => ['imap.gmail.com',            'smtp.gmail.com'],
+            'outlook.com' => ['outlook.office365.com',     'smtp.office365.com'],
+            'hotmail.com' => ['outlook.office365.com',     'smtp.office365.com'],
+        ];
+        if (isset($known[$domain])) {
+            return $known[$domain];
+        }
+
+        // MX-запрос: домен может быть корпоративным, но обслуживаться известным провайдером
+        $mxHosts = [];
+        if (@getmxrr($domain, $mxHosts)) {
+            foreach ($mxHosts as $mx) {
+                $mx = strtolower(rtrim((string) $mx, '.'));
+                if (str_contains($mx, 'mail.ru'))                          return ['imap.mail.ru',          'smtp.mail.ru'];
+                if (str_contains($mx, 'yandex'))                           return ['imap.yandex.ru',         'smtp.yandex.ru'];
+                if (str_contains($mx, 'google') || str_contains($mx, 'gmail')) return ['imap.gmail.com',    'smtp.gmail.com'];
+                if (str_contains($mx, 'outlook') || str_contains($mx, 'office365')) return ['outlook.office365.com', 'smtp.office365.com'];
+            }
+        }
+
+        return ['mail.'.$domain, 'mail.'.$domain];
     }
 
     public function updateAccount(Request $r, MailAccount $account)
@@ -138,9 +170,12 @@ class MailController extends Controller
     public function sync(MailAccount $account)
     {
         $domain = substr((string) strrchr($account->email, '@'), 1);
-        // На шаред-хостинге почта обычно доступна локально; пробуем по очереди, коротким таймаутом.
+
+        // MX-кандидат (важно для доменов на внешних провайдерах, напр. bybuka.ru → imap.mail.ru)
+        [$mxImap] = $this->detectProvider($domain);
+
         $candidates = array_values(array_unique(array_filter([
-            $account->imap_host, 'localhost', gethostname() ?: null, 'mail.'.$domain,
+            $account->imap_host, $mxImap, 'localhost', gethostname() ?: null, 'mail.'.$domain,
         ])));
         $port = $account->imap_port ?: 993;
         $user = $account->login ?: $account->email;
