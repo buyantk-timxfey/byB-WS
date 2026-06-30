@@ -59,6 +59,7 @@ Route::get('/finances', [FinanceController::class, 'index'])
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/references', [ReferenceController::class, 'index'])->name('references');
     Route::post('/references/{type}', [ReferenceController::class, 'store']);
+    Route::post('/quick/{type}', [ReferenceController::class, 'quick']);
     Route::put('/references/{type}/{id}', [ReferenceController::class, 'update']);
     Route::delete('/references/{type}/{id}', [ReferenceController::class, 'destroy']);
 

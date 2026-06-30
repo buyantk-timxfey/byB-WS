@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
+import axios from 'axios';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
@@ -21,6 +22,10 @@ const props = defineProps<{
     carriers: { id: number; name: string }[];
     goods: { id: number; name: string; unit: string }[];
 }>();
+
+// локальные списки (чтобы добавлять созданные на лету)
+const suppliers = ref([...props.suppliers]);
+const goods = ref([...props.goods]);
 
 const seg = ref<'all' | 'Ожидает отправки' | 'В пути' | 'Завершено'>('all');
 const q = ref('');
@@ -73,6 +78,36 @@ function openDoc(s: Row) {
 }
 function addItem() { form.items.push({ nomenclature_id: null, qty: 1, price: 0 }); }
 function removeItem(i: number) { form.items.splice(i, 1); }
+
+// ── Быстрое создание поставщика/товара прямо в модалке ──
+const showSup = ref(false);
+const supForm = ref({ name: '', inn: '' });
+const supSaving = ref(false);
+async function saveSup() {
+    if (!supForm.value.name.trim()) return;
+    supSaving.value = true;
+    try {
+        const { data } = await axios.post('/quick/counterparties', supForm.value);
+        suppliers.value.push(data);
+        form.counterparty_id = data.id;
+        showSup.value = false; supForm.value = { name: '', inn: '' };
+    } catch { alert('Не удалось создать поставщика'); }
+    supSaving.value = false;
+}
+
+const showProd = ref(false);
+const prodForm = ref({ name: '', unit: 'шт' });
+const prodSaving = ref(false);
+async function saveProd() {
+    if (!prodForm.value.name.trim()) return;
+    prodSaving.value = true;
+    try {
+        const { data } = await axios.post('/quick/nomenclature', prodForm.value);
+        goods.value.push(data);
+        showProd.value = false; prodForm.value = { name: '', unit: 'шт' };
+    } catch { alert('Не удалось создать товар'); }
+    prodSaving.value = false;
+}
 
 function submit() {
     const opts = { onSuccess: () => { open.value = false; } };
@@ -143,16 +178,24 @@ function destroy() {
         <AppModal :open="open" :title="editingId ? 'Поставка' : 'Новая поставка'" @close="open = false">
             <div class="fld-row">
                 <div class="fld"><label>Поставщик</label>
-                    <select v-model="form.counterparty_id">
-                        <option :value="null">— выбрать —</option>
-                        <option v-for="c in suppliers" :key="c.id" :value="c.id">{{ c.name }}</option>
-                    </select>
+                    <div class="sel-add">
+                        <select v-model="form.counterparty_id">
+                            <option :value="null">— выбрать —</option>
+                            <option v-for="c in suppliers" :key="c.id" :value="c.id">{{ c.name }}</option>
+                        </select>
+                        <button type="button" class="add-btn pressable" :class="{ on: showSup }" @click="showSup = !showSup" title="Создать поставщика">+</button>
+                    </div>
                 </div>
                 <div class="fld"><label>Статус</label>
                     <select v-model="form.status"><option>Ожидает отправки</option><option>В пути</option><option>Завершено</option></select>
                 </div>
             </div>
-            <div class="fld"><label>Название</label><input v-model="form.name" placeholder="Напр. Насосы Grundfos" /></div>
+            <div v-if="showSup" class="quick-form">
+                <input v-model="supForm.name" placeholder="Наименование поставщика" />
+                <input v-model="supForm.inn" placeholder="ИНН (необяз.)" style="max-width:140px" />
+                <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="supSaving" @click="saveSup">Создать</button>
+            </div>
+            <div class="fld"><label>Название</label><input v-model="form.name" /></div>
             <div class="fld-row">
                 <div class="fld"><label>Дата заказа</label><input v-model="form.date" type="date" /></div>
                 <div class="fld"><label>ETA</label><input v-model="form.eta" type="date" /></div>
@@ -171,7 +214,15 @@ function destroy() {
             <div>
                 <div class="items-h">
                     <span class="h2">Позиции</span>
-                    <button class="btn-ghost" style="padding:6px 12px;font-size:13px" @click="addItem">+ Товар</button>
+                    <div class="flex gap-2">
+                        <button class="btn-ghost" style="padding:6px 12px;font-size:13px" :class="{ 'on-ghost': showProd }" @click="showProd = !showProd">+ Новый товар</button>
+                        <button class="btn-ghost" style="padding:6px 12px;font-size:13px" @click="addItem">+ Строка</button>
+                    </div>
+                </div>
+                <div v-if="showProd" class="quick-form">
+                    <input v-model="prodForm.name" placeholder="Наименование товара" />
+                    <input v-model="prodForm.unit" placeholder="ед." style="max-width:80px" />
+                    <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="prodSaving" @click="saveProd">Создать</button>
                 </div>
                 <div v-for="(it, i) in form.items" :key="i" class="ship-item">
                     <select v-model="it.nomenclature_id">
@@ -203,4 +254,11 @@ function destroy() {
 <style scoped>
 .ship-item { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--glass-border); }
 .ship-item select, .ship-item input { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 8px 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
+.sel-add { display: flex; gap: 8px; align-items: center; }
+.sel-add select { flex: 1; min-width: 0; }
+.add-btn { flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); font-size: 20px; line-height: 1; cursor: pointer; }
+.add-btn.on { background: var(--ink); color: var(--bg); }
+.quick-form { display: flex; gap: 8px; align-items: center; padding: 10px 12px; margin-top: 4px; background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 12px; flex-wrap: wrap; }
+.quick-form input { flex: 1; min-width: 120px; border: 1px solid var(--glass-border); background: var(--bg); border-radius: 10px; padding: 9px 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
+.on-ghost { background: var(--ink) !important; color: var(--bg) !important; }
 </style>

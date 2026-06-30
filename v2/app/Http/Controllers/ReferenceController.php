@@ -82,6 +82,24 @@ class ReferenceController extends Controller
         return back();
     }
 
+    // Быстрое создание из других форм (возвращает JSON, без перезагрузки страницы)
+    public function quick(Request $r, string $type)
+    {
+        if ($type === 'counterparties') {
+            $d = $r->validate(['name' => 'required|string|max:255', 'inn' => 'nullable|string|max:20']);
+            $c = Counterparty::create($d + ['type' => 'Поставщик']);
+
+            return response()->json(['id' => $c->id, 'name' => $c->name]);
+        }
+        if ($type === 'nomenclature') {
+            $d = $r->validate(['name' => 'required|string|max:255', 'unit' => 'required|string|max:16']);
+            $n = Nomenclature::create($d);
+
+            return response()->json(['id' => $n->id, 'name' => $n->name, 'unit' => $n->unit]);
+        }
+        abort(404);
+    }
+
     public function update(Request $r, string $type, int $id)
     {
         [$model, $rules] = $this->resolve($type);
