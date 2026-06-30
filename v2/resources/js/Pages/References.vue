@@ -30,6 +30,11 @@ const debtText = (n: number) => n > 0 ? '+ ' + money(n) + ' (нам)' : n < 0 ? 
 const cpVariant = (t: string) => t === 'Поставщик' ? 'info' : t === 'Покупатель' ? 'ok' : 'neutral';
 const createLabel = computed(() => ({ counterparties: 'контрагента', nomenclature: 'товар', carriers: 'перевозчика', accounts: 'счёт', articles: 'статью' }[dir.value]));
 
+function cleanupGoods() {
+    if (!confirm('Удалить товары, которых нет ни в поставках, ни в продажах, ни на складе?')) return;
+    router.post('/references/nomenclature/cleanup', {}, { preserveScroll: true });
+}
+
 // ── Форма (поля переключаются по типу) ──
 const open = ref(false);
 const editingId = ref<number | null>(null);
@@ -80,6 +85,7 @@ function destroy() {
                 <Icon name="search" :size="16" class="text-ink-3" />
                 <input v-model="q" placeholder="Поиск…" />
             </div>
+            <button v-if="dir === 'nomenclature'" class="btn-ghost pressable" @click="cleanupGoods"><Icon name="alert" :size="16" /> Очистить неиспользуемые</button>
             <button class="btn-primary pressable" @click="create"><Icon name="plus" :size="17" /> Добавить {{ createLabel }}</button>
         </div>
 

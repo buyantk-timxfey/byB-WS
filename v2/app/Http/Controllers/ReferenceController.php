@@ -100,6 +100,22 @@ class ReferenceController extends Controller
         abort(404);
     }
 
+    // Удалить «фантомные» товары — те, что не встречаются ни в поставках, ни в продажах,
+    // ни на складе (партии/движения). Накапливаются от тестов и ввода названий вручную.
+    public function cleanupNomenclature()
+    {
+        $used = collect()
+            ->merge(DB::table('shipment_items')->whereNotNull('nomenclature_id')->pluck('nomenclature_id'))
+            ->merge(DB::table('sale_items')->whereNotNull('nomenclature_id')->pluck('nomenclature_id'))
+            ->merge(DB::table('stock_batches')->pluck('nomenclature_id'))
+            ->merge(DB::table('stock_moves')->whereNotNull('nomenclature_id')->pluck('nomenclature_id'))
+            ->filter()->unique()->values()->all();
+
+        $deleted = Nomenclature::whereNotIn('id', $used)->delete();
+
+        return back()->with('flash', 'Удалено неиспользуемых товаров: '.$deleted);
+    }
+
     public function update(Request $r, string $type, int $id)
     {
         [$model, $rules] = $this->resolve($type);

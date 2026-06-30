@@ -58,6 +58,7 @@ Route::get('/finances', [FinanceController::class, 'index'])
 // Справочники — реальные данные
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/references', [ReferenceController::class, 'index'])->name('references');
+    Route::post('/references/nomenclature/cleanup', [ReferenceController::class, 'cleanupNomenclature']);
     Route::post('/references/{type}', [ReferenceController::class, 'store']);
     Route::post('/quick/{type}', [ReferenceController::class, 'quick']);
     Route::put('/references/{type}/{id}', [ReferenceController::class, 'update']);
