@@ -22,6 +22,17 @@ const list = computed(() => props.messages.filter((m) =>
 
 const selectedId = ref<number | null>(props.messages[0]?.id ?? null);
 const selected = computed(() => props.messages.find((m) => m.id === selectedId.value) || null);
+
+// Очищает HTML из тела/превью — на случай если в БД уже сохранён сырой HTML
+function stripHtml(text: string): string {
+    if (!text || !/<[a-z]/i.test(text)) return text;
+    const div = document.createElement('div');
+    div.innerHTML = text;
+    div.querySelectorAll('style, script, head').forEach((el) => el.remove());
+    return (div.textContent ?? div.innerText ?? '').replace(/\n{3,}/g, '\n\n').trim();
+}
+const selectedBody = computed(() => stripHtml(selected.value?.body ?? ''));
+
 function openMsg(m: any) {
     selectedId.value = m.id;
     if (m.unread) router.post(`/mail/${m.id}/read`, {}, { preserveScroll: true, preserveState: true });
@@ -100,7 +111,7 @@ onUnmounted(() => { if (autoTimer !== null) { clearInterval(autoTimer); autoTime
                         <div class="mi-main">
                             <div class="mi-top"><span class="mi-from">{{ m.from }}</span><span class="mi-time">{{ m.time }}</span></div>
                             <div class="mi-subj">{{ m.subject }} <Icon v-if="m.attach" name="doc" :size="12" class="mi-clip" /></div>
-                            <div class="mi-prev">{{ m.preview }}</div>
+                            <div class="mi-prev">{{ stripHtml(m.preview) }}</div>
                         </div>
                         <span v-if="m.unread" class="mi-dot"></span>
                     </div>
@@ -120,7 +131,7 @@ onUnmounted(() => { if (autoTimer !== null) { clearInterval(autoTimer); autoTime
                         <span v-if="selected.party" class="pill pill--info mr-link"><Icon name="building" :size="12" /> {{ selected.party }}</span>
                     </div>
                 </div>
-                <div class="mr-body">{{ selected.body }}</div>
+                <div class="mr-body">{{ selectedBody }}</div>
                 <div class="mr-actions">
                     <button class="btn-primary pressable" @click="compose = true">Ответить</button>
                     <button class="btn-ghost pressable" @click="router.delete(`/mail/${selected.id}`)">Удалить</button>

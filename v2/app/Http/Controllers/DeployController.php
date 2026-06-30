@@ -52,7 +52,7 @@ class DeployController extends Controller
         }
         $zip->close();
 
-        // применяем миграции и чистим кэш
+        // Применяем миграции и чистим кэш
         $migrateOut = '';
         try {
             Artisan::call('migrate', ['--force' => true]);
@@ -65,7 +65,13 @@ class DeployController extends Controller
             report($e);
         }
 
-        Setting::put('last_patch', 'файлов: '.$applied.' · '.now()->format('d.m.Y H:i'));
+        // Сбрасываем OPcache чтобы PHP сразу увидел новые файлы
+        if (function_exists('opcache_reset')) {
+            @opcache_reset();
+        }
+
+        $summary = 'применено '.$applied.' · пропущено '.$skipped.' · '.now()->format('d.m.Y H:i');
+        Setting::put('last_patch', $summary);
 
         return back()->with('deploy', [
             'applied' => $applied, 'skipped' => $skipped,

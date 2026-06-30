@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 
@@ -50,12 +50,17 @@ function onPatch(e: Event) {
     patchForm.archive = f;
     patchName.value = f?.name ?? '';
 }
+const deployResult = ref('');
 function applyPatch() {
     if (!patchForm.archive) return;
+    deployResult.value = '';
     patchForm.post('/deploy', {
         forceFormData: true,
-        onSuccess: () => { patchForm.reset(); patchName.value = ''; alert('Патч применён ✓'); window.location.reload(); },
-        onError: () => alert('Ошибка применения патча'),
+        onSuccess: () => {
+            patchForm.reset(); patchName.value = '';
+            // lastPatch обновится через Inertia — он покажет реальный счётчик
+        },
+        onError: () => { deployResult.value = 'Ошибка: не удалось применить патч'; },
     });
 }
 </script>
@@ -154,7 +159,10 @@ function applyPatch() {
                 </label>
                 <div v-if="patchForm.progress" class="set-hint">Загрузка… {{ patchForm.progress.percentage }}%</div>
                 <div class="set-toggle">
-                    <div><div class="st-t">Последний патч</div><div class="st-s">{{ lastPatch || 'ещё не применялся' }}</div></div>
+                    <div>
+                        <div class="st-t">Последний патч</div>
+                        <div class="st-s" :style="lastPatch && lastPatch.includes('применено 0') ? 'color:var(--expense)' : ''">{{ lastPatch || 'ещё не применялся' }}</div>
+                    </div>
                     <button class="btn-primary pressable" style="border-radius:12px" :disabled="!patchForm.archive || patchForm.processing" @click="applyPatch">Применить патч</button>
                 </div>
             </div>
