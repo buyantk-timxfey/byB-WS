@@ -25,7 +25,9 @@ class MailController extends Controller
             ->map(fn (MailMessage $m) => [
                 'id'         => $m->id, 'account_id' => $m->account_id, 'folder' => $m->folder,
                 'from'       => $m->from_name ?? $m->from_email ?? '—', 'email' => $m->from_email,
-                'subject'    => $m->subject, 'preview' => $m->preview, 'body' => $m->body,
+                'subject'    => $m->subject,
+                'preview'    => $this->cleanBody($m->preview),
+                'body'       => $this->cleanBody($m->body),
                 'time'       => optional($m->date)->format('d.m H:i'), 'unread' => ! $m->is_read,
                 'attach'     => $m->has_attach ? 1 : 0, 'party' => $m->counterparty?->name,
             ]);
@@ -199,6 +201,20 @@ class MailController extends Controller
         $message->delete();
 
         return back();
+    }
+
+    // Очищает тела писем, сохранённых старым кодом: CSS-блоки + HTML-сущности.
+    private function cleanBody(?string $text): string
+    {
+        if ($text === null || $text === '') {
+            return '';
+        }
+        // Убираем "RTF Template" + блоки CSS (.c0 { ... }) сохранённые до фикса strip_tags
+        $text = (string) preg_replace('/\A(?:RTF\s+Template[\r\n]+)?(?:\.[^\s{]+\s*\{[^}]*\}[\r\n]*)+/u', '', $text);
+        // Декодируем HTML-сущности (&quot; &amp; &lt; и т.д.)
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim($text);
     }
 
     // Синхронизация папки: PHP imap-расширение (приоритет) → сокеты (fallback).
@@ -416,6 +432,7 @@ class MailController extends Controller
             $body = preg_replace('/<style[^>]*>.*?<\/style>/si', '', $body);
             $body = preg_replace('/<script[^>]*>.*?<\/script>/si', '', $body);
             $body = trim((string) preg_replace('/[ \t]*\R+[ \t]*/u', "\n", strip_tags($body)));
+            $body = html_entity_decode($body, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
         return $body;
