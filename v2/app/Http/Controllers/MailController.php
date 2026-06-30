@@ -13,6 +13,8 @@ class MailController extends Controller
 {
     public function index()
     {
+        $this->bootstrapAccounts();
+
         $accounts = MailAccount::get()->map(fn (MailAccount $a) => [
             'id' => $a->id, 'email' => $a->email,
             'folders' => [
@@ -35,6 +37,26 @@ class MailController extends Controller
             'messages' => $messages,
             'imapAvailable' => true,   // чтение через собственный IMAP-клиент, расширение PHP не нужно
         ]);
+    }
+
+    // Создаёт аккаунты из .env при первом запуске, если таблица пустая.
+    private function bootstrapAccounts(): void
+    {
+        if (MailAccount::exists()) {
+            return;
+        }
+
+        $slots = [
+            ['email' => env('BYBUKA_MAIL_1_EMAIL'), 'password' => env('BYBUKA_MAIL_1_PASS')],
+            ['email' => env('BYBUKA_MAIL_2_EMAIL'), 'password' => env('BYBUKA_MAIL_2_PASS')],
+        ];
+
+        foreach ($slots as $slot) {
+            if (empty($slot['email']) || empty($slot['password'])) {
+                continue;
+            }
+            MailAccount::create($this->withDefaults($slot));
+        }
     }
 
     public function storeAccount(Request $r)
