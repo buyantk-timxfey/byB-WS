@@ -60,6 +60,9 @@ function create() {
     editingId.value = null;
     form.reset();
     form.date = new Date().toISOString().slice(0, 10);
+    form.items = [{ name: '', qty: null, price: null }];
+    supHint.value = '';
+    showSup.value = false;
     open.value = true;
 }
 function openDoc(s: Row) {
@@ -74,6 +77,8 @@ function openDoc(s: Row) {
     form.delivery = s.delivery;
     form.problem = s.problem;
     form.items = s.items.map((i) => ({ name: i.name ?? '', qty: i.qty, price: i.price }));
+    supHint.value = '';
+    showSup.value = false;
     open.value = true;
 }
 function addItem() { form.items.push({ name: '', qty: null, price: null }); }
@@ -81,16 +86,18 @@ function removeItem(i: number) { form.items.splice(i, 1); }
 
 // ── Быстрое создание поставщика прямо в модалке ──
 const showSup = ref(false);
-const supForm = ref({ name: '', type: 'Поставщик' });
+const supForm = ref({ name: '' });
 const supSaving = ref(false);
+const supHint = ref('');
 async function saveSup() {
     if (!supForm.value.name.trim()) return;
     supSaving.value = true;
     try {
-        const { data } = await axios.post('/quick/counterparties', supForm.value);
+        const { data } = await axios.post('/quick/counterparties', { name: supForm.value.name });
         suppliers.value.push(data);
         form.counterparty_id = data.id;
-        showSup.value = false; supForm.value = { name: '', type: 'Поставщик' };
+        supHint.value = data.name;
+        showSup.value = false; supForm.value = { name: '' };
     } catch { alert('Не удалось создать поставщика'); }
     supSaving.value = false;
 }
@@ -177,12 +184,10 @@ function destroy() {
                 </div>
             </div>
             <div v-if="showSup" class="quick-form">
-                <input v-model="supForm.name" placeholder="Наименование" />
-                <select v-model="supForm.type" style="max-width:140px">
-                    <option>Поставщик</option><option>Покупатель</option><option>Оба</option>
-                </select>
+                <input v-model="supForm.name" placeholder="Наименование поставщика" @keyup.enter="saveSup" />
                 <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="supSaving" @click="saveSup">Создать</button>
             </div>
+            <div v-if="supHint" class="sup-hint">Поставщик «{{ supHint }}» создан. Дозаполните карточку (ИНН, контакты) в Справочниках.</div>
             <div class="fld"><label>Название поставки</label><input v-model="form.name" /></div>
             <div class="fld-row">
                 <div class="fld"><label>Дата заказа</label><input v-model="form.date" type="date" /></div>
@@ -241,4 +246,5 @@ function destroy() {
 .quick-form { display: flex; gap: 8px; align-items: center; padding: 10px 12px; margin-top: 8px; background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 12px; flex-wrap: wrap; }
 .quick-form input, .quick-form select { flex: 1; min-width: 120px; height: 40px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--bg); border-radius: 10px; padding: 0 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
 .on-ghost { background: var(--ink) !important; color: var(--bg) !important; }
+.sup-hint { margin-top: 8px; font-size: 13px; color: var(--income); background: rgba(52,199,89,.12); border: 1px solid rgba(52,199,89,.3); border-radius: 10px; padding: 8px 12px; }
 </style>
