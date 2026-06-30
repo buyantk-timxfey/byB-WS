@@ -104,19 +104,16 @@ class ImapClient
                 $parts[$m[1]] = $lit['value'];
             }
         }
-        // Предпочитаем HTML-части (1.2, 2) как богатейшие, затем plain (1.1, 1).
-        // Пропускаем части, которые выглядят как MIME-преамбула с разделителями.
+        // Порядок: text/plain во вложенном multipart (1.1), text/plain плоского (1),
+        // затем HTML-части — только если текстовых нет. Вложения (PDF/PNG) в конце и
+        // обнаруживаются как бинарные в decodeBody, что возвращает пустую строку.
         $body = '';
-        foreach (['1.2', '2', '1.1', '1'] as $part) {
+        foreach (['1.1', '1', '1.2', '2'] as $part) {
             $candidate = $parts[$part] ?? '';
             if ($candidate !== '' && ! preg_match('/^-{4,}[A-Za-z0-9]/m', $candidate)) {
                 $body = $candidate;
                 break;
             }
-        }
-        // Крайний случай: используем что есть (может содержать MIME-мусор)
-        if ($body === '' && $parts !== []) {
-            $body = reset($parts);
         }
         $seen = (bool) preg_match('/FLAGS \([^)]*\\\\Seen/i', $resp);
 

@@ -644,8 +644,19 @@ class MailController extends Controller
         if ($compact !== '' && strlen($compact) % 4 === 0 && preg_match('/^[A-Za-z0-9+\/=]+$/', $compact)) {
             $dec = base64_decode($compact, true);
             if ($dec !== false && $dec !== '') {
+                // Пропускаем бинарные вложения (PDF, PNG, JPEG, GIF, ZIP, DOCX и т.д.)
+                if (str_starts_with($dec, '%PDF') || str_starts_with($dec, "\x89PNG") ||
+                    str_starts_with($dec, "\xff\xd8\xff") || str_starts_with($dec, 'GIF8') ||
+                    str_starts_with($dec, 'PK') || str_starts_with($dec, "\x50\x4b\x03\x04")) {
+                    return '';
+                }
                 $out = $dec;
             }
+        }
+        // Дополнительная проверка: если после QP-декода получили бинарный контент — пропускаем
+        if (str_starts_with($out, '%PDF') || str_starts_with($out, "\x89PNG") ||
+            str_starts_with($out, "\xff\xd8\xff") || str_starts_with($out, 'GIF8')) {
+            return '';
         }
         if (! mb_check_encoding($out, 'UTF-8')) {
             $out = (string) @mb_convert_encoding($out, 'UTF-8', 'Windows-1251, ISO-8859-1, UTF-8');
