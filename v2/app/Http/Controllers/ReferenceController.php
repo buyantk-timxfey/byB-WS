@@ -86,8 +86,8 @@ class ReferenceController extends Controller
     public function quick(Request $r, string $type)
     {
         if ($type === 'counterparties') {
-            $d = $r->validate(['name' => 'required|string|max:255', 'inn' => 'nullable|string|max:20']);
-            $c = Counterparty::create($d + ['type' => 'Поставщик']);
+            $d = $r->validate(['name' => 'required|string|max:255', 'type' => 'nullable|in:Поставщик,Покупатель,Оба']);
+            $c = Counterparty::create(['name' => $d['name'], 'type' => $d['type'] ?? 'Поставщик']);
 
             return response()->json(['id' => $c->id, 'name' => $c->name]);
         }

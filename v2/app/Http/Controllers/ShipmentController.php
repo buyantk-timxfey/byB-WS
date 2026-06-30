@@ -136,21 +136,25 @@ class ShipmentController extends Controller
             'delivery' => 'nullable|numeric|min:0',
             'problem' => 'boolean',
             'items' => 'array',
-            'items.*.nomenclature_id' => 'nullable|exists:nomenclature,id',
+            'items.*.name' => 'nullable|string|max:255',
             'items.*.qty' => 'required|numeric',
             'items.*.price' => 'required|numeric',
         ]);
     }
 
+    // Позиции: товар вводится по наименованию. Точное совпадение — берём существующий,
+    // иначе создаём новый (приходуется на склад при проведении).
     private function syncItems(Shipment $shipment, array $items): void
     {
         $shipment->items()->delete();
         foreach ($items as $i) {
-            if (empty($i['nomenclature_id'])) {
+            $name = trim($i['name'] ?? '');
+            if ($name === '') {
                 continue;
             }
+            $nom = \App\Models\Nomenclature::firstOrCreate(['name' => $name], ['unit' => 'шт']);
             $shipment->items()->create([
-                'nomenclature_id' => $i['nomenclature_id'],
+                'nomenclature_id' => $nom->id,
                 'qty' => $i['qty'],
                 'price' => $i['price'],
             ]);

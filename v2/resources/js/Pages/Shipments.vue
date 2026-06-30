@@ -8,7 +8,7 @@ import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
 import { money, date as fdate } from '@/lib/format';
 
-type Item = { nomenclature_id: number | null; name?: string; qty: number; price: number };
+type Item = { name: string; qty: number; price: number };
 type Row = {
     id: number; number: string; date: string; supplier: string; counterparty_id: number | null;
     name: string | null; status: string; eta: string | null; carrier_id: number | null;
@@ -73,15 +73,15 @@ function openDoc(s: Row) {
     form.tracking = s.tracking ?? '';
     form.delivery = s.delivery;
     form.problem = s.problem;
-    form.items = s.items.map((i) => ({ nomenclature_id: i.nomenclature_id, qty: i.qty, price: i.price }));
+    form.items = s.items.map((i) => ({ name: i.name ?? '', qty: i.qty, price: i.price }));
     open.value = true;
 }
-function addItem() { form.items.push({ nomenclature_id: null, qty: 1, price: 0 }); }
+function addItem() { form.items.push({ name: '', qty: 1, price: 0 }); }
 function removeItem(i: number) { form.items.splice(i, 1); }
 
-// ── Быстрое создание поставщика/товара прямо в модалке ──
+// ── Быстрое создание поставщика прямо в модалке ──
 const showSup = ref(false);
-const supForm = ref({ name: '', inn: '' });
+const supForm = ref({ name: '', type: 'Поставщик' });
 const supSaving = ref(false);
 async function saveSup() {
     if (!supForm.value.name.trim()) return;
@@ -90,23 +90,9 @@ async function saveSup() {
         const { data } = await axios.post('/quick/counterparties', supForm.value);
         suppliers.value.push(data);
         form.counterparty_id = data.id;
-        showSup.value = false; supForm.value = { name: '', inn: '' };
+        showSup.value = false; supForm.value = { name: '', type: 'Поставщик' };
     } catch { alert('Не удалось создать поставщика'); }
     supSaving.value = false;
-}
-
-const showProd = ref(false);
-const prodForm = ref({ name: '', unit: 'шт' });
-const prodSaving = ref(false);
-async function saveProd() {
-    if (!prodForm.value.name.trim()) return;
-    prodSaving.value = true;
-    try {
-        const { data } = await axios.post('/quick/nomenclature', prodForm.value);
-        goods.value.push(data);
-        showProd.value = false; prodForm.value = { name: '', unit: 'шт' };
-    } catch { alert('Не удалось создать товар'); }
-    prodSaving.value = false;
 }
 
 function submit() {
@@ -191,8 +177,10 @@ function destroy() {
                 </div>
             </div>
             <div v-if="showSup" class="quick-form">
-                <input v-model="supForm.name" placeholder="Наименование поставщика" />
-                <input v-model="supForm.inn" placeholder="ИНН (необяз.)" style="max-width:140px" />
+                <input v-model="supForm.name" placeholder="Наименование" />
+                <select v-model="supForm.type" style="max-width:140px">
+                    <option>Поставщик</option><option>Покупатель</option><option>Оба</option>
+                </select>
                 <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="supSaving" @click="saveSup">Создать</button>
             </div>
             <div class="fld"><label>Название</label><input v-model="form.name" /></div>
@@ -214,26 +202,18 @@ function destroy() {
             <div>
                 <div class="items-h">
                     <span class="h2">Позиции</span>
-                    <div class="flex gap-2">
-                        <button class="btn-ghost" style="padding:6px 12px;font-size:13px" :class="{ 'on-ghost': showProd }" @click="showProd = !showProd">+ Новый товар</button>
-                        <button class="btn-ghost" style="padding:6px 12px;font-size:13px" @click="addItem">+ Строка</button>
-                    </div>
+                    <button class="btn-ghost" style="padding:6px 12px;font-size:13px" @click="addItem">+ Строка</button>
                 </div>
-                <div v-if="showProd" class="quick-form">
-                    <input v-model="prodForm.name" placeholder="Наименование товара" />
-                    <input v-model="prodForm.unit" placeholder="ед." style="max-width:80px" />
-                    <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="prodSaving" @click="saveProd">Создать</button>
-                </div>
+                <datalist id="goods-list">
+                    <option v-for="g in goods" :key="g.id" :value="g.name" />
+                </datalist>
                 <div v-for="(it, i) in form.items" :key="i" class="ship-item">
-                    <select v-model="it.nomenclature_id">
-                        <option :value="null">— товар —</option>
-                        <option v-for="g in goods" :key="g.id" :value="g.id">{{ g.name }}</option>
-                    </select>
+                    <input v-model="it.name" list="goods-list" placeholder="наименование товара" />
                     <input v-model.number="it.qty" type="number" placeholder="кол-во" />
                     <input v-model.number="it.price" type="number" placeholder="цена" />
                     <button class="link-btn link-btn--bad" @click="removeItem(i)">✕</button>
                 </div>
-                <div v-if="!form.items.length" class="text-ink-3" style="padding:12px 0;font-size:14px">Добавьте товары поступления</div>
+                <div v-if="!form.items.length" class="text-ink-3" style="padding:12px 0;font-size:14px">Добавьте позиции: введите наименование, количество и цену</div>
             </div>
 
             <div class="flex items-center justify-between" style="padding-top:6px;border-top:1px solid var(--glass-border)">

@@ -54,7 +54,7 @@ function applyPatch() {
     if (!patchForm.archive) return;
     patchForm.post('/deploy', {
         forceFormData: true,
-        onSuccess: () => { patchForm.reset(); patchName.value = ''; alert('Патч применён ✓'); },
+        onSuccess: () => { patchForm.reset(); patchName.value = ''; alert('Патч применён ✓'); window.location.reload(); },
         onError: () => alert('Ошибка применения патча'),
     });
 }
