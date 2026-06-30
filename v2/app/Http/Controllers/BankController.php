@@ -176,7 +176,7 @@ class BankController extends Controller
     {
         $paid = BankMatch::where('target_type', 'sale')->select('target_id', DB::raw('SUM(amount) as p'))->groupBy('target_id')->pluck('p', 'target_id');
 
-        return Sale::with('counterparty:id,name')->whereIn('status', ['Счёт', 'Отгружено'])->orderByDesc('date')->get()
+        return Sale::with('counterparty:id,name')->whereIn('status', ['Выставлен', 'Оплачен'])->orderByDesc('date')->get()
             ->map(fn (Sale $s) => ['id' => $s->id, 'number' => $s->number, 'party' => $s->counterparty?->name, 'sum' => $s->total(), 'debt' => $s->total() - (float) ($paid[$s->id] ?? 0), 'inn' => $s->counterparty?->inn])
             ->filter(fn ($s) => $s['debt'] > 0.01)->values()->all();
     }

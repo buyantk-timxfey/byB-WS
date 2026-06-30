@@ -8,30 +8,31 @@ use App\Models\Turnover;
 use App\Services\Fifo;
 use Illuminate\Support\Facades\DB;
 
-// Проведение продажи (Отгружено): списание склада по FIFO, дебиторка покупателя,
-// признание себестоимости (COGS). Выручка — НЕ здесь: признаётся кассовым методом
-// при сопоставлении прихода с продажей (см. BankReconcile).
+// Проводка продажи по статусу (идемпотентна — сначала снимает прежние эффекты, затем
+// применяет по текущему статусу):
+//   Выставлен — резерв (расчётный, без движений склада) + дебиторка покупателя (безнал).
+//   Оплачен   — списание склада по FIFO + себестоимость (COGS) + дебиторка (безнал).
+//   Отменён   — ничего.
+// Выручка (деньги) — НЕ здесь: кассовым методом при сопоставлении прихода (BankReconcile).
 class SalePosting
 {
-    public static function post(Sale $sale): void
+    public static function sync(Sale $sale): void
     {
-        if ($sale->isPosted()) {
-            return;
-        }
         $sale->load('items');
 
         DB::transaction(function () use ($sale) {
-            $totalCost = 0.0;
-            foreach ($sale->items as $item) {
-                if (! $item->nomenclature_id || $item->qty <= 0) {
-                    continue;
-                }
-                $cost = Fifo::consume($item->nomenclature_id, (float) $item->qty, $sale->date, 'sale', $sale->id);
-                $item->forceFill(['cost' => $cost])->save();
-                $totalCost += $cost;
+            // Снять прежние эффекты
+            Fifo::release('sale', $sale->id);
+            Settlement::where('doc_type', 'sale')->where('doc_id', $sale->id)->delete();
+            Turnover::where('doc_type', 'sale')->where('doc_id', $sale->id)->delete();
+            $sale->items()->update(['cost' => 0]);
+            $sale->forceFill(['posted_at' => null])->save();
+
+            if ($sale->status === 'Отменён') {
+                return;
             }
 
-            // Дебиторка: покупатель должен нам (amount > 0)
+            // Дебиторка покупателя (только безнал с контрагентом): он должен нам
             if ($sale->counterparty_id) {
                 Settlement::create([
                     'counterparty_id' => $sale->counterparty_id,
@@ -43,28 +44,33 @@ class SalePosting
                 ]);
             }
 
-            // Себестоимость проданного (COGS) — признаётся при отгрузке
-            if ($totalCost > 0) {
-                Turnover::create([
-                    'date' => $sale->date,
-                    'type' => 'cogs',
-                    'amount' => $totalCost,
-                    'doc_type' => 'sale',
-                    'doc_id' => $sale->id,
-                ]);
+            // Списание склада и себестоимость — при «Оплачен» (товар ушёл покупателю)
+            if ($sale->status === 'Оплачен') {
+                $totalCost = 0.0;
+                foreach ($sale->items as $item) {
+                    if (! $item->nomenclature_id || $item->qty <= 0) {
+                        continue;
+                    }
+                    $cost = Fifo::consume($item->nomenclature_id, (float) $item->qty, $sale->date, 'sale', $sale->id);
+                    $item->forceFill(['cost' => $cost])->save();
+                    $totalCost += $cost;
+                }
+                if ($totalCost > 0) {
+                    Turnover::create([
+                        'date' => $sale->date, 'type' => 'cogs', 'amount' => $totalCost,
+                        'doc_type' => 'sale', 'doc_id' => $sale->id,
+                    ]);
+                }
+                $sale->forceFill(['posted_at' => now()])->save();
             }
-
-            $sale->forceFill(['posted_at' => now()])->save();
         });
     }
 
+    // Полное снятие эффектов (при удалении продажи)
     public static function unpost(Sale $sale): void
     {
-        if (! $sale->isPosted()) {
-            return;
-        }
         DB::transaction(function () use ($sale) {
-            Fifo::release('sale', $sale->id);                 // вернуть товар в партии
+            Fifo::release('sale', $sale->id);
             Settlement::where('doc_type', 'sale')->where('doc_id', $sale->id)->delete();
             Turnover::where('doc_type', 'sale')->where('doc_id', $sale->id)->delete();
             $sale->items()->update(['cost' => 0]);

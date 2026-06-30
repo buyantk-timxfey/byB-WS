@@ -7,10 +7,10 @@ import StatusPill from '@/Components/StatusPill.vue';
 import { money, num, date as fdate } from '@/lib/format';
 
 type Batch = { ship: string; date: string; qty: number; cost: number; days: number };
-type Row = { id: number; name: string; group: string; unit: string; qty: number; value: number; days: number; stale: boolean; negative: boolean; batches: Batch[] };
+type Row = { id: number; name: string; group: string; unit: string; qty: number; reserved: number; available: number; value: number; days: number; stale: boolean; negative: boolean; batches: Batch[] };
 
 const props = defineProps<{
-    rows: Row[]; staleDays: number; frozen: number; staleMoney: number; posCount: number; negCount: number;
+    rows: Row[]; staleDays: number; frozen: number; staleMoney: number; posCount: number; negCount: number; reservedCount?: number;
 }>();
 
 const seg = ref<'all' | 'stock' | 'stale' | 'neg'>('all');
@@ -68,7 +68,7 @@ const toggle = (id: number) => { expanded.value = expanded.value === id ? null :
                     <thead>
                         <tr>
                             <th style="width:34px"></th><th>Товар</th><th>Группа</th><th>Ед.</th>
-                            <th class="num">Остаток</th><th class="num">Стоимость</th><th class="num">Дней</th>
+                            <th class="num">Остаток</th><th class="num">Резерв</th><th class="num">Доступно</th><th class="num">Стоимость</th><th class="num">Дней</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -83,12 +83,14 @@ const toggle = (id: number) => { expanded.value = expanded.value === id ? null :
                                 <td class="text-ink-2">{{ p.group }}</td>
                                 <td class="text-ink-2">{{ p.unit }}</td>
                                 <td class="num" :style="p.negative ? { color: 'var(--expense)' } : {}">{{ num(p.qty) }}</td>
+                                <td class="num" :style="p.reserved > 0 ? { color: 'var(--warn)' } : { color: 'var(--ink-3)' }">{{ p.reserved > 0 ? num(p.reserved) : '—' }}</td>
+                                <td class="num" :style="p.available < 0 ? { color: 'var(--expense)' } : {}">{{ num(p.available) }}</td>
                                 <td class="num">{{ money(p.value) }}</td>
                                 <td class="num text-ink-2">{{ p.negative ? '—' : p.days }}</td>
                             </tr>
                             <tr v-if="expanded === p.id" class="batch-tr">
                                 <td></td>
-                                <td colspan="6">
+                                <td colspan="8">
                                     <div v-if="p.batches.length" class="batches">
                                         <div class="batch-head">
                                             <span>Поступление</span><span>Дата прихода</span>
@@ -110,7 +112,7 @@ const toggle = (id: number) => { expanded.value = expanded.value === id ? null :
                                 </td>
                             </tr>
                         </template>
-                        <tr v-if="!rows.length"><td colspan="7"><div class="j-empty">На складе пусто — оприходуйте поставку</div></td></tr>
+                        <tr v-if="!rows.length"><td colspan="9"><div class="j-empty">На складе пусто — оприходуйте поставку</div></td></tr>
                     </tbody>
                 </table>
             </div>

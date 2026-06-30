@@ -19,16 +19,25 @@ class WarehouseController extends Controller
         $qtyByNom = StockMove::select('nomenclature_id', DB::raw('SUM(qty) as q'))
             ->groupBy('nomenclature_id')->pluck('q', 'nomenclature_id');
 
+        // Резерв: товары в выставленных счетах (ещё не оплачены/не списаны), даже если в пути
+        $reservedByNom = DB::table('sale_items')
+            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
+            ->where('sales.status', 'Выставлен')
+            ->select('sale_items.nomenclature_id', DB::raw('SUM(sale_items.qty) as q'))
+            ->groupBy('sale_items.nomenclature_id')->pluck('q', 'sale_items.nomenclature_id');
+
         $batchesByNom = StockBatch::with('shipmentItem.shipment:id,number')
             ->where('qty_left', '>', 0)->orderBy('received_date')->orderBy('id')
             ->get()->groupBy('nomenclature_id');
 
+        $ids = array_unique(array_merge(array_keys($qtyByNom->toArray()), array_keys($reservedByNom->toArray())));
         $noms = Nomenclature::with('group:id,name')
-            ->whereIn('id', array_keys($qtyByNom->toArray()))
+            ->whereIn('id', $ids)
             ->orderBy('name')->get();
 
-        $rows = $noms->map(function (Nomenclature $n) use ($qtyByNom, $batchesByNom, $staleDays) {
+        $rows = $noms->map(function (Nomenclature $n) use ($qtyByNom, $reservedByNom, $batchesByNom, $staleDays) {
             $qty = (float) ($qtyByNom[$n->id] ?? 0);
+            $reserved = (float) ($reservedByNom[$n->id] ?? 0);
             $batches = ($batchesByNom[$n->id] ?? collect())->map(fn (StockBatch $b) => [
                 'ship' => $b->shipmentItem?->shipment?->number ?? '—',
                 'date' => optional($b->received_date)->toDateString(),
@@ -41,7 +50,8 @@ class WarehouseController extends Controller
 
             return [
                 'id' => $n->id, 'name' => $n->name, 'group' => $n->group?->name ?? '—', 'unit' => $n->unit,
-                'qty' => $qty, 'value' => round($value, 2), 'days' => $oldest,
+                'qty' => $qty, 'reserved' => $reserved, 'available' => $qty - $reserved,
+                'value' => round($value, 2), 'days' => $oldest,
                 'stale' => $oldest >= $staleDays, 'negative' => $qty < 0,
                 'batches' => $batches,
             ];
@@ -54,6 +64,7 @@ class WarehouseController extends Controller
             'staleMoney' => round($rows->where('stale', true)->sum('value'), 2),
             'posCount' => $rows->where('qty', '>', 0)->count(),
             'negCount' => $rows->where('negative', true)->count(),
+            'reservedCount' => $rows->where('reserved', '>', 0)->count(),
         ]);
     }
 }

@@ -54,7 +54,8 @@ return new class extends Migration
             $t->string('buyer_name')->nullable();              // разовый покупатель
             $t->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
             $t->foreignId('source_shipment_id')->nullable()->constrained('shipments')->nullOnDelete();
-            $t->enum('status', ['Счёт', 'Отгружено', 'Отменено'])->default('Счёт');
+            $t->string('status', 32)->default('Выставлен');    // Выставлен | Оплачен | Отменён
+            $t->string('sale_type', 24)->default('Безналичная'); // Касса | Безналичная
             $t->text('comment')->nullable();
             $t->timestamp('posted_at')->nullable();            // отгружено (списание склада)
             $t->timestamps();

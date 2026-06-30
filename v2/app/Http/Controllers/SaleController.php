@@ -6,11 +6,12 @@ use App\Models\Account;
 use App\Models\BankLine;
 use App\Models\BankMatch;
 use App\Models\Counterparty;
+use App\Models\ExpenseArticle;
 use App\Models\Nomenclature;
 use App\Models\Sale;
+use App\Models\Setting;
 use App\Services\BankReconcile;
 use App\Services\DocNumber;
-use App\Models\Setting;
 use App\Services\Posting\SalePosting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,8 +35,9 @@ class SaleController extends Controller
                     'buyer' => $s->counterparty?->name ?? $s->buyer_name ?? '—',
                     'counterparty_id' => $s->counterparty_id,
                     'account_id' => $s->account_id,
-                    'status' => $s->status,
+                    'sale_type' => $s->sale_type,
                     'payment_method' => $s->payment_method,
+                    'status' => $s->status,
                     'sum' => $s->total(),
                     'cost' => $s->cost(),
                     'profit' => $s->profit(),
@@ -68,19 +70,10 @@ class SaleController extends Controller
     {
         $data = $this->validateData($r);
         DB::transaction(function () use ($data) {
-            $sale = Sale::create([
-                'number' => DocNumber::next('sale', $data['date']),
-                'date' => $data['date'],
-                'counterparty_id' => $data['counterparty_id'] ?? null,
-                'account_id' => $data['account_id'] ?? null,
-                'payment_method' => $data['payment_method'] ?? null,
-                'status' => $data['status'],
-                'comment' => $data['comment'] ?? null,
-            ]);
+            $sale = Sale::create($this->attrs($data, DocNumber::next('sale', $data['date'])));
             $this->syncItems($sale, $data['items'] ?? []);
-            if ($data['status'] === 'Отгружено') {
-                SalePosting::post($sale->fresh()->load('items'));
-            }
+            SalePosting::sync($sale->fresh()->load('items'));
+            $this->syncKassaPayment($sale->fresh());
         });
 
         return back();
@@ -90,21 +83,10 @@ class SaleController extends Controller
     {
         $data = $this->validateData($r);
         DB::transaction(function () use ($sale, $data) {
-            if ($sale->isPosted()) {
-                SalePosting::unpost($sale);
-            }
-            $sale->update([
-                'date' => $data['date'],
-                'counterparty_id' => $data['counterparty_id'] ?? null,
-                'account_id' => $data['account_id'] ?? null,
-                'payment_method' => $data['payment_method'] ?? null,
-                'status' => $data['status'],
-                'comment' => $data['comment'] ?? null,
-            ]);
+            $sale->update($this->attrs($data));
             $this->syncItems($sale, $data['items'] ?? []);
-            if ($data['status'] === 'Отгружено') {
-                SalePosting::post($sale->fresh()->load('items'));
-            }
+            SalePosting::sync($sale->fresh()->load('items'));
+            $this->syncKassaPayment($sale->fresh());
         });
 
         return back();
@@ -112,10 +94,11 @@ class SaleController extends Controller
 
     public function destroy(Sale $sale)
     {
-        if ($sale->isPosted()) {
+        DB::transaction(function () use ($sale) {
+            BankLine::where('auto_sale_id', $sale->id)->delete();   // кассовый авто-приход
             SalePosting::unpost($sale);
-        }
-        $sale->delete();
+            $sale->delete();
+        });
 
         return back();
     }
@@ -148,14 +131,91 @@ class SaleController extends Controller
         return back();
     }
 
+    // Касса оплачивается на месте: авто-приход на счёт (выручка по сумме чека) и отдельной
+    // строкой — комиссия эквайринга/СБП на статью «Эквайринг». Сопоставление остаётся.
+    private function syncKassaPayment(Sale $sale): void
+    {
+        // Снять прежний авто-приход (идемпотентно при правках чека)
+        BankLine::where('auto_sale_id', $sale->id)->delete();
+
+        if ($sale->sale_type !== 'Касса' || $sale->status !== 'Оплачен') {
+            return;
+        }
+        $gross = $sale->total();
+        if ($gross <= 0) {
+            return;
+        }
+        $account = $sale->account_id ? Account::find($sale->account_id) : null;
+        $account ??= Account::where('name', 'Альфа-Банк')->first() ?? Account::first();
+        if (! $account) {
+            return;
+        }
+        $rate = $sale->payment_method === 'СБП'
+            ? (float) Setting::get('acquiring_sbp_rate', 0.7)
+            : (float) Setting::get('acquiring_card_rate', 1.22);
+        $fee = round($gross * $rate / 100, 2);
+
+        DB::transaction(function () use ($sale, $account, $gross, $fee) {
+            // Приход = сумма чека (выручка)
+            $income = BankLine::create([
+                'account_id' => $account->id,
+                'auto_sale_id' => $sale->id,
+                'date' => $sale->date,
+                'amount' => $gross,
+                'counterparty_name' => 'Касса · '.($sale->payment_method ?? ''),
+                'purpose' => 'Касса '.$sale->number,
+                'status' => 'matched',
+            ]);
+            BankMatch::create(['bank_line_id' => $income->id, 'target_type' => 'sale', 'target_id' => $sale->id, 'amount' => $gross]);
+            BankReconcile::apply($income->fresh());
+
+            // Комиссия эквайринга — расход на статью «Эквайринг»
+            if ($fee > 0) {
+                $articleId = ExpenseArticle::where('name', 'Эквайринг')->value('id');
+                $feeLine = BankLine::create([
+                    'account_id' => $account->id,
+                    'auto_sale_id' => $sale->id,
+                    'date' => $sale->date,
+                    'amount' => -$fee,
+                    'counterparty_name' => 'Касса · комиссия',
+                    'purpose' => 'Комиссия '.($sale->payment_method ?? '').' по '.$sale->number,
+                    'status' => 'matched',
+                ]);
+                BankMatch::create(['bank_line_id' => $feeLine->id, 'target_type' => 'acquiring', 'target_id' => $articleId, 'amount' => $fee]);
+                BankReconcile::apply($feeLine->fresh());
+            }
+        });
+    }
+
+    // Нормализация атрибутов: касса — без покупателя, всегда «Оплачен»; безнал — без способа оплаты.
+    private function attrs(array $data, ?string $number = null): array
+    {
+        $isKassa = ($data['sale_type'] ?? 'Безналичная') === 'Касса';
+        $attrs = [
+            'date' => $data['date'],
+            'sale_type' => $isKassa ? 'Касса' : 'Безналичная',
+            'counterparty_id' => $isKassa ? null : ($data['counterparty_id'] ?? null),
+            'account_id' => $data['account_id'] ?? null,
+            'payment_method' => $isKassa ? ($data['payment_method'] ?? 'Карта') : null,
+            'status' => $isKassa ? 'Оплачен' : $data['status'],
+            'comment' => $data['comment'] ?? null,
+        ];
+        if ($number !== null) {
+            $attrs['number'] = $number;
+        }
+
+        return $attrs;
+    }
+
     private function validateData(Request $r): array
     {
         return $r->validate([
             'date' => 'required|date',
+            'sale_type' => 'required|in:Касса,Безналичная',
             'counterparty_id' => 'nullable|exists:counterparties,id',
             'account_id' => 'nullable|exists:accounts,id',
-            'payment_method' => 'nullable|in:Эквайринг,СБП,Без комиссии',
-            'status' => 'required|in:Счёт,Отгружено,Отменено',
+            'payment_method' => 'nullable|in:Карта,СБП',
+            'status' => 'required|in:Выставлен,Оплачен,Отменён',
             'comment' => 'nullable|string',
             'items' => 'array',
             'items.*.nomenclature_id' => 'nullable|exists:nomenclature,id',

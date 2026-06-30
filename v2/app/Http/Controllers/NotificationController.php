@@ -20,7 +20,7 @@ class NotificationController extends Controller
 
         $paid = BankMatch::where('target_type', 'sale')
             ->select('target_id', DB::raw('SUM(amount) as p'))->groupBy('target_id')->pluck('p', 'target_id');
-        foreach (Sale::with('counterparty')->where('status', 'Отгружено')->get() as $s) {
+        foreach (Sale::with('counterparty')->whereIn('status', ['Выставлен', 'Оплачен'])->get() as $s) {
             $debt = $s->total() - (float) ($paid[$s->id] ?? 0);
             if ($debt > 0.01 && $s->date && Carbon::parse($s->date)->diffInDays($now) > 7) {
                 $out[] = ['dot' => 'var(--expense)', 't' => 'Долг · '.($s->counterparty?->name ?? $s->number),
