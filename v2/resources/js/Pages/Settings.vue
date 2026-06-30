@@ -86,6 +86,7 @@ function applyPatch() {
         </div>
 
         <div class="set-wrap">
+          <div class="set-col">
             <!-- Ставки -->
             <div class="set-card glass">
                 <div class="set-h"><Icon name="chart" :size="18" /> Ставки и расчёты</div>
@@ -129,6 +130,8 @@ function applyPatch() {
                 </div>
             </div>
 
+          </div>
+          <div class="set-col">
             <!-- Реквизиты -->
             <div class="set-card glass">
                 <div class="set-h"><Icon name="building" :size="18" /> Реквизиты компании</div>
@@ -201,6 +204,7 @@ function applyPatch() {
                     <button class="btn-primary pressable" style="border-radius:12px" :disabled="!patchForm.archive || patchForm.processing" @click="applyPatch">Применить патч</button>
                 </div>
             </div>
+          </div>
         </div>
     </AppShell>
 </template>
