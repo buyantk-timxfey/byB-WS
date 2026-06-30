@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import AppModal from '@/Components/AppModal.vue';
@@ -9,6 +9,9 @@ import { initials } from '@/lib/format';
 const props = defineProps<{
     accounts: any[]; messages: any[]; imapAvailable: boolean;
 }>();
+
+const page = usePage();
+const syncError = computed(() => (page.props.errors as any)?.imap ?? null);
 
 const activeFolder = ref(props.accounts[0]?.folders[0]?.id ?? '');
 const activeAccountId = computed(() => Number(String(activeFolder.value).split(':')[1] ?? 0));
@@ -29,7 +32,14 @@ const compose = ref(false);
 const cForm = useForm({ account_id: props.accounts[0]?.id ?? null, to: '', subject: '', body: '', doc_type: '', doc_id: null });
 function send() { cForm.post('/mail/compose', { onSuccess: () => { compose.value = false; cForm.reset(); } }); }
 
-function sync() { if (activeAccountId.value) router.post(`/mail/accounts/${activeAccountId.value}/sync`); }
+const syncing = ref(false);
+function sync() {
+    if (!activeAccountId.value || syncing.value) return;
+    syncing.value = true;
+    router.post(`/mail/accounts/${activeAccountId.value}/sync`, {}, {
+        onFinish: () => { syncing.value = false; },
+    });
+}
 </script>
 
 <template>
@@ -37,8 +47,16 @@ function sync() { if (activeAccountId.value) router.post(`/mail/accounts/${activ
     <AppShell>
         <div class="toolbar">
             <h1>Почта</h1>
-            <button v-if="imapAvailable && accounts.length" class="btn-ghost pressable" style="margin-left:auto" @click="sync"><Icon name="search" :size="15" /> Синхр.</button>
+            <button v-if="imapAvailable && accounts.length" class="btn-ghost pressable" style="margin-left:auto" :disabled="syncing" @click="sync">
+                <Icon :name="syncing ? 'loader' : 'refresh'" :size="15" :style="syncing ? 'animation:spin 1s linear infinite' : ''" />
+                {{ syncing ? 'Синхронизация…' : 'Синхр.' }}
+            </button>
             <button class="btn-primary pressable" :style="!(imapAvailable && accounts.length) ? 'margin-left:auto' : ''" @click="compose = true" :disabled="!accounts.length"><Icon name="plus" :size="17" /> Написать</button>
+        </div>
+
+        <div v-if="syncError" class="sync-error">
+            <Icon name="warning" :size="15" />
+            {{ syncError }}
         </div>
 
         <div v-if="!accounts.length" class="jcard glass" style="padding:40px;text-align:center;color:var(--ink-3)">
@@ -109,4 +127,6 @@ function sync() { if (activeAccountId.value) router.post(`/mail/accounts/${activ
 
 <style scoped>
 .mail-area { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 12px; padding: 10px 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; resize: vertical; }
+.sync-error { display: flex; align-items: center; gap: 8px; padding: 10px 14px; margin-bottom: 12px; background: color-mix(in srgb, var(--expense) 12%, transparent); border: 1px solid color-mix(in srgb, var(--expense) 30%, transparent); border-radius: 12px; color: var(--expense); font-size: 13px; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
