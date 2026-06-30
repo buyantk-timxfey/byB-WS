@@ -6,6 +6,6 @@ class MailAccount extends Model
 {
     protected $guarded = [];
     protected $hidden = ["password"];
-    protected $casts = ["use_ssl" => "bool", "password" => "encrypted"];
+    protected $casts = ["use_ssl" => "bool", "password" => "encrypted", "folders" => "array"];
     public function messages(): HasMany { return $this->hasMany(MailMessage::class, "account_id"); }
 }

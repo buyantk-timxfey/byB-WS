@@ -1,1 +1,0 @@
-import{K as e,T as t,at as n,b as r,k as i,lt as a,w as o}from"./app-DOFIbDFF.js";t(),e();var s=o({__name:`StatusPill`,props:{text:{},variant:{}},setup(e){return(t,o)=>(i(),r(`span`,{class:n([`pill`,`pill--`+(e.variant||`neutral`)])},a(e.text),3))}});export{s as t};

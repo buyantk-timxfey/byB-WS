@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
@@ -32,14 +32,31 @@ const compose = ref(false);
 const cForm = useForm({ account_id: props.accounts[0]?.id ?? null, to: '', subject: '', body: '', doc_type: '', doc_id: null });
 function send() { cForm.post('/mail/compose', { onSuccess: () => { compose.value = false; cForm.reset(); } }); }
 
+// Синхронизация
 const syncing = ref(false);
 function sync() {
     if (!activeAccountId.value || syncing.value) return;
     syncing.value = true;
-    router.post(`/mail/accounts/${activeAccountId.value}/sync`, {}, {
+    router.post(`/mail/accounts/${activeAccountId.value}/sync`, { folder: activeFolderName.value }, {
         onFinish: () => { syncing.value = false; },
     });
 }
+
+// Авто-синхр при переходе в папку без писем
+watch(activeFolder, () => {
+    if (list.value.length === 0 && activeAccountId.value && !syncing.value) {
+        sync();
+    }
+});
+
+// Авто-синхр каждые 5 минут
+let autoTimer: ReturnType<typeof setInterval> | null = null;
+onMounted(() => {
+    autoTimer = setInterval(() => {
+        if (!syncing.value && activeAccountId.value) sync();
+    }, 5 * 60 * 1000);
+});
+onUnmounted(() => { if (autoTimer !== null) { clearInterval(autoTimer); autoTimer = null; } });
 </script>
 
 <template>
@@ -48,8 +65,7 @@ function sync() {
         <div class="toolbar">
             <h1>Почта</h1>
             <button v-if="imapAvailable && accounts.length" class="btn-ghost pressable" style="margin-left:auto" :disabled="syncing" @click="sync">
-                <Icon name="refresh" :size="15" :style="syncing ? 'animation:spin 1s linear infinite' : ''" />
-                {{ syncing ? 'Синхронизация…' : 'Синхр.' }}
+                <Icon name="refresh" :size="16" :style="syncing ? 'animation:spin 1s linear infinite' : ''" />
             </button>
             <button class="btn-primary pressable" :style="!(imapAvailable && accounts.length) ? 'margin-left:auto' : ''" @click="compose = true" :disabled="!accounts.length"><Icon name="plus" :size="17" /> Написать</button>
         </div>
@@ -60,8 +76,7 @@ function sync() {
         </div>
 
         <div v-if="!accounts.length" class="jcard glass" style="padding:40px;text-align:center;color:var(--ink-3)">
-            Почтовые ящики не настроены. Добавьте IMAP/SMTP-аккаунт в разделе
-            <Link href="/settings" class="link-btn">Настройки → Почтовые ящики</Link>.
+            Почтовые ящики не настроены.
         </div>
 
         <div v-else class="mail-grid glass">
@@ -75,16 +90,22 @@ function sync() {
             </div>
 
             <div class="mlist">
-                <div v-for="m in list" :key="m.id" class="mitem" :class="{ on: selectedId === m.id, unread: m.unread }" @click="openMsg(m)">
-                    <div class="mi-av">{{ initials(m.from) }}</div>
-                    <div class="mi-main">
-                        <div class="mi-top"><span class="mi-from">{{ m.from }}</span><span class="mi-time">{{ m.time }}</span></div>
-                        <div class="mi-subj">{{ m.subject }} <Icon v-if="m.attach" name="doc" :size="12" class="mi-clip" /></div>
-                        <div class="mi-prev">{{ m.preview }}</div>
-                    </div>
-                    <span v-if="m.unread" class="mi-dot"></span>
+                <div v-if="syncing && !list.length" class="j-empty" style="padding:30px;color:var(--ink-3)">
+                    <Icon name="refresh" :size="18" style="animation:spin 1s linear infinite;display:block;margin:0 auto 8px" />
+                    Загрузка…
                 </div>
-                <div v-if="!list.length" class="j-empty" style="padding:30px">Писем нет</div>
+                <template v-else>
+                    <div v-for="m in list" :key="m.id" class="mitem" :class="{ on: selectedId === m.id, unread: m.unread }" @click="openMsg(m)">
+                        <div class="mi-av">{{ initials(m.from) }}</div>
+                        <div class="mi-main">
+                            <div class="mi-top"><span class="mi-from">{{ m.from }}</span><span class="mi-time">{{ m.time }}</span></div>
+                            <div class="mi-subj">{{ m.subject }} <Icon v-if="m.attach" name="doc" :size="12" class="mi-clip" /></div>
+                            <div class="mi-prev">{{ m.preview }}</div>
+                        </div>
+                        <span v-if="m.unread" class="mi-dot"></span>
+                    </div>
+                    <div v-if="!list.length" class="j-empty" style="padding:30px">Писем нет</div>
+                </template>
             </div>
 
             <div class="mread" v-if="selected">
