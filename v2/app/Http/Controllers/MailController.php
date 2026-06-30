@@ -209,10 +209,41 @@ class MailController extends Controller
         if ($text === null || $text === '') {
             return '';
         }
-        // Убираем "RTF Template" + блоки CSS (.c0 { ... }) сохранённые до фикса strip_tags
-        $text = (string) preg_replace('/\A(?:RTF\s+Template[\r\n]+)?(?:\.[^\s{]+\s*\{[^}]*\}[\r\n]*)+/u', '', $text);
         // Декодируем HTML-сущности (&quot; &amp; &lt; и т.д.)
         $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // Убираем "RTF Template" заголовок
+        $text = (string) preg_replace('/\ARTF\s+Template[ \t]*\r?\n/u', '', $text);
+        // Убираем ведущие CSS-блоки любого вида (.class{}, @media{}, :root{}, body{} и т.д.)
+        // Используем подсчёт глубины скобок, чтобы корректно обрабатывать вложенность @media
+        if (preg_match('/\A[ \t]*(?:@|\.[\w-]|#[\w-]|:[a-z]|\*[ \t]*\{|html[ \t{]|body[ \t{])/iu', $text)) {
+            $n     = strlen($text);
+            $i     = 0;
+            $depth = 0;
+            while ($i < $n) {
+                $c = $text[$i];
+                if ($c === '{') {
+                    $depth++;
+                } elseif ($c === '}') {
+                    $depth--;
+                    if ($depth <= 0) {
+                        $depth = 0;
+                        // Пропускаем пробелы/переносы после закрывающей скобки
+                        $j = $i + 1;
+                        while ($j < $n && ($text[$j] === ' ' || $text[$j] === "\t" || $text[$j] === "\r" || $text[$j] === "\n")) {
+                            $j++;
+                        }
+                        $rest = substr($text, $j);
+                        // Если следующее содержимое больше не выглядит как CSS — это начало текста письма
+                        if (!preg_match('/\A(?:@|\.[\w-]|#[\w-]|:[a-z]|\*[ \t]*\{|html[ \t{]|body[ \t{])/iu', $rest)) {
+                            $text = $rest;
+                            break;
+                        }
+                        $i = $j - 1;
+                    }
+                }
+                $i++;
+            }
+        }
 
         return trim($text);
     }
