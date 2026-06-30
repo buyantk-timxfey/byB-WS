@@ -8,7 +8,7 @@ import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
 import { money, date as fdate } from '@/lib/format';
 
-type Item = { name: string; qty: number; price: number };
+type Item = { name: string; qty: number | null; price: number | null };
 type Row = {
     id: number; number: string; date: string; supplier: string; counterparty_id: number | null;
     name: string | null; status: string; eta: string | null; carrier_id: number | null;
@@ -76,7 +76,7 @@ function openDoc(s: Row) {
     form.items = s.items.map((i) => ({ name: i.name ?? '', qty: i.qty, price: i.price }));
     open.value = true;
 }
-function addItem() { form.items.push({ name: '', qty: 1, price: 0 }); }
+function addItem() { form.items.push({ name: '', qty: null, price: null }); }
 function removeItem(i: number) { form.items.splice(i, 1); }
 
 // ── Быстрое создание поставщика прямо в модалке ──
@@ -183,7 +183,7 @@ function destroy() {
                 </select>
                 <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="supSaving" @click="saveSup">Создать</button>
             </div>
-            <div class="fld"><label>Название</label><input v-model="form.name" /></div>
+            <div class="fld"><label>Название поставки</label><input v-model="form.name" /></div>
             <div class="fld-row">
                 <div class="fld"><label>Дата заказа</label><input v-model="form.date" type="date" /></div>
                 <div class="fld"><label>ETA</label><input v-model="form.eta" type="date" /></div>
@@ -197,12 +197,12 @@ function destroy() {
                 </div>
                 <div class="fld"><label>Трек-номер</label><input v-model="form.tracking" placeholder="—" /></div>
             </div>
-            <div class="fld"><label>Стоимость доставки (в себестоимость)</label><input v-model.number="form.delivery" type="number" /></div>
+            <div class="fld"><label>Стоимость доставки</label><input v-model.number="form.delivery" type="number" /></div>
 
             <div>
                 <div class="items-h">
-                    <span class="h2">Позиции</span>
-                    <button class="btn-ghost" style="padding:6px 12px;font-size:13px" @click="addItem">+ Строка</button>
+                    <span class="h2">Товары</span>
+                    <button class="btn-ghost" style="padding:6px 12px;font-size:13px" @click="addItem">Добавить</button>
                 </div>
                 <datalist id="goods-list">
                     <option v-for="g in goods" :key="g.id" :value="g.name" />
@@ -232,13 +232,13 @@ function destroy() {
 </template>
 
 <style scoped>
-.ship-item { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--glass-border); }
-.ship-item select, .ship-item input { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 8px 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
+.ship-item { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--glass-border); }
+.ship-item input { height: 40px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
 .sel-add { display: flex; gap: 8px; align-items: center; }
 .sel-add select { flex: 1; min-width: 0; }
-.add-btn { flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); font-size: 20px; line-height: 1; cursor: pointer; }
+.add-btn { flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); font-size: 20px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .add-btn.on { background: var(--ink); color: var(--bg); }
-.quick-form { display: flex; gap: 8px; align-items: center; padding: 10px 12px; margin-top: 4px; background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 12px; flex-wrap: wrap; }
-.quick-form input { flex: 1; min-width: 120px; border: 1px solid var(--glass-border); background: var(--bg); border-radius: 10px; padding: 9px 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
+.quick-form { display: flex; gap: 8px; align-items: center; padding: 10px 12px; margin-top: 8px; background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 12px; flex-wrap: wrap; }
+.quick-form input, .quick-form select { flex: 1; min-width: 120px; height: 40px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--bg); border-radius: 10px; padding: 0 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
 .on-ghost { background: var(--ink) !important; color: var(--bg) !important; }
 </style>
