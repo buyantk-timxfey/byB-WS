@@ -39,7 +39,7 @@ class MailController extends Controller
         ]);
     }
 
-    // Формирует список папок для аккаунта: из БД если уже обнаружены, иначе дефолт.
+    // Формирует список папок для аккаунта: из БД если уже обнаружены, иначе стандартный набор.
     private function accountFolders(MailAccount $a): array
     {
         if ($a->folders) {
@@ -51,10 +51,23 @@ class MailController extends Controller
             ])->toArray();
         }
 
-        return [
-            ['id' => 'INBOX:'.$a->id, 'name' => 'Входящие',      'imap_name' => 'INBOX', 'count' => $a->messages()->where('folder', 'INBOX')->where('is_read', false)->count()],
-            ['id' => 'Sent:'.$a->id,  'name' => 'Отправленные',   'imap_name' => 'Sent',  'count' => 0],
+        // Стандартные папки до первой синхронизации (обновятся после sync)
+        $defaults = [
+            ['name' => 'INBOX',  'label' => 'Входящие'],
+            ['name' => 'Sent',   'label' => 'Отправленные'],
+            ['name' => 'Drafts', 'label' => 'Черновики'],
+            ['name' => 'Spam',   'label' => 'Спам'],
+            ['name' => 'Trash',  'label' => 'Корзина'],
         ];
+
+        return array_map(fn ($f) => [
+            'id'        => $f['name'].':'.$a->id,
+            'name'      => $f['label'],
+            'imap_name' => $f['name'],
+            'count'     => $f['name'] === 'INBOX'
+                ? $a->messages()->where('folder', 'INBOX')->where('is_read', false)->count()
+                : 0,
+        ], $defaults);
     }
 
     // Создаёт аккаунты из .env при первом запуске, если таблица пустая.
@@ -257,7 +270,7 @@ class MailController extends Controller
             return $this->syncViaExtension($account, $folder);
         }
 
-        return $this->syncViaSockets($account);
+        return $this->syncViaSockets($account, $folder);
     }
 
     private function syncViaExtension(MailAccount $account, string $targetFolder = 'INBOX')
@@ -469,7 +482,7 @@ class MailController extends Controller
         return $body;
     }
 
-    private function syncViaSockets(MailAccount $account)
+    private function syncViaSockets(MailAccount $account, string $targetFolder = 'INBOX')
     {
         $domain     = substr((string) strrchr($account->email, '@'), 1);
         [$mxImap]   = $this->detectProvider($domain);
@@ -500,16 +513,30 @@ class MailController extends Controller
         }
 
         try {
-            $client->selectInbox();
+            // Определяем список папок и сохраняем (заменяет imap_list для socket-пути)
+            try {
+                $rawFolders = $client->listFolders();
+                if ($rawFolders) {
+                    $account->update(['folders' => $this->mapRawFolders($rawFolders)]);
+                }
+            } catch (\Throwable) {}
+
+            // Выбираем нужную папку
+            if ($targetFolder === 'INBOX') {
+                $client->selectInbox();
+            } else {
+                $client->select($targetFolder);
+            }
+
             foreach (array_reverse($client->recentUids(30)) as $uid) {
-                if (MailMessage::where('account_id', $account->id)->where('uid', (string) $uid)->exists()) {
+                if (MailMessage::where('account_id', $account->id)->where('folder', $targetFolder)->where('uid', (string) $uid)->exists()) {
                     continue;
                 }
-                $msg                              = $client->fetch($uid);
+                $msg = $client->fetch($uid);
                 [$fromName, $fromEmail, $subject, $date] = $this->parseHeader($msg['header']);
-                $body                             = $this->decodeBody($msg['body']);
+                $body = $this->decodeBody($msg['body']);
                 MailMessage::create([
-                    'account_id' => $account->id, 'folder' => 'INBOX', 'uid' => (string) $uid,
+                    'account_id' => $account->id, 'folder' => $targetFolder, 'uid' => (string) $uid,
                     'from_name'  => $fromName, 'from_email' => $fromEmail, 'subject' => $subject,
                     'preview'    => mb_substr(trim($body), 0, 120), 'body' => $body,
                     'date'       => $date, 'is_read' => $msg['seen'],
@@ -523,6 +550,41 @@ class MailController extends Controller
         }
 
         return back();
+    }
+
+    // Преобразует сырые имена папок из LIST-команды в формат [{name, label}].
+    private function mapRawFolders(array $rawNames): array
+    {
+        $nameMap = [
+            'INBOX' => 'Входящие',
+            'Sent' => 'Отправленные', 'Sent Items' => 'Отправленные', 'SENT' => 'Отправленные',
+            'Drafts' => 'Черновики', 'DRAFTS' => 'Черновики',
+            'Trash' => 'Корзина', 'Deleted' => 'Корзина', 'Deleted Items' => 'Корзина', 'TRASH' => 'Корзина',
+            'Spam' => 'Спам', 'Junk' => 'Спам', 'Junk Email' => 'Спам', 'Bulk Mail' => 'Спам',
+            'Отправленные' => 'Отправленные', 'Черновики' => 'Черновики',
+            'Удалённые' => 'Корзина', 'Спам' => 'Спам',
+        ];
+        $sortOrder = ['INBOX', 'Sent', 'Sent Items', 'Отправленные', 'Drafts', 'Черновики', 'Spam', 'Junk', 'Спам', 'Trash', 'Deleted', 'Удалённые'];
+
+        $folders = [];
+        foreach ($rawNames as $name) {
+            if (str_contains($name, '&')) {
+                $decoded = @mb_convert_encoding($name, 'UTF-8', 'UTF7-IMAP');
+                if ($decoded && $decoded !== '') {
+                    $name = $decoded;
+                }
+            }
+            $folders[] = ['name' => $name, 'label' => $nameMap[$name] ?? $name];
+        }
+
+        usort($folders, function ($a, $b) use ($sortOrder) {
+            $ia = array_search($a['name'], $sortOrder);
+            $ib = array_search($b['name'], $sortOrder);
+
+            return (($ia === false) ? 999 : $ia) - (($ib === false) ? 999 : $ib);
+        });
+
+        return $folders;
     }
 
     private function parseHeader(string $raw): array
@@ -576,10 +638,12 @@ class MailController extends Controller
         if (! mb_check_encoding($out, 'UTF-8')) {
             $out = (string) @mb_convert_encoding($out, 'UTF-8', 'Windows-1251, ISO-8859-1, UTF-8');
         }
-        if (preg_match('/<\/?(html|body|div|p|br|table|span)\b/i', $out)) {
+        // Та же логика что и в fetchPlainBody: убираем <style>/<script> ДО strip_tags
+        if (preg_match('/<[a-z!]/i', $out)) {
             $out = preg_replace('/<style[^>]*>.*?<\/style>/si', '', $out);
             $out = preg_replace('/<script[^>]*>.*?<\/script>/si', '', $out);
-            $out = trim((string) preg_replace('/[ \t]*\R+[ \t]*/u', "\n", strip_tags($out)));
+            $out = html_entity_decode(strip_tags($out), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $out = trim((string) preg_replace('/[ \t]*\R+[ \t]*/u', "\n", $out));
         }
 
         return $out;

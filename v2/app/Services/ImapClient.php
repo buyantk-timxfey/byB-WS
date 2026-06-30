@@ -49,6 +49,29 @@ class ImapClient
         $this->command('SELECT INBOX');
     }
 
+    public function select(string $folder): void
+    {
+        $this->command('SELECT '.$this->quote($folder));
+    }
+
+    /** Список имён папок с сервера (LIST "" "*"). */
+    public function listFolders(): array
+    {
+        $resp    = $this->command('LIST "" "*"');
+        $folders = [];
+        foreach (preg_split('/\r?\n/', $resp) as $line) {
+            // Формат: * LIST (\flags) "/" folderName
+            if (preg_match('/^\* LIST\s+\S+\s+"[^"]*"\s+(.+)$/i', $line, $m)) {
+                $name = trim($m[1], "\" \t\r\n");
+                if ($name !== '') {
+                    $folders[] = $name;
+                }
+            }
+        }
+
+        return $folders;
+    }
+
     /** Последние $limit UID входящих. */
     public function recentUids(int $limit): array
     {
@@ -60,18 +83,36 @@ class ImapClient
         return array_slice($uids, -$limit);
     }
 
-    /** Заголовки (From/Subject/Date), тело первой части и флаг прочтения по UID. */
+    /** Заголовки (From/Subject/Date), тело и флаг прочтения по UID.
+     *  Тянет несколько BODY-частей за один запрос, чтобы корректно обрабатывать
+     *  вложенные multipart (где BODY[1] содержит сырые MIME-разделители). */
     public function fetch(int $uid): array
     {
-        $resp = $this->command("UID FETCH $uid (FLAGS BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)] BODY.PEEK[1])");
+        $resp = $this->command(
+            "UID FETCH $uid (FLAGS BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)] BODY.PEEK[1] BODY.PEEK[1.1] BODY.PEEK[1.2] BODY.PEEK[2])"
+        );
         $header = '';
-        $body = '';
+        $parts  = [];
         foreach ($this->extractLiterals($resp) as $lit) {
             if (stripos($lit['key'], '[HEADER') !== false) {
                 $header = $lit['value'];
-            } elseif (stripos($lit['key'], '[1]') !== false || stripos($lit['key'], '[TEXT]') !== false) {
-                $body = $lit['value'];
+            } elseif (preg_match('/BODY(?:\.PEEK)?\[([^\]]+)\]/i', $lit['key'], $m)) {
+                $parts[$m[1]] = $lit['value'];
             }
+        }
+        // Предпочитаем HTML-части (1.2, 2) как богатейшие, затем plain (1.1, 1).
+        // Пропускаем части, которые выглядят как MIME-преамбула с разделителями.
+        $body = '';
+        foreach (['1.2', '2', '1.1', '1'] as $part) {
+            $candidate = $parts[$part] ?? '';
+            if ($candidate !== '' && ! preg_match('/^-{4,}[A-Za-z0-9]/m', $candidate)) {
+                $body = $candidate;
+                break;
+            }
+        }
+        // Крайний случай: используем что есть (может содержать MIME-мусор)
+        if ($body === '' && $parts !== []) {
+            $body = reset($parts);
         }
         $seen = (bool) preg_match('/FLAGS \([^)]*\\\\Seen/i', $resp);
 
