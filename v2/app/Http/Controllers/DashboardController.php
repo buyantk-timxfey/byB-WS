@@ -84,7 +84,7 @@ class DashboardController extends Controller
             ['label' => 'Закупки', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true, 'sub' => 'пред. мес: '.$this->m($purchP), 'spark' => $incSpark, 'color' => 'var(--expense)'],
         ];
 
-        $accounts = Account::orderByDesc('opening_balance')->get()->map(fn ($a) => ['name' => $a->name, 'balance' => $a->balance()]);
+        $accounts = Account::orderBy('sort_order')->orderBy('name')->get()->map(fn ($a) => ['name' => $a->name, 'balance' => $a->balance()]);
         $unrecLines = BankLine::whereIn('status', ['unmatched', 'partial'])->get();
         // Приход/расход за месяц (по строкам выписки)
         $monthIn = (float) BankLine::whereBetween('date', [$from, $to])->where('amount', '>', 0)->sum('amount');

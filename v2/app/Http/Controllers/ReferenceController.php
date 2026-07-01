@@ -64,7 +64,7 @@ class ReferenceController extends Controller
                 'unit' => $n->unit, 'article' => $n->article, 'comment' => $n->comment, 'qty' => $n->qty(),
             ]),
             'carriers' => Carrier::orderBy('name')->get(),
-            'accounts' => Account::orderBy('name')->get()->map(fn ($a) => [
+            'accounts' => Account::orderBy('sort_order')->orderBy('name')->get()->map(fn ($a) => [
                 'id' => $a->id, 'name' => $a->name, 'type' => $a->type, 'bank' => $a->bank,
                 'last4' => $a->last4, 'opening_balance' => (float) $a->opening_balance,
                 'color' => $a->color, 'comment' => $a->comment, 'balance' => $a->balance(),

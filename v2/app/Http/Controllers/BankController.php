@@ -20,7 +20,7 @@ class BankController extends Controller
 {
     public function index()
     {
-        $accounts = Account::orderBy('name')->get()->map(fn (Account $a) => [
+        $accounts = Account::orderBy('sort_order')->orderBy('name')->get()->map(fn (Account $a) => [
             'id' => $a->id, 'name' => $a->name, 'bank' => $a->bank, 'last4' => $a->last4,
             'type' => $a->type, 'balance' => $a->balance(), 'color' => $a->color,
             'unmatched' => $a->lines()->whereIn('status', ['unmatched', 'partial'])->count(),
@@ -47,7 +47,7 @@ class BankController extends Controller
             'articles' => ExpenseArticle::orderBy('name')->get(['id', 'name']),
             'openSales' => $this->openSales(),
             'openShipments' => $this->openShipments(),
-            'importAccounts' => Account::orderBy('name')->get(['id', 'name']),
+            'importAccounts' => Account::orderBy('sort_order')->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

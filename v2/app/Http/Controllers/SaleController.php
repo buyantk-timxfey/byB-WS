@@ -51,13 +51,13 @@ class SaleController extends Controller
             });
 
         $defaultAccount = Account::where('name', 'Альфа-Банк')->value('id')
-            ?? Account::orderBy('id')->value('id');
+            ?? Account::orderBy('sort_order')->orderBy('id')->value('id');
 
         return Inertia::render('Sales', [
             'rows' => $rows,
             'buyers' => Counterparty::whereIn('type', ['Покупатель', 'Оба'])->orderBy('name')->get(['id', 'name']),
             'goods' => Nomenclature::orderBy('name')->get(['id', 'name', 'unit']),
-            'accounts' => Account::orderBy('name')->get(['id', 'name']),
+            'accounts' => Account::orderBy('sort_order')->orderBy('name')->get(['id', 'name']),
             'defaultAccountId' => $defaultAccount,
             'rates' => [
                 'card' => (float) Setting::get('acquiring_card_rate', 1.22),

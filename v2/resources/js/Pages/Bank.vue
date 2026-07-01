@@ -113,7 +113,7 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                 <div class="bc-top"><span class="bc-bank">{{ a.bank || a.name }}</span><span class="bc-chip"></span></div>
                 <div class="bc-bal tnum">{{ money(a.balance) }}</div>
                 <div class="bc-bottom">
-                    <span class="bc-num">{{ a.last4 ? '•••• ' + a.last4 : a.type }}</span>
+                    <span class="bc-num">{{ a.last4 ? '•••• •••• •••• ' + a.last4 : a.type }}</span>
                     <span v-if="a.unmatched" class="bc-badge">{{ a.unmatched }} не разнесено</span>
                     <span v-else class="bc-ok">всё разнесено</span>
                 </div>
