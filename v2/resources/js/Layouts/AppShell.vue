@@ -100,7 +100,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.nav-active { color: var(--ink); box-shadow: inset 0 0 0 2px var(--info, #0a84ff); }
+.nav-active { background: var(--info, #0a84ff); color: #fff; }
 .notif-badge { position: absolute; top: 1px; right: 1px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--expense); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .user-menu { position: absolute; left: 0; top: 50px; z-index: 20; min-width: 180px; border-radius: 16px; padding: 6px; display: flex; flex-direction: column; }
 .um-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--ink); background: transparent; border: 0; cursor: pointer; text-align: left; width: 100%; }
