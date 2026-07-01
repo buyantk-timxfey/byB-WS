@@ -7,4 +7,5 @@ use Illuminate\Database\Eloquent\Model;
 class VatRate extends Model
 {
     protected $guarded = [];
+    protected $casts = ['rate' => 'float'];
 }
