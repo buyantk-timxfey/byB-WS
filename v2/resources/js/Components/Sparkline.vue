@@ -26,6 +26,7 @@ const path = computed(() => {
             fill="none"
             :stroke="color ?? 'var(--income)'"
             stroke-width="2.5"
+            vector-effect="non-scaling-stroke"
             stroke-linecap="round"
             stroke-linejoin="round"
             opacity="0.7"
