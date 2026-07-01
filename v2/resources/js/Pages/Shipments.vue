@@ -6,6 +6,8 @@ import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
+import SearchSelect from '@/Components/SearchSelect.vue';
+import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
 
 type Item = { name: string; qty: number | null; price: number | null };
@@ -172,10 +174,7 @@ function destroy() {
             <div class="fld-row">
                 <div class="fld"><label>Поставщик</label>
                     <div class="sel-add">
-                        <select v-model="form.counterparty_id">
-                            <option :value="null">— выбрать —</option>
-                            <option v-for="c in suppliers" :key="c.id" :value="c.id">{{ c.name }}</option>
-                        </select>
+                        <SearchSelect v-model="form.counterparty_id" :options="suppliers" placeholder="— выбрать —" />
                         <button type="button" class="add-btn pressable" :class="{ on: showSup }" @click="showSup = !showSup" title="Создать поставщика">+</button>
                     </div>
                 </div>
@@ -190,15 +189,12 @@ function destroy() {
             <div v-if="supHint" class="sup-hint">Поставщик «{{ supHint }}» создан. Дозаполните карточку (ИНН, контакты) в Справочниках.</div>
             <div class="fld"><label>Название поставки</label><input v-model="form.name" /></div>
             <div class="fld-row">
-                <div class="fld"><label>Дата заказа</label><input v-model="form.date" type="date" /></div>
-                <div class="fld"><label>ETA</label><input v-model="form.eta" type="date" /></div>
+                <div class="fld"><label>Дата заказа</label><DatePicker v-model="form.date" placeholder="Дата заказа" /></div>
+                <div class="fld"><label>ETA</label><DatePicker v-model="form.eta" placeholder="—" /></div>
             </div>
             <div class="fld-row">
                 <div class="fld"><label>Транспортная компания</label>
-                    <select v-model="form.carrier_id">
-                        <option :value="null">—</option>
-                        <option v-for="c in carriers" :key="c.id" :value="c.id">{{ c.name }}</option>
-                    </select>
+                    <SearchSelect v-model="form.carrier_id" :options="carriers" placeholder="—" />
                 </div>
                 <div class="fld"><label>Трек-номер</label><input v-model="form.tracking" placeholder="—" /></div>
             </div>
@@ -240,7 +236,7 @@ function destroy() {
 .ship-item { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--glass-border); }
 .ship-item input { height: 40px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
 .sel-add { display: flex; gap: 8px; align-items: center; }
-.sel-add select { flex: 1; min-width: 0; }
+.sel-add .ssel { flex: 1; min-width: 0; }
 .add-btn { flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); font-size: 20px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .add-btn.on { background: var(--ink); color: var(--bg); }
 .quick-form { display: flex; gap: 8px; align-items: center; padding: 10px 12px; margin-top: 8px; background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 12px; flex-wrap: wrap; }
