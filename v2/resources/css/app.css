@@ -66,13 +66,19 @@
        та же прозрачность выглядит гораздо более "сквозной". Класс ставится в
        app.ts по navigator.userAgent. Поднимаем плотность стекла компенсирующе. */
     html.is-windows {
-        --glass-fill: rgba(255, 255, 255, 0.75);
-        --glass-fill-strong: rgba(255, 255, 255, 0.85);
+        --glass-fill: rgba(255, 255, 255, 0.88);
+        --glass-fill-strong: rgba(255, 255, 255, 0.94);
+        /* Полупрозрачная белая рамка на светлом фоне без сильного блюра почти не видна —
+           берём тёмную, чтобы граница читалась независимо от качества blur. */
+        --glass-border: rgba(0, 0, 0, 0.12);
+        --glass-highlight: rgba(255, 255, 255, 0.7);
     }
     @media (prefers-color-scheme: dark) {
         html.is-windows {
-            --glass-fill: rgba(255, 255, 255, 0.16);
-            --glass-fill-strong: rgba(255, 255, 255, 0.22);
+            --glass-fill: rgba(255, 255, 255, 0.20);
+            --glass-fill-strong: rgba(255, 255, 255, 0.28);
+            --glass-border: rgba(255, 255, 255, 0.20);
+            --glass-highlight: rgba(255, 255, 255, 0.22);
         }
     }
 
@@ -534,7 +540,7 @@
 .item-row { display: grid; grid-template-columns: 1fr 64px 92px 40px; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--glass-border); }
 .item-row .nm { font-size: 14px; font-weight: 500; }
 .item-row .sub { font-size: 12px; color: var(--ink-3); }
-.btn-ghost { border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); border-radius: 12px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.btn-ghost { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); border-radius: 12px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 
 /* Блок итогов продажи (выручка / себестоимость / прибыль) */
 .sale-sums { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 14px; background: var(--glass-fill); border: 1px solid var(--glass-border); }
