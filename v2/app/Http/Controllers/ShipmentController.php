@@ -7,6 +7,7 @@ use App\Models\Carrier;
 use App\Models\Counterparty;
 use App\Models\Nomenclature;
 use App\Models\Shipment;
+use App\Models\VatRate;
 use App\Services\DocNumber;
 use App\Services\Posting\ShipmentPosting;
 use Illuminate\Http\Request;
@@ -48,6 +49,8 @@ class ShipmentController extends Controller
                     'items' => $s->items->map(fn ($i) => [
                         'id' => $i->id, 'nomenclature_id' => $i->nomenclature_id,
                         'name' => $i->nomenclature?->name, 'qty' => (float) $i->qty, 'price' => (float) $i->price,
+                        'vat_rate' => $i->vat_rate !== null ? (float) $i->vat_rate : null,
+                        'vat_amount' => $i->vat_amount !== null ? (float) $i->vat_amount : null,
                     ]),
                 ];
             });
@@ -57,6 +60,7 @@ class ShipmentController extends Controller
             'suppliers' => Counterparty::whereIn('type', ['Поставщик', 'Оба'])->orderBy('name')->get(['id', 'name']),
             'carriers' => Carrier::orderBy('name')->get(['id', 'name']),
             'goods' => Nomenclature::orderBy('name')->get(['id', 'name', 'unit']),
+            'vatRates' => VatRate::orderBy('rate')->get(['id', 'rate']),
         ]);
     }
 
@@ -139,6 +143,8 @@ class ShipmentController extends Controller
             'items.*.name' => 'nullable|string|max:255',
             'items.*.qty' => 'required|numeric',
             'items.*.price' => 'required|numeric',
+            'items.*.vat_rate' => 'nullable|numeric|min:0|max:100',
+            'items.*.vat_amount' => 'nullable|numeric|min:0',
         ]);
     }
 
@@ -157,6 +163,8 @@ class ShipmentController extends Controller
                 'nomenclature_id' => $nom->id,
                 'qty' => $i['qty'],
                 'price' => $i['price'],
+                'vat_rate' => $i['vat_rate'] ?? null,
+                'vat_amount' => $i['vat_amount'] ?? null,
             ]);
         }
     }

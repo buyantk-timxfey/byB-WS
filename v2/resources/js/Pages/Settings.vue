@@ -8,6 +8,7 @@ const props = defineProps<{
     settings: Record<string, any>;
     rules: any[];
     articles: { id: number; name: string }[];
+    vatRates: { id: number; rate: number }[];
     devices: any[];
     lastPatch: string | null;
 }>();
@@ -35,6 +36,11 @@ const actionLabel = (a: string) => ({
 const ruleForm = useForm({ match_field: 'purpose', match_value: '', action_type: 'expense_article', article_id: null as number | null, priority: 100 });
 const addRule = () => ruleForm.post('/settings/rules', { onSuccess: () => ruleForm.reset() });
 const delRule = (id: number) => router.delete(`/settings/rules/${id}`);
+
+// Ставки НДС (справочник для товаров в поставках)
+const vatRateForm = useForm({ rate: null as number | null });
+const addVatRate = () => { if (vatRateForm.rate !== null) vatRateForm.post('/settings/vat-rates', { onSuccess: () => vatRateForm.reset() }); };
+const delVatRate = (id: number) => router.delete(`/settings/vat-rates/${id}`);
 
 function changePin() {
     const pin = window.prompt('Новый PIN (4–8 цифр):');
@@ -115,6 +121,20 @@ function applyPatch() {
                         <option value="sale_income">К продаже</option><option value="transfer">Перевод</option>
                     </select>
                     <button class="btn-ghost pressable" @click="addRule">+</button>
+                </div>
+            </div>
+
+            <!-- Ставки НДС -->
+            <div class="set-card glass">
+                <div class="set-h"><Icon name="doc" :size="18" /> Ставки НДС</div>
+                <div class="set-hint">Используются при выборе НДС у товара в поставке. Цена товара уже с НДС — сумма выделяется из неё автоматически, но её можно поправить вручную.</div>
+                <div class="rule" v-for="v in vatRates" :key="v.id">
+                    <div class="rule-m">{{ v.rate }}%</div>
+                    <button class="link-btn link-btn--bad" @click="delVatRate(v.id)">Удалить</button>
+                </div>
+                <div class="rule-add">
+                    <input v-model.number="vatRateForm.rate" type="number" step="0.01" min="0" max="100" placeholder="ставка, %" />
+                    <button class="btn-ghost pressable" @click="addVatRate">+</button>
                 </div>
             </div>
 

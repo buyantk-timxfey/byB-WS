@@ -10,7 +10,7 @@ import SearchSelect from '@/Components/SearchSelect.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
 
-type Item = { name: string; qty: number | null; price: number | null };
+type Item = { name: string; qty: number | null; price: number | null; vat_rate: number | null; vat_amount: number | null };
 type Row = {
     id: number; number: string; date: string; supplier: string; counterparty_id: number | null;
     name: string | null; status: string; eta: string | null; carrier_id: number | null;
@@ -23,6 +23,7 @@ const props = defineProps<{
     suppliers: { id: number; name: string }[];
     carriers: { id: number; name: string }[];
     goods: { id: number; name: string; unit: string }[];
+    vatRates: { id: number; rate: number }[];
 }>();
 
 // локальные списки (чтобы добавлять созданные на лету)
@@ -62,7 +63,7 @@ function create() {
     editingId.value = null;
     form.reset();
     form.date = new Date().toISOString().slice(0, 10);
-    form.items = [{ name: '', qty: null, price: null }];
+    form.items = [{ name: '', qty: null, price: null, vat_rate: null, vat_amount: null }];
     supHint.value = '';
     showSup.value = false;
     open.value = true;
@@ -78,13 +79,24 @@ function openDoc(s: Row) {
     form.tracking = s.tracking ?? '';
     form.delivery = s.delivery;
     form.problem = s.problem;
-    form.items = s.items.map((i) => ({ name: i.name ?? '', qty: i.qty, price: i.price }));
+    form.items = s.items.map((i) => ({ name: i.name ?? '', qty: i.qty, price: i.price, vat_rate: i.vat_rate ?? null, vat_amount: i.vat_amount ?? null }));
     supHint.value = '';
     showSup.value = false;
     open.value = true;
 }
-function addItem() { form.items.push({ name: '', qty: null, price: null }); }
+function addItem() { form.items.push({ name: '', qty: null, price: null, vat_rate: null, vat_amount: null }); }
 function removeItem(i: number) { form.items.splice(i, 1); }
+
+// НДС: цена в поставке уже с НДС, сумма выделяется по формуле Сумма × ставка / (100 + ставка).
+// Пересчитывается при изменении кол-ва/цены/ставки, но остаётся редактируемой вручную.
+function applyAutoVat(it: Item) {
+    if (it.vat_rate === null || it.vat_rate === undefined) {
+        it.vat_amount = null;
+        return;
+    }
+    const sum = (Number(it.qty) || 0) * (Number(it.price) || 0);
+    it.vat_amount = Math.round(sum * it.vat_rate / (100 + it.vat_rate) * 100) / 100;
+}
 
 // ── Быстрое создание поставщика прямо в модалке ──
 const showSup = ref(false);
@@ -209,10 +221,24 @@ function destroy() {
                     <option v-for="g in goods" :key="g.id" :value="g.name" />
                 </datalist>
                 <div v-for="(it, i) in form.items" :key="i" class="ship-item">
-                    <input v-model="it.name" list="goods-list" placeholder="наименование товара" />
-                    <input v-model.number="it.qty" type="number" placeholder="кол-во" />
-                    <input v-model.number="it.price" type="number" placeholder="цена" />
-                    <button class="link-btn link-btn--bad" @click="removeItem(i)">✕</button>
+                    <div class="ship-item-main">
+                        <input v-model="it.name" list="goods-list" placeholder="наименование товара" />
+                        <input v-model.number="it.qty" type="number" placeholder="кол-во" @input="applyAutoVat(it)" />
+                        <input v-model.number="it.price" type="number" placeholder="цена" @input="applyAutoVat(it)" />
+                        <button class="link-btn link-btn--bad" @click="removeItem(i)">✕</button>
+                    </div>
+                    <div class="ship-item-vat">
+                        <select v-model="it.vat_rate" @change="applyAutoVat(it)">
+                            <option :value="null">Без НДС</option>
+                            <option v-for="v in vatRates" :key="v.id" :value="v.rate">{{ v.rate }}%</option>
+                        </select>
+                        <input
+                            v-model.number="it.vat_amount"
+                            type="number" step="0.01"
+                            :disabled="it.vat_rate === null"
+                            placeholder="Сумма НДС"
+                        />
+                    </div>
                 </div>
                 <div v-if="!form.items.length" class="text-ink-3" style="padding:12px 0;font-size:14px">Добавьте позиции: введите наименование, количество и цену</div>
             </div>
@@ -233,8 +259,12 @@ function destroy() {
 </template>
 
 <style scoped>
-.ship-item { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--glass-border); }
-.ship-item input { height: 40px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
+.ship-item { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px solid var(--glass-border); }
+.ship-item-main { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; }
+.ship-item-main input { height: 40px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
+.ship-item-vat { display: grid; grid-template-columns: 110px 1fr; gap: 8px; }
+.ship-item-vat select, .ship-item-vat input { height: 34px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 9px; padding: 0 9px; color: var(--ink-2); font-size: 12px; font-family: inherit; outline: none; }
+.ship-item-vat input:disabled { opacity: .5; }
 .sel-add { display: flex; gap: 8px; align-items: center; }
 .sel-add .ssel { flex: 1; min-width: 0; }
 .add-btn { flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); font-size: 20px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }

@@ -69,6 +69,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/settings', [SettingController::class, 'update']);
     Route::post('/settings/rules', [SettingController::class, 'storeRule']);
     Route::delete('/settings/rules/{rule}', [SettingController::class, 'destroyRule']);
+    Route::post('/settings/vat-rates', [SettingController::class, 'storeVatRate']);
+    Route::delete('/settings/vat-rates/{vatRate}', [SettingController::class, 'destroyVatRate']);
 });
 
 // Транспорт — реальные данные

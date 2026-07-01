@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ExpenseArticle;
 use App\Models\ReconRule;
 use App\Models\Setting;
+use App\Models\VatRate;
 use App\Models\WebauthnCredential;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,6 +29,7 @@ class SettingController extends Controller
             'settings' => $settings,
             'rules' => ReconRule::with('article:id,name')->orderBy('priority')->get(),
             'articles' => ExpenseArticle::orderBy('name')->get(['id', 'name']),
+            'vatRates' => VatRate::orderBy('rate')->get(['id', 'rate']),
             'devices' => WebauthnCredential::where('user_id', auth()->id())->get(['id', 'name', 'last_used_at']),
             'lastPatch' => Setting::get('last_patch'),
         ]);
@@ -64,6 +66,21 @@ class SettingController extends Controller
     public function destroyRule(ReconRule $rule)
     {
         $rule->delete();
+
+        return back();
+    }
+
+    // Ставки НДС (справочник для товаров в поставках)
+    public function storeVatRate(Request $r)
+    {
+        VatRate::create($r->validate(['rate' => 'required|numeric|min:0|max:100|unique:vat_rates,rate']));
+
+        return back();
+    }
+
+    public function destroyVatRate(VatRate $vatRate)
+    {
+        $vatRate->delete();
 
         return back();
     }
