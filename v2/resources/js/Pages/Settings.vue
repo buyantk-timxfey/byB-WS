@@ -11,6 +11,8 @@ const props = defineProps<{
     vatRates: { id: number; rate: number }[];
     devices: any[];
     lastPatch: string | null;
+    currentLogin: string;
+    status?: string | null;
 }>();
 
 const form = useForm({
@@ -21,12 +23,26 @@ const form = useForm({
     recon_tolerance: props.settings.recon_tolerance ?? 1.5,
     acquiring_auto: props.settings.acquiring_auto === '1' || props.settings.acquiring_auto === true,
     stale_days: props.settings.stale_days ?? 60,
+    idle_lock_minutes: props.settings.idle_lock_minutes ?? 30,
     company_name: props.settings.company_name ?? '',
     company_inn: props.settings.company_inn ?? '',
     company_ogrnip: props.settings.company_ogrnip ?? '',
     company_account: props.settings.company_account ?? '',
 });
 const save = () => form.put('/settings');
+
+// ── Смена логина/пароля ──
+const credForm = useForm({
+    email: props.currentLogin,
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+});
+function saveCredentials() {
+    credForm.put('/settings/credentials', {
+        onSuccess: () => credForm.reset('current_password', 'password', 'password_confirmation'),
+    });
+}
 
 const actionLabel = (a: string) => ({
     expense_article: 'Расход → статья', sale_income: 'Приход эквайринга → к продаже',
@@ -159,12 +175,31 @@ function applyPatch() {
                     <div><div class="st-t">PIN-код входа</div><div class="st-s">быстрый вход без пароля</div></div>
                     <button class="btn-ghost pressable" @click="changePin">Сменить PIN</button>
                 </div>
+                <div class="fld" style="margin-top:12px"><label>Автоблокировка после бездействия, мин</label><input v-model="form.idle_lock_minutes" type="number" min="1" /></div>
+                <div class="set-hint">После этого времени без действий приложение запросит PIN — сессия не сбрасывается, только блокируется.</div>
                 <div class="h2" style="margin-top:6px">Устройства (Face ID / WebAuthn)</div>
                 <div class="rule" v-for="d in devices" :key="d.id">
                     <div class="rule-m">{{ d.name || 'Устройство' }}</div>
                     <div class="rule-a">активность: {{ d.last_used_at ? new Date(d.last_used_at).toLocaleDateString('ru-RU') : '—' }}</div>
                 </div>
                 <div v-if="!devices.length" class="set-hint">Устройства не привязаны.</div>
+            </div>
+
+            <!-- Вход в систему -->
+            <div class="set-card glass">
+                <div class="set-h"><Icon name="gear" :size="18" /> Вход в систему</div>
+                <div class="set-hint">Логин и пароль меняются только у вас — нигде больше не сохраняются.</div>
+                <div class="set-grid">
+                    <div class="fld"><label>Логин</label><input v-model="credForm.email" autocomplete="username" /></div>
+                    <div class="fld"><label>Текущий пароль</label><input v-model="credForm.current_password" type="password" autocomplete="current-password" /></div>
+                    <div class="fld"><label>Новый пароль</label><input v-model="credForm.password" type="password" autocomplete="new-password" placeholder="оставьте пустым, если не меняете" /></div>
+                    <div class="fld"><label>Повторите новый пароль</label><input v-model="credForm.password_confirmation" type="password" autocomplete="new-password" /></div>
+                </div>
+                <div v-if="credForm.errors.current_password" class="set-err">{{ credForm.errors.current_password }}</div>
+                <div v-if="credForm.errors.email" class="set-err">{{ credForm.errors.email }}</div>
+                <div v-if="credForm.errors.password" class="set-err">{{ credForm.errors.password }}</div>
+                <div v-if="status" class="set-ok">{{ status }}</div>
+                <button class="btn-primary pressable" style="margin-top:10px" :disabled="credForm.processing" @click="saveCredentials">Сохранить</button>
             </div>
 
             <!-- Обновление (ZIP-патч) -->

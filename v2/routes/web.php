@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/settings/rules/{rule}', [SettingController::class, 'destroyRule']);
     Route::post('/settings/vat-rates', [SettingController::class, 'storeVatRate']);
     Route::delete('/settings/vat-rates/{vatRate}', [SettingController::class, 'destroyVatRate']);
+    Route::put('/settings/credentials', [SettingController::class, 'changeCredentials']);
 });
 
 // Транспорт — реальные данные
@@ -100,9 +101,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Одноразовый веб-установщик (создаёт БД с нуля без консоли)
 Route::get('/setup', [\App\Http\Controllers\SetupController::class, 'run']);
 
-// Быстрый вход по PIN
+// Быстрый вход по PIN / разблокировка после бездействия
 Route::get('/pin', [PinController::class, 'show'])->name('pin');
-Route::post('/pin', [PinController::class, 'login']);
+Route::post('/pin', [PinController::class, 'login'])->name('pin.attempt');
 
 Route::middleware('auth')->group(function () {
     Route::put('/pin', [PinController::class, 'change']);

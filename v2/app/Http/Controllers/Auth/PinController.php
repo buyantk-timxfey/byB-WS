@@ -14,13 +14,14 @@ use Inertia\Inertia;
 // Быстрый вход по PIN (один аккаунт). Поверх обычного email/пароля.
 class PinController extends Controller
 {
-    public function show()
+    public function show(Request $request)
     {
-        if (Auth::check()) {
+        $locked = Auth::check() && $request->session()->get('locked');
+        if (Auth::check() && ! $locked) {
             return redirect()->route('dashboard');
         }
 
-        return Inertia::render('Auth/Pin');
+        return Inertia::render('Auth/Pin', ['locked' => $locked]);
     }
 
     public function login(Request $request)
@@ -38,8 +39,15 @@ class PinController extends Controller
         }
 
         RateLimiter::clear($key);
-        Auth::login($user, true);
-        $request->session()->regenerate();
+
+        if (Auth::check() && Auth::id() === $user->id) {
+            // Разблокировка уже активной сессии после бездействия — не логиним заново.
+            $request->session()->put('locked', false);
+        } else {
+            Auth::login($user, true);
+            $request->session()->regenerate();
+        }
+        $request->session()->put('last_activity_at', time());
 
         return redirect()->intended(route('dashboard'));
     }

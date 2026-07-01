@@ -19,8 +19,8 @@ const submit = () => form.post(route('login'), { onFinish: () => form.reset('pas
             <div v-if="status" class="login-status">{{ status }}</div>
 
             <label class="fld">
-                <span>Email</span>
-                <input v-model="form.email" type="email" autocomplete="username" autofocus placeholder="admin@bybuka.ru" />
+                <span>Логин</span>
+                <input v-model="form.email" type="text" autocomplete="username" autofocus placeholder="Логин" />
             </label>
             <div v-if="form.errors.email" class="login-err">{{ form.errors.email }}</div>
 

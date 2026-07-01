@@ -8,13 +8,16 @@ use App\Models\Setting;
 use App\Models\VatRate;
 use App\Models\WebauthnCredential;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class SettingController extends Controller
 {
     private const KEYS = [
         'tax_rate', 'salary_rate', 'acquiring_card_rate', 'acquiring_sbp_rate',
-        'recon_tolerance', 'acquiring_auto', 'stale_days',
+        'recon_tolerance', 'acquiring_auto', 'stale_days', 'idle_lock_minutes',
         'company_name', 'company_inn', 'company_ogrnip', 'company_account',
     ];
 
@@ -32,6 +35,8 @@ class SettingController extends Controller
             'vatRates' => VatRate::orderBy('rate')->get(['id', 'rate']),
             'devices' => WebauthnCredential::where('user_id', auth()->id())->get(['id', 'name', 'last_used_at']),
             'lastPatch' => Setting::get('last_patch'),
+            'currentLogin' => auth()->user()->email,
+            'status' => session('status'),
         ]);
     }
 
@@ -41,6 +46,7 @@ class SettingController extends Controller
             'tax_rate' => 'nullable|numeric', 'salary_rate' => 'nullable|numeric',
             'acquiring_card_rate' => 'nullable|numeric', 'acquiring_sbp_rate' => 'nullable|numeric',
             'recon_tolerance' => 'nullable|numeric', 'acquiring_auto' => 'boolean', 'stale_days' => 'nullable|integer',
+            'idle_lock_minutes' => 'nullable|integer|min:1|max:480',
             'company_name' => 'nullable|string|max:255', 'company_inn' => 'nullable|string|max:20',
             'company_ogrnip' => 'nullable|string|max:20', 'company_account' => 'nullable|string|max:40',
         ]);
@@ -49,6 +55,32 @@ class SettingController extends Controller
         }
 
         return back();
+    }
+
+    // Смена логина/пароля (владелец задаёт их сам — значения нигде не хранятся вне БД).
+    public function changeCredentials(Request $r)
+    {
+        $user = $r->user();
+        // Пустая строка — «пароль не меняем»; приводим к null, иначе nullable
+        // не сработает и min:6/confirmed будут проверять пустое значение.
+        if ($r->input('password') === '') {
+            $r->merge(['password' => null]);
+        }
+        $data = $r->validate([
+            'current_password' => 'required|string',
+            'email' => ['required', 'string', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password' => 'nullable|string|min:6|confirmed',
+        ]);
+        if (! Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages(['current_password' => 'Неверный текущий пароль']);
+        }
+        $user->email = $data['email'];
+        if (! empty($data['password'])) {
+            $user->password = $data['password'];
+        }
+        $user->save();
+
+        return back()->with('status', 'Данные для входа обновлены');
     }
 
     // Авто-правила сверки

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue';
-import { Link, usePage } from '@inertiajs/vue3';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { Link, usePage, router } from '@inertiajs/vue3';
 import Icon from '@/Components/Icon.vue';
 import SearchPalette from '@/Components/SearchPalette.vue';
 import NotificationsPanel from '@/Components/NotificationsPanel.vue';
@@ -33,6 +33,25 @@ onMounted(async () => {
         const data = await res.json();
         notifItems.value = data.items ?? [];
     } catch { /* ignore */ }
+});
+
+// Автоблокировка после бездействия — сервер тоже проверяет это на каждом запросе
+// (см. LockIdleSession), но таймер в браузере блокирует сразу по истечении времени,
+// даже если пользователь просто смотрит на экран и ничего не запрашивает с сервера.
+const idleMinutes = computed(() => Number((page.props as any).idleLockMinutes) || 30);
+let idleTimer: ReturnType<typeof setTimeout> | null = null;
+function resetIdleTimer() {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => router.visit('/pin'), idleMinutes.value * 60 * 1000);
+}
+const idleEvents = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+onMounted(() => {
+    idleEvents.forEach((e) => window.addEventListener(e, resetIdleTimer, { passive: true }));
+    resetIdleTimer();
+});
+onUnmounted(() => {
+    idleEvents.forEach((e) => window.removeEventListener(e, resetIdleTimer));
+    if (idleTimer) clearTimeout(idleTimer);
 });
 </script>
 

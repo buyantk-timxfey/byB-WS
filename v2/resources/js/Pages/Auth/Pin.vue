@@ -2,6 +2,8 @@
 import { ref, watch } from 'vue';
 import { Head, useForm, Link } from '@inertiajs/vue3';
 
+defineProps<{ locked?: boolean }>();
+
 const form = useForm({ pin: '' });
 const dots = ref('');
 
@@ -25,7 +27,7 @@ watch(() => form.errors.pin, () => { dots.value = ''; });
         <div class="pin-card glass-strong">
             <div class="pin-logo"><span>bB</span></div>
             <div class="pin-title">byBuka</div>
-            <div class="pin-sub">Введите PIN</div>
+            <div class="pin-sub">{{ locked ? 'Сессия заблокирована из-за бездействия' : 'Введите PIN' }}</div>
 
             <div class="pin-dots">
                 <span v-for="i in 8" :key="i" class="pin-dot" :class="{ filled: i <= dots.length }" v-show="i <= Math.max(4, dots.length)"></span>
@@ -39,7 +41,8 @@ watch(() => form.errors.pin, () => { dots.value = ''; });
                 <button class="pin-key pin-key--act pressable" @click="back">⌫</button>
             </div>
 
-            <Link href="/login" class="pin-alt">Войти по паролю</Link>
+            <Link v-if="locked" href="/logout" method="post" as="button" class="pin-alt">Выйти и войти паролем</Link>
+            <Link v-else href="/login" class="pin-alt">Войти по паролю</Link>
         </div>
     </div>
 </template>
@@ -58,5 +61,5 @@ watch(() => form.errors.pin, () => { dots.value = ''; });
 .pin-key { height: 72px; border-radius: 50%; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); font-size: 26px; font-weight: 500; cursor: pointer; }
 .pin-key:hover { background: var(--glass-fill-strong); }
 .pin-key--act { font-size: 22px; }
-.pin-alt { margin-top: 24px; font-size: 14px; color: var(--info, #0a84ff); text-decoration: none; }
+.pin-alt { margin-top: 24px; font-size: 14px; color: var(--info, #0a84ff); text-decoration: none; background: transparent; border: 0; cursor: pointer; font-family: inherit; }
 </style>
