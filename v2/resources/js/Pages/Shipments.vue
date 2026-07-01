@@ -11,12 +11,14 @@ import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
 
 type Item = { nomenclature_id: number | null; qty: number | null; price: number | null; vat_rate: number | null; vat_amount: number | null };
+type Payment = { match_id: number; bank_line_id: number; date: string | null; party: string; amount: number };
 type Row = {
     id: number; number: string; date: string; supplier: string; counterparty_id: number | null;
     name: string | null; status: string; eta: string | null; carrier_id: number | null;
     tracking: string | null; delivery: number; problem: boolean; sum: number; paid: number;
-    posted: boolean; items: Item[];
+    posted: boolean; items: Item[]; payments: Payment[];
 };
+type BankCandidate = { id: number; date: string | null; party: string; purpose: string | null; remaining: number };
 
 const props = defineProps<{
     rows: Row[];
@@ -24,6 +26,7 @@ const props = defineProps<{
     carriers: { id: number; name: string }[];
     goods: { id: number; name: string; unit: string }[];
     vatRates: { id: number; rate: number }[];
+    bankCandidates: BankCandidate[];
 }>();
 
 // локальные списки (чтобы добавлять созданные на лету)
@@ -67,6 +70,7 @@ function create() {
     form.items = [{ nomenclature_id: null, qty: null, price: null, vat_rate: null, vat_amount: null }];
     supHint.value = '';
     showSup.value = false;
+    showPayPick.value = false; payLineId.value = null; payAmount.value = null;
     open.value = true;
 }
 function openDoc(s: Row) {
@@ -83,10 +87,35 @@ function openDoc(s: Row) {
     form.items = s.items.map((i) => ({ nomenclature_id: i.nomenclature_id, qty: i.qty, price: i.price, vat_rate: i.vat_rate ?? null, vat_amount: i.vat_amount ?? null }));
     supHint.value = '';
     showSup.value = false;
+    showPayPick.value = false; payLineId.value = null; payAmount.value = null;
     open.value = true;
 }
 function addItem() { form.items.push({ nomenclature_id: null, qty: null, price: null, vat_rate: null, vat_amount: null }); }
 function removeItem(i: number) { form.items.splice(i, 1); }
+
+// ── Оплата — привязка операций из выписки прямо здесь (то же, что и разнесение на странице Банк) ──
+const currentRow = computed(() => props.rows.find((r) => r.id === editingId.value) ?? null);
+const currentDebt = computed(() => currentRow.value ? Math.max(currentRow.value.sum - currentRow.value.paid, 0) : 0);
+const bankCandOptions = computed(() => props.bankCandidates.map((c) => ({ id: c.id, name: `${fdate(c.date)} · ${c.party} · ${money(c.remaining)}` })));
+
+const showPayPick = ref(false);
+const payLineId = ref<number | null>(null);
+const payAmount = ref<number | null>(null);
+function pickPayLine(id: number | null) {
+    payLineId.value = id;
+    const cand = props.bankCandidates.find((c) => c.id === id);
+    if (cand) payAmount.value = Math.round(Math.min(currentDebt.value, cand.remaining) * 100) / 100;
+}
+function attachPayment() {
+    if (!editingId.value || !payLineId.value || !payAmount.value) return;
+    router.post(`/shipments/${editingId.value}/match`, { bank_line_id: payLineId.value, amount: payAmount.value }, {
+        onSuccess: () => { showPayPick.value = false; payLineId.value = null; payAmount.value = null; },
+    });
+}
+function detachPayment(p: Payment) {
+    if (!editingId.value) return;
+    router.delete(`/shipments/${editingId.value}/match/${p.match_id}`);
+}
 
 // НДС: цена в поставке уже с НДС, сумма выделяется по формуле Сумма × ставка / (100 + ставка).
 // Пересчитывается при изменении кол-ва/цены/ставки, но остаётся редактируемой вручную.
@@ -254,6 +283,37 @@ function destroy() {
                 <div class="fld" style="margin-top:12px"><label>Стоимость доставки</label><input v-model.number="form.delivery" type="number" /></div>
             </div>
 
+            <!-- Оплата -->
+            <div class="modal-sec">
+                <div class="modal-sec-h"><Icon name="wallet" :size="14" /> Оплата</div>
+                <div v-if="!editingId" class="text-ink-3" style="font-size:13px">Привязать оплату можно после сохранения поставки.</div>
+                <template v-else>
+                    <div v-for="p in currentRow?.payments ?? []" :key="p.match_id" class="pay-row">
+                        <div class="pay-row-info">
+                            <span class="text-ink-2" style="font-size:13px">{{ fdate(p.date) }} · {{ p.party }}</span>
+                        </div>
+                        <span class="tnum" style="font-weight:600">{{ money(p.amount) }}</span>
+                        <button type="button" class="good-card-remove pressable" style="width:32px;height:32px" @click="detachPayment(p)" title="Отвязать">✕</button>
+                    </div>
+                    <div v-if="!(currentRow?.payments ?? []).length" class="text-ink-3" style="font-size:13px;padding:4px 0">Оплат пока нет</div>
+
+                    <div v-if="showPayPick" class="quick-form" style="flex-wrap:wrap">
+                        <div style="flex:1;min-width:220px">
+                            <SearchSelect :modelValue="payLineId" :options="bankCandOptions" placeholder="— выбрать операцию из выписки —" @update:modelValue="pickPayLine" />
+                        </div>
+                        <input v-model.number="payAmount" type="number" step="0.01" placeholder="Сумма" style="max-width:120px" />
+                        <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="!payLineId || !payAmount" @click="attachPayment">Привязать</button>
+                    </div>
+                    <button v-else type="button" class="btn-ghost pressable" style="margin-top:8px" @click="showPayPick = true"><Icon name="plus" :size="14" /> Привязать оплату</button>
+                    <div v-if="!bankCandidates.length && !(currentRow?.payments ?? []).length" class="text-ink-3" style="font-size:12px;margin-top:6px">Нет неразнесённых операций в выписке — сначала загрузите её на странице Банк.</div>
+
+                    <div class="modal-total">
+                        <span class="text-ink-2 text-[14px]">Долг поставщику</span>
+                        <span class="tnum text-[18px] font-bold">{{ money(currentDebt) }}</span>
+                    </div>
+                </template>
+            </div>
+
             <!-- Товары -->
             <div class="modal-sec">
                 <div class="modal-sec-h">
@@ -315,6 +375,8 @@ function destroy() {
 .good-card-row1 { display: flex; gap: 8px; align-items: center; }
 .good-card-row1 .ssel { flex: 1; min-width: 0; }
 .good-card-remove { flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--glass-border); background: transparent; color: var(--expense); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.pay-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill); margin-bottom: 8px; }
+.pay-row-info { flex: 1; min-width: 0; }
 .good-card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
 .good-card-grid label { font-size: 11px; }
 .good-card-grid input, .good-card-grid select { height: 38px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--bg); border-radius: 9px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }

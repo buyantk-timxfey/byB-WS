@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BankLine;
 use App\Models\BankMatch;
 use App\Models\Carrier;
 use App\Models\Counterparty;
 use App\Models\Nomenclature;
 use App\Models\Shipment;
 use App\Models\VatRate;
+use App\Services\BankReconcile;
 use App\Services\DocNumber;
 use App\Services\Posting\ShipmentPosting;
 use Illuminate\Http\Request;
@@ -19,13 +21,12 @@ class ShipmentController extends Controller
     public function index()
     {
         // Оплачено поставщику = сумма привязок строк выписки к поставке
-        $paidByShipment = BankMatch::where('target_type', 'shipment')
-            ->select('target_id', DB::raw('SUM(amount) as paid'))
-            ->groupBy('target_id')->pluck('paid', 'target_id');
+        $matchesByShipment = BankMatch::where('target_type', 'shipment')->with('line:id,date,counterparty_name,purpose')->get()->groupBy('target_id');
+        $paidByShipment = $matchesByShipment->map(fn ($ms) => $ms->sum('amount'));
 
         $rows = Shipment::with(['counterparty:id,name', 'carrier:id,name', 'items'])
             ->orderByDesc('date')->orderByDesc('id')->get()
-            ->map(function (Shipment $s) use ($paidByShipment) {
+            ->map(function (Shipment $s) use ($paidByShipment, $matchesByShipment) {
                 $total = $s->total();
                 $paid = (float) ($paidByShipment[$s->id] ?? 0);
 
@@ -52,6 +53,12 @@ class ShipmentController extends Controller
                         'vat_rate' => $i->vat_rate !== null ? (float) $i->vat_rate : null,
                         'vat_amount' => $i->vat_amount !== null ? (float) $i->vat_amount : null,
                     ]),
+                    'payments' => ($matchesByShipment[$s->id] ?? collect())->map(fn (BankMatch $m) => [
+                        'match_id' => $m->id, 'bank_line_id' => $m->bank_line_id,
+                        'date' => optional($m->line?->date)->toDateString(),
+                        'party' => $m->line?->counterparty_name ?? $m->line?->purpose ?? '—',
+                        'amount' => (float) $m->amount,
+                    ])->values(),
                 ];
             });
 
@@ -61,7 +68,27 @@ class ShipmentController extends Controller
             'carriers' => Carrier::orderBy('name')->get(['id', 'name']),
             'goods' => Nomenclature::orderBy('name')->get(['id', 'name', 'unit']),
             'vatRates' => VatRate::orderBy('rate')->get(['id', 'rate']),
+            'bankCandidates' => $this->bankCandidates(),
         ]);
+    }
+
+    // Строки выписки, ещё не разнесённые полностью — кандидаты для привязки оплаты
+    // прямо со стороны поставки (те же операции, что доступны в разнесении на странице Банк).
+    private function bankCandidates(): array
+    {
+        return BankLine::whereIn('status', ['unmatched', 'partial'])
+            ->where('amount', '<', 0)
+            ->with('matches')
+            ->orderByDesc('date')->get()
+            ->map(fn (BankLine $l) => [
+                'id' => $l->id,
+                'date' => optional($l->date)->toDateString(),
+                'party' => $l->counterparty_name ?? $l->purpose ?? '—',
+                'purpose' => $l->purpose,
+                'remaining' => round(abs((float) $l->amount) - $l->matchedSum(), 2),
+            ])
+            ->filter(fn ($l) => $l['remaining'] > 0.01)
+            ->values()->all();
     }
 
     public function store(Request $r)
@@ -123,6 +150,38 @@ class ShipmentController extends Controller
             ShipmentPosting::unpost($shipment);
         }
         $shipment->delete();
+
+        return back();
+    }
+
+    // Привязка оплаты к поставке прямо со страницы Поставки — тот же BankMatch,
+    // что создаётся при разнесении на странице Банк, просто с другой стороны.
+    public function matchPayment(Request $r, Shipment $shipment)
+    {
+        $data = $r->validate([
+            'bank_line_id' => 'required|exists:bank_lines,id',
+            'amount' => 'required|numeric|min:0.01',
+        ]);
+        $line = BankLine::findOrFail($data['bank_line_id']);
+        BankMatch::create([
+            'bank_line_id' => $line->id,
+            'target_type' => 'shipment',
+            'target_id' => $shipment->id,
+            'amount' => abs($data['amount']),
+        ]);
+        BankReconcile::apply($line->fresh());
+
+        return back();
+    }
+
+    public function unmatchPayment(Shipment $shipment, BankMatch $match)
+    {
+        abort_unless($match->target_type === 'shipment' && $match->target_id === $shipment->id, 404);
+        $line = $match->line;
+        $match->delete();
+        if ($line) {
+            BankReconcile::apply($line->fresh());
+        }
 
         return back();
     }

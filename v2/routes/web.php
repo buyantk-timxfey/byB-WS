@@ -27,6 +27,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/shipments', [ShipmentController::class, 'store']);
     Route::put('/shipments/{shipment}', [ShipmentController::class, 'update']);
     Route::delete('/shipments/{shipment}', [ShipmentController::class, 'destroy']);
+    Route::post('/shipments/{shipment}/match', [ShipmentController::class, 'matchPayment']);
+    Route::delete('/shipments/{shipment}/match/{match}', [ShipmentController::class, 'unmatchPayment']);
 });
 
 // Продажи — реальные данные
