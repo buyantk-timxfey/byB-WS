@@ -435,13 +435,24 @@ class MailController extends Controller
         return ['', $from];
     }
 
+    // HTML-версия предпочтительна: авто-сгенерированная plain-text альтернатива у многих
+    // отправителей склеена без переносов строк, тогда как их HTML-версия структурирована
+    // тегами (div/p/br), которые ниже превращаются в переносы. Поэтому два прохода по
+    // дереву частей: сначала ищем html везде, и только если нигде нет — берём plain.
     private function fetchPlainBody($imap, int $uid, $structure, string $partNum = ''): string
+    {
+        $body = $this->findBodyPart($imap, $uid, $structure, $partNum, 'html');
+
+        return $body !== '' ? $body : $this->findBodyPart($imap, $uid, $structure, $partNum, 'plain');
+    }
+
+    private function findBodyPart($imap, int $uid, $structure, string $partNum, string $wantSubtype): string
     {
         $type = (int) ($structure->type ?? 0);
         if ($type === 1) {
             foreach (($structure->parts ?? []) as $i => $part) {
                 $num  = $partNum ? "$partNum." . ($i + 1) : (string) ($i + 1);
-                $body = $this->fetchPlainBody($imap, $uid, $part, $num);
+                $body = $this->findBodyPart($imap, $uid, $part, $num, $wantSubtype);
                 if ($body !== '') {
                     return $body;
                 }
@@ -453,7 +464,7 @@ class MailController extends Controller
             return '';
         }
         $subtype = strtolower($structure->subtype ?? 'plain');
-        if ($subtype !== 'plain' && $subtype !== 'html') {
+        if ($subtype !== $wantSubtype) {
             return '';
         }
         $encoding = $structure->encoding ?? 0;
