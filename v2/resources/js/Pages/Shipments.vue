@@ -219,7 +219,7 @@ function destroy() {
                     <thead>
                         <tr>
                             <th>№</th><th>Дата</th><th>Поставщик</th><th>Название</th>
-                            <th class="num">Сумма</th><th>Оплата</th><th>Статус</th><th>ETA</th>
+                            <th class="num">Сумма</th><th class="pay-col"><Icon name="paperclip" :size="14" /></th><th>Статус</th><th>ETA</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -232,7 +232,11 @@ function destroy() {
                                 <StatusPill v-if="s.problem" text="Проблема" variant="bad" class="ml-2" />
                             </td>
                             <td class="num">{{ money(s.sum) }}</td>
-                            <td><StatusPill :text="payText(s)" :variant="payVariant(s)" /></td>
+                            <td class="pay-col" :title="payText(s)">
+                                <Icon v-if="payVariant(s) === 'ok'" name="check" :size="16" style="color:var(--income)" />
+                                <Icon v-else-if="payVariant(s) === 'warn'" name="minus" :size="16" style="color:var(--warn)" />
+                                <Icon v-else name="x" :size="16" style="color:var(--expense)" />
+                            </td>
                             <td><StatusPill :text="s.status" :variant="statusVariant(s.status)" /></td>
                             <td class="text-ink-2">{{ fdate(s.eta) }}</td>
                         </tr>
@@ -383,6 +387,8 @@ function destroy() {
 .good-card-remove { flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--glass-border); background: transparent; color: var(--expense); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .pay-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill); margin-bottom: 8px; }
 .pay-row-info { flex: 1; min-width: 0; }
+.pay-col { text-align: center; }
+.pay-col svg { display: block; margin: 0 auto; }
 .good-card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
 .good-card-grid label { font-size: 11px; }
 .good-card-grid input, .good-card-grid select { height: 38px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--bg); border-radius: 9px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }

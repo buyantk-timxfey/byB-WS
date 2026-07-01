@@ -84,14 +84,6 @@
             --glass-highlight: rgba(255, 255, 255, 0.22);
         }
     }
-    html.is-windows .glass,
-    html.is-windows .glass-strong,
-    html.is-windows .editbtn,
-    html.is-windows .jtable thead th {
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-    }
-
     html {
         color-scheme: light dark;
     }
@@ -137,8 +129,8 @@
 @layer components {
     .glass {
         background: var(--glass-fill);
-        backdrop-filter: blur(30px) saturate(190%);
         -webkit-backdrop-filter: blur(30px) saturate(190%);
+        backdrop-filter: blur(30px) saturate(190%);
         border: 1px solid var(--glass-border);
         box-shadow: var(--shadow), inset 0 1px 0 var(--glass-highlight);
         border-radius: var(--r-card);
@@ -146,8 +138,8 @@
 
     .glass-strong {
         background: var(--glass-fill-strong);
-        backdrop-filter: blur(40px) saturate(190%);
         -webkit-backdrop-filter: blur(40px) saturate(190%);
+        backdrop-filter: blur(40px) saturate(190%);
         border: 1px solid var(--glass-border);
         box-shadow: var(--shadow-lg), inset 0 1px 0 var(--glass-highlight);
         border-radius: var(--r-card);
@@ -189,10 +181,24 @@
     .glass,
     .glass-strong {
         background: var(--glass-solid);
-        backdrop-filter: none;
         -webkit-backdrop-filter: none;
+        backdrop-filter: none;
     }
     .orbs { display: none; }
+}
+
+/* Windows — те же .glass/.glass-strong/.editbtn/.jtable thead th объявлены внутри
+   @layer components (или вовсе без слоя для .editbtn) с backdrop-filter: blur(...).
+   Правило внутри @layer base их не перебивало — по спеке cascade layers порядок
+   слоёв важнее специфичности, более поздний слой всегда выигрывает у более раннего
+   независимо от селектора. Поэтому здесь — намеренно вне @layer (у неслоёных правил
+   наивысший приоритет), как и блок reduced-transparency выше. */
+html.is-windows .glass,
+html.is-windows .glass-strong,
+html.is-windows .editbtn,
+html.is-windows .jtable thead th {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -255,7 +261,7 @@
 .ships-scroll .wgt-s { scroll-snap-align: start; flex: 0 0 168px; }
 
 /* ── Глобальный поиск ── */
-.search-ov { position: fixed; inset: 0; z-index: 80; display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; background: rgba(0,0,0,.35); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.search-ov { position: fixed; inset: 0; z-index: 80; display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; background: rgba(0,0,0,.35); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 .search-box { width: min(640px, 92vw); max-height: 70vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 20px; padding: 8px; }
 .search-input { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
 .search-input input { flex: 1; border: 0; background: transparent; outline: none; color: var(--ink); font-size: 17px; font-family: inherit; }
@@ -283,7 +289,7 @@
 
 /* ── Режим настройки виджетов ── */
 .edit-bar { display: flex; justify-content: flex-end; gap: 8px; max-width: 1240px; margin: 0 auto 12px; padding: 0 2px; }
-.editbtn { border: 1px solid var(--glass-border); background: var(--glass-fill-strong); color: var(--ink); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.editbtn { border: 1px solid var(--glass-border); background: var(--glass-fill-strong); color: var(--ink); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
 .wwrap { position: relative; }
 .whide { position: absolute; top: -7px; right: -7px; z-index: 6; width: 24px; height: 24px; border-radius: 50%; background: var(--expense); color: #fff; border: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1; cursor: pointer; box-shadow: var(--shadow); }
 .editing .wgt-s, .editing .wgt-m, .editing .wgt-l { cursor: grab; }
@@ -310,7 +316,7 @@
 .jcard { max-width: 1240px; margin: 0 auto; padding: 0; overflow: hidden; }
 .jscroll { overflow-x: auto; }
 .jtable { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 760px; }
-.jtable thead th { position: sticky; top: 0; z-index: 1; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); padding: 12px 16px; background: var(--glass-fill-strong); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); white-space: nowrap; }
+.jtable thead th { position: sticky; top: 0; z-index: 1; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); padding: 12px 16px; background: var(--glass-fill-strong); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); white-space: nowrap; }
 .jtable tbody td { padding: 13px 16px; border-top: 1px solid var(--glass-border); white-space: nowrap; }
 .jtable tbody tr { cursor: pointer; }
 .jtable tbody tr:hover td { background: var(--glass-fill); }
@@ -531,7 +537,7 @@
 .pill--bad { background: rgba(255,59,48,.16); color: var(--expense); }
 
 /* Drawer (форма-документ) */
-.drawer-ov { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.35); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.drawer-ov { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.35); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 96vw); z-index: 91; display: flex; flex-direction: column; border-radius: 24px 0 0 24px; }
 .drawer-head { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--glass-border); }
 .drawer-head .dt { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
@@ -558,7 +564,7 @@
 .ss-row--total { padding-top: 8px; margin-top: 2px; border-top: 1px solid var(--glass-border); }
 
 /* ── Модалка: центр + zoom (на мобайле — снизу) ── */
-.modal-ov { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: ov-in .2s ease; }
+.modal-ov { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.4); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: ov-in .2s ease; }
 .modal-box { width: min(640px, 100%); max-height: 86vh; display: flex; flex-direction: column; border-radius: 26px; overflow: hidden; animation: modal-in .26s cubic-bezier(.22,1,.36,1); transform-origin: center; }
 .modal-box--wide { width: min(920px, 94vw); }
 @keyframes spin { to { transform: rotate(360deg); } }

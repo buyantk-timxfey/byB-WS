@@ -36,6 +36,10 @@ const paths: Record<string, string> = {
     bag: 'M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2',
     wallet: 'M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l3-3h11M16 13h2',
     car: 'M5 16l1.5-5h11L19 16M3 16h18v3H3zM6 19v1M18 19v1',
+    check: 'M20 6 9 17l-5-5',
+    x: 'M18 6 6 18M6 6l12 12',
+    minus: 'M5 12h14',
+    paperclip: 'M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48',
 };
 </script>
 
