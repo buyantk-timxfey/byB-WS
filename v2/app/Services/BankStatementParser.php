@@ -48,10 +48,15 @@ class BankStatementParser
                 case 'Дата': if ($cur) $cur['date'] = self::date($val); break;
                 case 'Сумма': if ($cur) $cur['amount'] = (float) $val; break;
                 case 'ПлательщикСчет': if ($cur) $cur['payer_acc'] = $val; break;
-                case 'Плательщик': if ($cur) $cur['payer'] = self::cleanName($val); break;
+                // Некоторые банки (Точка, Озон Банк) пишут имя с суффиксом «1»
+                // (Плательщик1/Получатель1) вместо обычных Плательщик/Получатель —
+                // без этого имя контрагента терялось и строка показывалась безымянной.
+                case 'Плательщик':
+                case 'Плательщик1': if ($cur) $cur['payer'] = self::cleanName($val); break;
                 case 'ПлательщикИНН': if ($cur) $cur['payer_inn'] = $val; break;
                 case 'ПолучательСчет': if ($cur) $cur['receiver_acc'] = $val; break;
-                case 'Получатель': if ($cur) $cur['receiver'] = self::cleanName($val); break;
+                case 'Получатель':
+                case 'Получатель1': if ($cur) $cur['receiver'] = self::cleanName($val); break;
                 case 'ПолучательИНН': if ($cur) $cur['receiver_inn'] = $val; break;
                 case 'НазначениеПлатежа': if ($cur) $cur['purpose'] = $val; break;
 

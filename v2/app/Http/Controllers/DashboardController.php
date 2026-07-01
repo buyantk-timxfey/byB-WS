@@ -146,7 +146,7 @@ class DashboardController extends Controller
 
         // Последние операции
         $tx = BankLine::orderByDesc('date')->orderByDesc('id')->limit(6)->get()->map(fn ($l) => [
-            'who' => $l->counterparty_name ?? '—', 'cat' => $l->amount >= 0 ? 'Приход' : 'Расход',
+            'who' => $l->counterparty_name ?? $l->purpose ?? '—', 'cat' => $l->amount >= 0 ? 'Приход' : 'Расход',
             'amount' => (float) $l->amount, 'kind' => $l->amount >= 0 ? 'in' : 'out',
         ]);
 

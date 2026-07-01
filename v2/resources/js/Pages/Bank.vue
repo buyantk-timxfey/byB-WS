@@ -6,6 +6,7 @@ import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
+import DatePicker from '@/Components/DatePicker.vue';
 import { money, signed, initials } from '@/lib/format';
 
 type Line = {
@@ -22,10 +23,14 @@ const props = defineProps<{
 
 const seg = ref<'all' | 'unmatched' | 'in' | 'out'>('all');
 const q = ref('');
+const dateFrom = ref('');
+const dateTo = ref('');
 const rows = computed(() => props.lines.filter((o) => {
     if (seg.value === 'unmatched' && (o.status === 'matched' || o.status === 'ignore')) return false;
     if (seg.value === 'in' && o.amount < 0) return false;
     if (seg.value === 'out' && o.amount > 0) return false;
+    if (dateFrom.value && o.date < dateFrom.value) return false;
+    if (dateTo.value && o.date > dateTo.value) return false;
     if (q.value && !(`${o.party} ${o.purpose ?? ''}`.toLowerCase().includes(q.value.toLowerCase()))) return false;
     return true;
 }));
@@ -39,10 +44,19 @@ const statusPill = (s: string) => ({ matched: { t: 'Разнесено', v: 'ok'
 const open = ref(false);
 const cur = ref<Line | null>(null);
 const sel = ref<{ target_type: string; target_id: number | null; amount: number } | null>(null);
-const candidates = computed<Doc[]>(() => cur.value ? (cur.value.amount > 0 ? props.openSales : props.openShipments) : []);
+const showAllCand = ref(false);
+// Ближайшие по сумме к операции — сверху, чтобы не листать весь список долгов.
+const candidates = computed<Doc[]>(() => {
+    if (!cur.value) return [];
+    const list = cur.value.amount > 0 ? props.openSales : props.openShipments;
+    const amt = Math.abs(cur.value.amount);
+    return [...list].sort((a, b) => Math.abs(a.debt - amt) - Math.abs(b.debt - amt));
+});
+const candidatesShown = computed(() => showAllCand.value ? candidates.value : candidates.value.slice(0, 5));
 
 function reconcile(l: Line) {
     cur.value = l;
+    showAllCand.value = false;
     // Если операция уже разнесена (полностью или частично) — подставляем текущий выбор,
     // чтобы модалка при повторном открытии показывала, куда операция отнесена сейчас.
     sel.value = l.match ? { target_type: l.match.target_type, target_id: l.match.target_id, amount: Math.abs(l.amount) } : null;
@@ -119,6 +133,11 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
 
         <div class="toolbar" style="margin-top:18px">
             <h2 class="sec-h">Операции</h2>
+            <div class="bank-period">
+                <DatePicker v-model="dateFrom" placeholder="с" />
+                <span class="text-ink-3">—</span>
+                <DatePicker v-model="dateTo" placeholder="по" />
+            </div>
             <div class="seg" style="margin-left:auto">
                 <button :class="{ on: seg === 'all' }" @click="seg = 'all'">Все</button>
                 <button :class="{ on: seg === 'unmatched' }" @click="seg = 'unmatched'">Не разнесено<span v-if="unmatchedCount" class="seg-dot">{{ unmatchedCount }}</span></button>
@@ -160,7 +179,7 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                 </div>
                 <div>
                     <span class="h2">{{ cur.amount > 0 ? 'Продажи с долгом' : 'Поставки с долгом' }}</span>
-                    <div v-for="d in candidates" :key="d.id" class="cand" :class="{ 'cand--best': sel?.target_id === d.id && (sel?.target_type==='sale'||sel?.target_type==='shipment') }" @click="pickDoc(d)" style="cursor:pointer">
+                    <div v-for="d in candidatesShown" :key="d.id" class="cand" :class="{ 'cand--best': sel?.target_id === d.id && (sel?.target_type==='sale'||sel?.target_type==='shipment') }" @click="pickDoc(d)" style="cursor:pointer">
                         <div class="cand-r">
                             <div class="cand-tick" :class="{ 'cand-tick--off': !(sel?.target_id === d.id) }">{{ sel?.target_id === d.id ? '✓' : '' }}</div>
                             <div><div class="cand-doc">{{ d.number }} · {{ d.party }}</div><div class="cand-sub">долг {{ money(d.debt) }}<span v-if="d.inn && cur.inn === d.inn"> · совпадение по ИНН</span></div></div>
@@ -168,6 +187,7 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                         </div>
                     </div>
                     <div v-if="!candidates.length" class="text-ink-3" style="font-size:13px;padding:8px 0">Нет подходящих документов с долгом.</div>
+                    <button v-else-if="!showAllCand && candidates.length > candidatesShown.length" type="button" class="link-btn" @click="showAllCand = true">Показать ещё {{ candidates.length - candidatesShown.length }}</button>
                 </div>
                 <div class="fld" v-if="cur.amount < 0">
                     <label>Или отнести на статью</label>
@@ -217,4 +237,6 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
 .rb-t { font-size: 15px; font-weight: 600; }
 .rb-s { font-size: 13px; color: var(--ink-2); margin-top: 1px; }
 .rb-btn { margin-left: auto; border-radius: 12px; padding: 9px 18px; }
+.bank-period { display: flex; align-items: center; gap: 8px; }
+.bank-period .dpick { width: 132px; }
 </style>

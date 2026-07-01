@@ -30,7 +30,7 @@ class BankController extends Controller
             ->orderByDesc('date')->orderByDesc('id')->limit(300)->get()
             ->map(fn (BankLine $l) => [
                 'id' => $l->id, 'date' => optional($l->date)->toDateString(),
-                'party' => $l->counterparty_name ?? '—', 'purpose' => $l->purpose,
+                'party' => $l->counterparty_name ?? $l->purpose ?? '—', 'purpose' => $l->purpose,
                 'account' => trim(($l->account?->name ?? '')),
                 'amount' => (float) $l->amount, 'status' => $l->status,
                 'inn' => $l->inn,
@@ -73,8 +73,14 @@ class BankController extends Controller
 
         DB::transaction(function () use ($parsed, $r, $batch, $rules, &$created, &$turnIn, &$turnOut) {
             foreach ($parsed['docs'] as $d) {
-                if (BankLine::where('dedup_hash', $d['dedup'])->exists()) {
-                    continue; // дедуп повторного импорта
+                $existing = BankLine::where('dedup_hash', $d['dedup'])->first();
+                if ($existing) {
+                    // Дедуп повторного импорта — но подтягиваем контрагента/назначение,
+                    // если раньше парсер их не распознал (например, старый формат без Плательщик1/Получатель1).
+                    if (! $existing->counterparty_name && $d['counterparty_name']) {
+                        $existing->update(['counterparty_name' => $d['counterparty_name'], 'inn' => $d['inn'] ?: $existing->inn]);
+                    }
+                    continue;
                 }
                 $line = BankLine::create([
                     'account_id' => $r->account_id, 'batch_id' => $batch->id,

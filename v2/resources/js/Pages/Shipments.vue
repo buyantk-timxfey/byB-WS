@@ -96,7 +96,11 @@ function removeItem(i: number) { form.items.splice(i, 1); }
 // ── Оплата — привязка операций из выписки прямо здесь (то же, что и разнесение на странице Банк) ──
 const currentRow = computed(() => props.rows.find((r) => r.id === editingId.value) ?? null);
 const currentDebt = computed(() => currentRow.value ? Math.max(currentRow.value.sum - currentRow.value.paid, 0) : 0);
-const bankCandOptions = computed(() => props.bankCandidates.map((c) => ({ id: c.id, name: `${fdate(c.date)} · ${c.party} · ${money(c.remaining)}` })));
+// Сортируем по близости остатка операции к долгу поставки — самое вероятное совпадение сверху,
+// не нужно листать все неразнесённые операции банка.
+const bankCandOptions = computed(() => [...props.bankCandidates]
+    .sort((a, b) => Math.abs(a.remaining - currentDebt.value) - Math.abs(b.remaining - currentDebt.value))
+    .map((c) => ({ id: c.id, name: `${fdate(c.date)} · ${c.party} · ${money(c.remaining)}` })));
 
 const showPayPick = ref(false);
 const payLineId = ref<number | null>(null);
