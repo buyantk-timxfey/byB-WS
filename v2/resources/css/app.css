@@ -66,18 +66,18 @@
        та же прозрачность выглядит гораздо более "сквозной". Класс ставится в
        app.ts по navigator.userAgent. Поднимаем плотность стекла компенсирующе. */
     html.is-windows {
-        --glass-fill: rgba(255, 255, 255, 0.88);
-        --glass-fill-strong: rgba(255, 255, 255, 0.94);
+        --glass-fill: rgba(255, 255, 255, 0.97);
+        --glass-fill-strong: rgba(255, 255, 255, 0.99);
         /* Полупрозрачная белая рамка на светлом фоне без сильного блюра почти не видна —
            берём тёмную, чтобы граница читалась независимо от качества blur. */
-        --glass-border: rgba(0, 0, 0, 0.12);
+        --glass-border: rgba(0, 0, 0, 0.16);
         --glass-highlight: rgba(255, 255, 255, 0.7);
     }
     @media (prefers-color-scheme: dark) {
         html.is-windows {
-            --glass-fill: rgba(255, 255, 255, 0.20);
-            --glass-fill-strong: rgba(255, 255, 255, 0.28);
-            --glass-border: rgba(255, 255, 255, 0.20);
+            --glass-fill: rgba(20, 20, 24, 0.92);
+            --glass-fill-strong: rgba(20, 20, 24, 0.97);
+            --glass-border: rgba(255, 255, 255, 0.24);
             --glass-highlight: rgba(255, 255, 255, 0.22);
         }
     }

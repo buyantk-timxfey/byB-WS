@@ -48,13 +48,14 @@ const payVariant = (s: Row) => s.paid >= s.sum && s.sum > 0 ? 'ok' : s.paid > 0 
 // ── Форма документа ──
 const open = ref(false);
 const editingId = ref<number | null>(null);
+const blankForm = {
+    date: '', counterparty_id: null as number | null, name: '', status: 'Ожидает отправки', eta: '',
+    carrier_id: null as number | null, tracking: '', delivery: 0, problem: false, items: [] as Item[],
+};
 const form = useForm<{
     date: string; counterparty_id: number | null; name: string; status: string; eta: string;
     carrier_id: number | null; tracking: string; delivery: number; problem: boolean; items: Item[];
-}>({
-    date: '', counterparty_id: null, name: '', status: 'Ожидает отправки', eta: '',
-    carrier_id: null, tracking: '', delivery: 0, problem: false, items: [],
-});
+}>({ ...blankForm });
 
 const formTotal = computed(() =>
     form.items.reduce((a, i) => a + (Number(i.qty) || 0) * (Number(i.price) || 0), 0) + (Number(form.delivery) || 0));
@@ -134,7 +135,19 @@ async function saveGood(i: number) {
 }
 
 function submit() {
-    const opts = { onSuccess: () => { open.value = false; } };
+    const wasCreate = !editingId.value;
+    const opts = {
+        onSuccess: () => {
+            open.value = false;
+            // Inertia после успешной отправки запоминает just-submitted значения как новый
+            // дефолт для reset() — без этого следующее «Создать» открывалось бы с данными
+            // только что сохранённой поставки.
+            if (wasCreate) {
+                form.defaults({ ...blankForm, items: [] });
+                form.reset();
+            }
+        },
+    };
     if (editingId.value) form.put(`/shipments/${editingId.value}`, opts);
     else form.post('/shipments', opts);
 }
@@ -281,8 +294,9 @@ function destroy() {
             </div>
 
             <template #footer>
-                <button class="btn-primary pressable" style="flex:1;justify-content:center" :disabled="form.processing" @click="submit">
-                    {{ form.status === 'Ожидает отправки' ? 'Сохранить' : 'Сохранить и оприходовать' }}
+                <button class="btn-primary pressable" style="flex:1;justify-content:center;gap:8px" :disabled="form.processing" @click="submit">
+                    <Icon v-if="form.processing" name="loader" :size="16" style="animation:spin 1s linear infinite" />
+                    {{ form.processing ? 'Сохранение…' : (form.status === 'Ожидает отправки' ? 'Сохранить' : 'Сохранить и оприходовать') }}
                 </button>
                 <button v-if="editingId" class="btn-ghost pressable" @click="destroy">Удалить</button>
             </template>
