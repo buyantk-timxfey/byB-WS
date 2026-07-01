@@ -152,7 +152,7 @@ class DashboardController extends Controller
 
         // Почта (если настроена)
         $mailboxes = MailAccount::with(['messages' => fn ($q) => $q->latest('date')->limit(3)])->get()->map(fn ($a) => [
-            'addr' => $a->email, 'unread' => $a->messages()->where('is_read', false)->count(),
+            'id' => $a->id, 'addr' => $a->email, 'unread' => $a->messages()->where('is_read', false)->count(),
             'letters' => $a->messages->map(fn ($m) => ['from' => $m->from_name, 'sub' => $m->subject]),
         ]);
 

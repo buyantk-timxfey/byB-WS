@@ -55,6 +55,24 @@ const restore = (id: string) => { hidden.value = hidden.value.filter((x) => x !=
 const hiddenList = computed(() => hidden.value.map((id) => ({ id, label: labelFor(id) })));
 
 const go = (url: string) => { if (!editMode.value) router.visit(url); };
+
+// Обновление почты: используется и кнопкой в виджете, и автоматически при заходе на главную
+const refreshingMail = ref(false);
+async function refreshMail() {
+    if (refreshingMail.value || !mailboxes.length) return;
+    refreshingMail.value = true;
+    for (const mb of mailboxes) {
+        if (!mb.id) continue;
+        await new Promise<void>((resolve) => {
+            router.post(`/mail/accounts/${mb.id}/sync`, { folder: 'INBOX' }, {
+                preserveScroll: true, preserveState: true,
+                onFinish: () => resolve(),
+            });
+        });
+    }
+    refreshingMail.value = false;
+}
+onMounted(() => { refreshMail(); });
 </script>
 
 <template>
@@ -186,7 +204,16 @@ const go = (url: string) => { if (!editMode.value) router.visit(url); };
 
                         <!-- Почта -->
                         <div v-else-if="element.id === 'mail'" class="glass w-pad wgt-l pressable" @click="go('/mail')">
-                            <span class="h2">Почта</span>
+                            <div class="flex items-center justify-between">
+                                <span class="h2">Почта</span>
+                                <button
+                                    class="pressable flex h-[26px] w-[26px] items-center justify-center rounded-full text-ink-2 hover:text-ink"
+                                    :disabled="refreshingMail"
+                                    @click.stop="refreshMail"
+                                >
+                                    <Icon name="refresh" :size="14" :style="refreshingMail ? 'animation:spin 1s linear infinite' : ''" />
+                                </button>
+                            </div>
                             <div style="flex:1;overflow-y:auto;margin-top:2px">
                                 <div v-for="(mb, idx) in mailboxes" :key="mb.addr" :style="idx ? 'margin-top:14px' : 'margin-top:8px'">
                                     <div class="flex items-center justify-between" style="margin-bottom:4px">

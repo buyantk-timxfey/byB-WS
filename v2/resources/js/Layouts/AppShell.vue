@@ -42,9 +42,26 @@ onMounted(async () => {
             <i class="orb-a"></i><i class="orb-b"></i><i class="orb-c"></i><i class="orb-d"></i>
         </div>
 
-        <!-- ВЕРХ: меню по центру, иконки отдельным овалом справа -->
+        <!-- ВЕРХ: лого слева, меню по центру, иконки отдельным овалом справа -->
         <header class="sticky top-3 z-30 mx-auto mb-5 mt-3 flex max-w-[1400px] items-center gap-3 px-3">
-            <div class="hidden flex-1 lg:block"></div>
+            <div class="flex flex-1 items-center">
+                <!-- Логотип + выпадающее меню -->
+                <div class="relative">
+                    <button class="pressable glass-strong flex h-[42px] w-[42px] items-center justify-center rounded-full" @click="menuOpen = !menuOpen">
+                        <picture>
+                            <source srcset="/images/logo-white.png" media="(prefers-color-scheme: dark)" />
+                            <img src="/images/logo-black.png" alt="byBuka" style="width:20px;height:20px;object-fit:contain" />
+                        </picture>
+                    </button>
+                    <Transition name="menu">
+                        <div v-if="menuOpen" class="user-menu glass-strong" @click="menuOpen = false">
+                            <Link href="/settings" class="um-item"><Icon name="gear" :size="17" /> Настройки</Link>
+                            <Link href="/logout" method="post" as="button" class="um-item um-item--bad"><Icon name="logout" :size="17" /> Выход</Link>
+                        </div>
+                    </Transition>
+                    <div v-if="menuOpen" class="fixed inset-0 z-10" @click="menuOpen = false"></div>
+                </div>
+            </div>
 
             <nav class="glass-strong flex items-center gap-0.5 overflow-x-auto px-2.5 py-2" style="border-radius: 999px; scrollbar-width: none">
                 <Link
@@ -71,20 +88,6 @@ onMounted(async () => {
                         <span v-if="notifCount" class="notif-badge">{{ notifCount }}</span>
                     </button>
                 </div>
-
-                <!-- Аватар + выпадающее меню -->
-                <div class="relative">
-                    <button class="pressable glass-strong flex h-[42px] w-[42px] items-center justify-center rounded-full" @click="menuOpen = !menuOpen">
-                        <span class="text-[14px] font-bold">bB</span>
-                    </button>
-                    <Transition name="menu">
-                        <div v-if="menuOpen" class="user-menu glass-strong" @click="menuOpen = false">
-                            <Link href="/settings" class="um-item"><Icon name="gear" :size="17" /> Настройки</Link>
-                            <Link href="/logout" method="post" as="button" class="um-item um-item--bad"><Icon name="logout" :size="17" /> Выход</Link>
-                        </div>
-                    </Transition>
-                    <div v-if="menuOpen" class="fixed inset-0 z-10" @click="menuOpen = false"></div>
-                </div>
             </div>
         </header>
 
@@ -99,7 +102,7 @@ onMounted(async () => {
 
 <style scoped>
 .notif-badge { position: absolute; top: 1px; right: 1px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--expense); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
-.user-menu { position: absolute; right: 0; top: 50px; z-index: 20; min-width: 180px; border-radius: 16px; padding: 6px; display: flex; flex-direction: column; }
+.user-menu { position: absolute; left: 0; top: 50px; z-index: 20; min-width: 180px; border-radius: 16px; padding: 6px; display: flex; flex-direction: column; }
 .um-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--ink); background: transparent; border: 0; cursor: pointer; text-align: left; width: 100%; }
 .um-item:hover { background: var(--glass-fill); }
 .um-item--bad { color: var(--expense); }
