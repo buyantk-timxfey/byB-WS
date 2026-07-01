@@ -48,7 +48,34 @@ class BankController extends Controller
             'openSales' => $this->openSales(),
             'openShipments' => $this->openShipments(),
             'importAccounts' => Account::orderBy('sort_order')->orderBy('name')->get(['id', 'name']),
+            'balanceSeries' => $this->balanceSeries(),
         ]);
+    }
+
+    // Суммарный баланс всех счетов за последние 30 дней (для мини-графика в аналитике).
+    private function balanceSeries(): array
+    {
+        $today = now()->startOfDay();
+        $from = $today->copy()->subDays(29);
+
+        $base = (float) Account::sum('opening_balance')
+            + (float) DB::table('bank_lines')->where('date', '<', $from->toDateString())->sum('amount');
+
+        // DATE(date) вместо голого date — гарантирует чистый YYYY-MM-DD ключ
+        // независимо от того, как драйвер БД хранит/отдаёт значение колонки date.
+        $deltas = DB::table('bank_lines')
+            ->where('date', '>=', $from->toDateString())
+            ->selectRaw('DATE(date) as d, SUM(amount) as amt')
+            ->groupBy('d')->pluck('amt', 'd');
+
+        $series = [];
+        $running = $base;
+        for ($d = $from->copy(); $d->lte($today); $d->addDay()) {
+            $running += (float) ($deltas[$d->toDateString()] ?? 0);
+            $series[] = round($running, 2);
+        }
+
+        return $series;
     }
 
     public function import(Request $r)

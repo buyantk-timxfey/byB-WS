@@ -348,9 +348,25 @@ html.is-windows .jtable thead th {
 .batch-row .bship { font-weight: 600; }
 .batch-row .num { font-variant-numeric: tabular-nums; }
 /* ── Банк: премиальные карточки счетов ── */
-.bank-cards { display: grid; grid-template-columns: repeat(auto-fill, 260px); gap: 16px; justify-content: start; }
-.bank-card { position: relative; width: 100%; max-width: 260px; aspect-ratio: 85.6 / 53.98; border-radius: 18px; padding: 15px 17px; color: #fff; display: flex; flex-direction: column; box-shadow: 0 14px 40px rgba(0,0,0,.28); overflow: hidden; cursor: default; }
+.bank-top-row { display: flex; align-items: flex-start; gap: 28px; flex-wrap: wrap; }
+/* Веер — карточки внахлёст с разворотом (--fan-r/--fan-y/--fan-z из шаблона),
+   нахлёст небольшой (24px), чтобы вся информация на карточке оставалась читаемой. */
+.bank-cards { display: flex; padding: 10px 24px 10px 0; }
+.bank-card { position: relative; width: 220px; flex-shrink: 0; aspect-ratio: 85.6 / 53.98; border-radius: 18px; padding: 15px 17px; color: #fff; display: flex; flex-direction: column; box-shadow: 0 14px 40px rgba(0,0,0,.28); overflow: hidden; cursor: default;
+    transform: rotate(var(--fan-r, 0deg)) translateY(var(--fan-y, 0px)); z-index: var(--fan-z, 0);
+    transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease; }
+.bank-card + .bank-card { margin-left: -24px; }
+.bank-card:hover { transform: translateY(-14px) scale(1.05); z-index: 50; box-shadow: 0 20px 50px rgba(0,0,0,.36); }
 .bank-card::after { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 80% at 80% 0%, rgba(255,255,255,.32), transparent 60%); pointer-events: none; }
+.bank-analytics { flex: 1; min-width: 220px; padding: 18px 20px; }
+.ba-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+.ba-sum { font-size: 30px; font-weight: 700; letter-spacing: -.02em; margin-top: 4px; }
+.ba-delta { font-size: 13px; font-weight: 600; margin-top: 4px; }
+.ba-spark { margin-top: 14px; }
+@media (max-width: 820px) {
+    .bank-top-row { flex-direction: column; }
+    .bank-cards { padding: 10px 0; }
+}
 .bc-top { display: flex; align-items: center; justify-content: space-between; }
 .bc-bank { font-size: 12px; font-weight: 600; letter-spacing: .01em; opacity: .95; }
 /* Стилизованный EMV-чип — золотистая пластина с полосами контактов */
