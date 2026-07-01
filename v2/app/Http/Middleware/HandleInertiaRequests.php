@@ -36,6 +36,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'idleLockMinutes' => (int) (Setting::get('idle_lock_minutes') ?: 30),
+            'themeMode' => Setting::get('theme_mode') ?: 'system',
         ];
     }
 }

@@ -84,6 +84,62 @@
             --glass-highlight: rgba(255, 255, 255, 0.22);
         }
     }
+
+    /* Тема выбирается в Настройках (светлая/тёмная/системная/по времени) —
+       app.ts ставит соответствующий класс на <html>. Без класса (режим "системная")
+       работает как раньше — через prefers-color-scheme выше. Значения продублированы
+       из :root / его dark-варианта, чтобы переопределить их вне зависимости от OS. */
+    html.theme-light {
+        --bg: #eef0f5;
+        --ink: #0b0b0f;
+        --ink-2: rgba(11, 11, 15, 0.6);
+        --ink-3: rgba(11, 11, 15, 0.4);
+        --glass-fill: rgba(255, 255, 255, 0.45);
+        --glass-fill-strong: rgba(255, 255, 255, 0.6);
+        --glass-solid: rgba(255, 255, 255, 0.92);
+        --glass-border: rgba(255, 255, 255, 0.55);
+        --glass-highlight: rgba(255, 255, 255, 0.9);
+        --shadow: 0 8px 30px rgba(17, 22, 40, 0.1);
+        --shadow-lg: 0 20px 60px rgba(17, 22, 40, 0.14);
+        --orb-a: rgba(10, 132, 255, 0.35);
+        --orb-b: rgba(52, 199, 89, 0.3);
+        --orb-c: rgba(175, 82, 222, 0.3);
+        --orb-d: rgba(255, 159, 10, 0.25);
+    }
+    html.theme-dark {
+        --bg: #0b0b0f;
+        --ink: #f5f6f8;
+        --ink-2: rgba(245, 246, 248, 0.62);
+        --ink-3: rgba(245, 246, 248, 0.4);
+        --glass-fill: rgba(255, 255, 255, 0.07);
+        --glass-fill-strong: rgba(255, 255, 255, 0.12);
+        --glass-solid: rgba(26, 27, 34, 0.96);
+        --glass-border: rgba(255, 255, 255, 0.12);
+        --glass-highlight: rgba(255, 255, 255, 0.16);
+        --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        --shadow-lg: 0 24px 70px rgba(0, 0, 0, 0.6);
+        --orb-a: rgba(10, 132, 255, 0.45);
+        --orb-b: rgba(52, 199, 89, 0.4);
+        --orb-c: rgba(175, 82, 222, 0.45);
+        --orb-d: rgba(255, 159, 10, 0.3);
+    }
+    /* Windows + принудительная тема — те же плотные/непрозрачные значения glass,
+       что и выше, но без привязки к prefers-color-scheme (тема может не совпадать с OS). */
+    html.is-windows.theme-light {
+        --glass-fill: #f4f5f8;
+        --glass-fill-strong: #f8f9fb;
+        --glass-solid: #f8f9fb;
+        --glass-border: rgba(0, 0, 0, 0.16);
+        --glass-highlight: rgba(255, 255, 255, 0.7);
+    }
+    html.is-windows.theme-dark {
+        --glass-fill: #1c1c22;
+        --glass-fill-strong: #202027;
+        --glass-solid: #202027;
+        --glass-border: rgba(255, 255, 255, 0.24);
+        --glass-highlight: rgba(255, 255, 255, 0.22);
+    }
+
     html {
         color-scheme: light dark;
     }

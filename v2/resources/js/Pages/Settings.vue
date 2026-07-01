@@ -24,6 +24,7 @@ const form = useForm({
     acquiring_auto: props.settings.acquiring_auto === '1' || props.settings.acquiring_auto === true,
     stale_days: props.settings.stale_days ?? 60,
     idle_lock_minutes: props.settings.idle_lock_minutes ?? 30,
+    theme_mode: props.settings.theme_mode ?? 'system',
     company_name: props.settings.company_name ?? '',
     company_inn: props.settings.company_inn ?? '',
     company_ogrnip: props.settings.company_ogrnip ?? '',
@@ -155,6 +156,18 @@ function applyPatch() {
 
           </div>
           <div class="set-col">
+            <!-- Тема -->
+            <div class="set-card glass">
+                <div class="set-h"><Icon name="gear" :size="18" /> Тема</div>
+                <div class="seg" style="width:100%">
+                    <button type="button" :class="{ on: form.theme_mode === 'system' }" @click="form.theme_mode = 'system'">Системная</button>
+                    <button type="button" :class="{ on: form.theme_mode === 'light' }" @click="form.theme_mode = 'light'">Светлая</button>
+                    <button type="button" :class="{ on: form.theme_mode === 'dark' }" @click="form.theme_mode = 'dark'">Тёмная</button>
+                    <button type="button" :class="{ on: form.theme_mode === 'auto_time' }" @click="form.theme_mode = 'auto_time'">По времени</button>
+                </div>
+                <div class="set-hint">«По времени» — тёмная с 20:00 до 8:00 по времени Сургута (UTC+5), не зависит от настроек компьютера или телефона. Применяется после «Сохранить».</div>
+            </div>
+
             <!-- Реквизиты -->
             <div class="set-card glass">
                 <div class="set-h"><Icon name="building" :size="18" /> Реквизиты компании</div>
