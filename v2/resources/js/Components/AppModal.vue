@@ -11,7 +11,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey));
 
 <template>
     <Teleport to="body">
-        <div v-if="open" class="modal-ov" @click.self="emit('close')">
+        <div v-if="open" class="modal-ov">
             <div class="modal-box glass-strong">
                 <div class="modal-grip"></div>
                 <div class="drawer-head">
