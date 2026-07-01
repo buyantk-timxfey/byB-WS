@@ -40,7 +40,7 @@ const open = ref(false);
 const editingId = ref<number | null>(null);
 const accountColors = ['#0a84ff', '#ef3124', '#34c759', '#ff9f0a', '#af52de', '#5e5ce6', '#ff375f', '#64748b'];
 const blankForm = {
-    type: 'Оба', name: '', inn: '', contact: '', comment: '',
+    type: 'Поставщик', name: '', inn: '', contact: '', comment: '',
     group_id: null, unit: 'шт', article: '',
     site: '', note: '', last4: '', color: accountColors[0],
 };
