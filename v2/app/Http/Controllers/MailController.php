@@ -28,6 +28,7 @@ class MailController extends Controller
                 'subject'    => $m->subject,
                 'preview'    => $this->cleanBody($m->preview),
                 'body'       => (string) $m->body,
+                'date'       => optional($m->date)?->toIso8601String(),
                 'time'       => optional($m->date)->format('d.m H:i'), 'unread' => ! $m->is_read,
                 'attach'     => $m->has_attach ? 1 : 0, 'party' => $m->counterparty?->name,
             ]);

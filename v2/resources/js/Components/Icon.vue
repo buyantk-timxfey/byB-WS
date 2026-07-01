@@ -22,6 +22,8 @@ const paths: Record<string, string> = {
     logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
     'chevron-left': 'M15 18l-6-6 6-6',
     'chevron-right': 'M9 18l6-6-6-6',
+    'chevron-down': 'M6 9l6 6 6-6',
+    'chevron-up': 'M18 15l-6-6-6 6',
     building: 'M3 21h18M5 21V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v16M14 9h4a1 1 0 0 1 1 1v11M8 8h2M8 12h2M8 16h2',
     doc: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
     refresh: 'M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15',
