@@ -14,17 +14,16 @@ const menuOpen = ref(false);
 const page = usePage();
 const url = computed(() => page.url);
 
-// Цвет — фон бейджа под иконкой (в стиле iOS «Настройки»)
 const nav = [
-    { label: 'Главная', icon: 'home', href: '/dashboard', color: '#0a84ff' },
-    { label: 'Поставки', icon: 'package', href: '/shipments', color: '#ff9f0a' },
-    { label: 'Продажи', icon: 'cart', href: '/sales', color: '#34c759' },
-    { label: 'Склад', icon: 'warehouse', href: '/warehouse', color: '#a2845e' },
-    { label: 'Банк', icon: 'card', href: '/bank', color: '#5e5ce6' },
-    { label: 'Финансы', icon: 'chart', href: '/finances', color: '#ff375f' },
-    { label: 'Почта', icon: 'mail', href: '/mail', color: '#64d2ff' },
-    { label: 'Транспорт', icon: 'truck', href: '/vehicle', color: '#bf5af2' },
-    { label: 'Справочники', icon: 'book', href: '/references', color: '#8e8e93' },
+    { label: 'Главная', icon: 'home', href: '/dashboard' },
+    { label: 'Поставки', icon: 'package', href: '/shipments' },
+    { label: 'Продажи', icon: 'cart', href: '/sales' },
+    { label: 'Склад', icon: 'warehouse', href: '/warehouse' },
+    { label: 'Банк', icon: 'card', href: '/bank' },
+    { label: 'Финансы', icon: 'chart', href: '/finances' },
+    { label: 'Почта', icon: 'mail', href: '/mail' },
+    { label: 'Транспорт', icon: 'truck', href: '/vehicle' },
+    { label: 'Справочники', icon: 'book', href: '/references' },
 ];
 const isActive = (href: string) => url.value.startsWith(href);
 
@@ -69,13 +68,10 @@ onMounted(async () => {
                     v-for="item in nav"
                     :key="item.href"
                     :href="item.href"
-                    class="pressable flex items-center gap-2 whitespace-nowrap rounded-full py-1.5 pl-1.5 pr-3 text-[14px] font-medium"
-                    :class="isActive(item.href) ? '' : 'text-ink-2 hover:text-ink'"
-                    :style="isActive(item.href) ? 'background: var(--ink); color: var(--bg)' : ''"
+                    class="pressable flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2 text-[14px] font-medium"
+                    :class="isActive(item.href) ? 'nav-active' : 'text-ink-2 hover:text-ink'"
                 >
-                    <span class="nav-badge" :style="`background:${item.color}`">
-                        <Icon :name="item.icon" :size="13" />
-                    </span>
+                    <Icon :name="item.icon" :size="17" />
                     <span>{{ item.label }}</span>
                 </Link>
             </nav>
@@ -104,7 +100,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.nav-badge { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 7px; color: #fff; flex-shrink: 0; }
+.nav-active { color: var(--ink); box-shadow: inset 0 0 0 2px var(--info, #0a84ff); }
 .notif-badge { position: absolute; top: 1px; right: 1px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--expense); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
 .user-menu { position: absolute; left: 0; top: 50px; z-index: 20; min-width: 180px; border-radius: 16px; padding: 6px; display: flex; flex-direction: column; }
 .um-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--ink); background: transparent; border: 0; cursor: pointer; text-align: left; width: 100%; }
