@@ -19,10 +19,10 @@ const nav = [
     { label: 'Поставки', icon: 'package', href: '/shipments' },
     { label: 'Продажи', icon: 'cart', href: '/sales' },
     { label: 'Склад', icon: 'warehouse', href: '/warehouse' },
-    { label: 'Банк', icon: 'card', href: '/bank' },
+    { label: 'Банк', icon: 'building-columns', href: '/bank' },
     { label: 'Финансы', icon: 'chart', href: '/finances' },
     { label: 'Почта', icon: 'mail', href: '/mail' },
-    { label: 'Транспорт', icon: 'truck', href: '/vehicle' },
+    { label: 'Транспорт', icon: 'car', href: '/vehicle' },
     { label: 'Справочники', icon: 'book', href: '/references' },
 ];
 const isActive = (href: string) => url.value.startsWith(href);

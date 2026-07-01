@@ -36,6 +36,7 @@ const paths: Record<string, string> = {
     bag: 'M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2',
     wallet: 'M3 7h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zM3 7l3-3h11M16 13h2',
     car: 'M5 16l1.5-5h11L19 16M3 16h18v3H3zM6 19v1M18 19v1',
+    'building-columns': 'M3 22h18M6 18V11M10 18V11M14 18V11M18 18V11M12 2 20 7H4Z',
     check: 'M20 6 9 17l-5-5',
     x: 'M18 6 6 18M6 6l12 12',
     minus: 'M5 12h14',
