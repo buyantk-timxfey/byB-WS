@@ -34,13 +34,12 @@ const save = () => form.put('/settings');
 // ── Смена логина/пароля ──
 const credForm = useForm({
     email: props.currentLogin,
-    current_password: '',
     password: '',
     password_confirmation: '',
 });
 function saveCredentials() {
     credForm.put('/settings/credentials', {
-        onSuccess: () => credForm.reset('current_password', 'password', 'password_confirmation'),
+        onSuccess: () => credForm.reset('password', 'password_confirmation'),
     });
 }
 
@@ -191,11 +190,9 @@ function applyPatch() {
                 <div class="set-hint">Логин и пароль меняются только у вас — нигде больше не сохраняются.</div>
                 <div class="set-grid">
                     <div class="fld"><label>Логин</label><input v-model="credForm.email" autocomplete="username" /></div>
-                    <div class="fld"><label>Текущий пароль</label><input v-model="credForm.current_password" type="password" autocomplete="current-password" /></div>
                     <div class="fld"><label>Новый пароль</label><input v-model="credForm.password" type="password" autocomplete="new-password" placeholder="оставьте пустым, если не меняете" /></div>
                     <div class="fld"><label>Повторите новый пароль</label><input v-model="credForm.password_confirmation" type="password" autocomplete="new-password" /></div>
                 </div>
-                <div v-if="credForm.errors.current_password" class="set-err">{{ credForm.errors.current_password }}</div>
                 <div v-if="credForm.errors.email" class="set-err">{{ credForm.errors.email }}</div>
                 <div v-if="credForm.errors.password" class="set-err">{{ credForm.errors.password }}</div>
                 <div v-if="status" class="set-ok">{{ status }}</div>

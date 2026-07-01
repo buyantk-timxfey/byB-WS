@@ -8,9 +8,7 @@ use App\Models\Setting;
 use App\Models\VatRate;
 use App\Models\WebauthnCredential;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class SettingController extends Controller
@@ -67,13 +65,9 @@ class SettingController extends Controller
             $r->merge(['password' => null]);
         }
         $data = $r->validate([
-            'current_password' => 'required|string',
             'email' => ['required', 'string', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => 'nullable|string|min:6|confirmed',
         ]);
-        if (! Hash::check($data['current_password'], $user->password)) {
-            throw ValidationException::withMessages(['current_password' => 'Неверный текущий пароль']);
-        }
         $user->email = $data['email'];
         if (! empty($data['password'])) {
             $user->password = $data['password'];
