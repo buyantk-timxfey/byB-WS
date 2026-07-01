@@ -16,7 +16,7 @@ const dir = ref<'counterparties' | 'nomenclature' | 'carriers' | 'accounts' | 'a
 const q = ref('');
 const tabs = [
     { id: 'counterparties', label: 'Контрагенты' }, { id: 'nomenclature', label: 'Номенклатура' },
-    { id: 'carriers', label: 'Перевозчики' }, { id: 'accounts', label: 'Счета' }, { id: 'articles', label: 'Статьи затрат' },
+    { id: 'carriers', label: 'Транспортные компании' }, { id: 'accounts', label: 'Счета' }, { id: 'articles', label: 'Статьи затрат' },
 ] as const;
 
 const list = computed<any[]>(() => {
@@ -28,7 +28,7 @@ const list = computed<any[]>(() => {
 
 const debtText = (n: number) => n > 0 ? '+ ' + money(n) + ' (нам)' : n < 0 ? '− ' + money(-n) + ' (мы)' : '—';
 const cpVariant = (t: string) => t === 'Поставщик' ? 'info' : t === 'Покупатель' ? 'ok' : 'neutral';
-const createLabel = computed(() => ({ counterparties: 'контрагента', nomenclature: 'товар', carriers: 'перевозчика', accounts: 'счёт', articles: 'статью' }[dir.value]));
+const createLabel = computed(() => ({ counterparties: 'контрагента', nomenclature: 'товар', carriers: 'транспортную компанию', accounts: 'счёт', articles: 'статью' }[dir.value]));
 
 function cleanupGoods() {
     if (!confirm('Удалить товары, которых нет ни в поставках, ни в продажах, ни на складе?')) return;

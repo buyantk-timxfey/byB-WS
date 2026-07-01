@@ -194,7 +194,7 @@ function destroy() {
                 <div class="fld"><label>ETA</label><input v-model="form.eta" type="date" /></div>
             </div>
             <div class="fld-row">
-                <div class="fld"><label>Перевозчик</label>
+                <div class="fld"><label>Транспортная компания</label>
                     <select v-model="form.carrier_id">
                         <option :value="null">—</option>
                         <option v-for="c in carriers" :key="c.id" :value="c.id">{{ c.name }}</option>
