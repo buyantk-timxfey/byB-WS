@@ -4,6 +4,7 @@ import { Head, useForm } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import AppModal from '@/Components/AppModal.vue';
+import DatePicker from '@/Components/DatePicker.vue';
 import { money, num, date as fdate } from '@/lib/format';
 
 const props = defineProps<{
@@ -101,23 +102,23 @@ const addLabel = computed(() => ({ fuel: 'Заправка', trips: 'Маршр�
 
         <AppModal :open="open" :title="addLabel" @close="open = false">
             <template v-if="tab === 'fuel'">
-                <div class="fld-row"><div class="fld"><label>Дата</label><input v-model="fuel.date" type="date" /></div><div class="fld"><label>АЗС</label><input v-model="fuel.azs" /></div></div>
+                <div class="fld-row"><div class="fld"><label>Дата</label><DatePicker v-model="fuel.date" /></div><div class="fld"><label>АЗС</label><input v-model="fuel.azs" /></div></div>
                 <div class="fld-row"><div class="fld"><label>Литры</label><input v-model.number="fuel.liters" type="number" /></div><div class="fld"><label>Цена/л</label><input v-model.number="fuel.price" type="number" step="0.01" /></div></div>
                 <div class="fld-row"><div class="fld"><label>Одометр</label><input v-model.number="fuel.odometer" type="number" /></div><div class="fld"><label>Оплата</label><select v-model="fuel.paid_from"><option value="card">Топл. карта</option><option value="cash">Наличные</option></select></div></div>
             </template>
             <template v-else-if="tab === 'trips'">
-                <div class="fld"><label>Дата</label><input v-model="trip.date" type="date" /></div>
+                <div class="fld"><label>Дата</label><DatePicker v-model="trip.date" /></div>
                 <div class="fld"><label>Маршрут</label><input v-model="trip.route" /></div>
                 <div class="fld-row"><div class="fld"><label>Км</label><input v-model.number="trip.km" type="number" /></div><div class="fld"><label>Топливо, л (авто)</label><input v-model.number="trip.fuel" type="number" /></div></div>
                 <div class="fld"><label>Цель</label><input v-model="trip.goal" /></div>
             </template>
             <template v-else-if="tab === 'wash'">
-                <div class="fld-row"><div class="fld"><label>Дата</label><input v-model="wash.date" type="date" /></div><div class="fld"><label>Сумма</label><input v-model.number="wash.sum" type="number" /></div></div>
+                <div class="fld-row"><div class="fld"><label>Дата</label><DatePicker v-model="wash.date" /></div><div class="fld"><label>Сумма</label><input v-model.number="wash.sum" type="number" /></div></div>
                 <div class="fld"><label>Место</label><input v-model="wash.place" /></div>
                 <div class="fld"><label>Тип</label><input v-model="wash.type" /></div>
             </template>
             <template v-else>
-                <div class="fld-row"><div class="fld"><label>Дата</label><input v-model="topup.date" type="date" /></div><div class="fld"><label>Сумма</label><input v-model.number="topup.sum" type="number" /></div></div>
+                <div class="fld-row"><div class="fld"><label>Дата</label><DatePicker v-model="topup.date" /></div><div class="fld"><label>Сумма</label><input v-model.number="topup.sum" type="number" /></div></div>
                 <div class="fld"><label>Источник</label><input v-model="topup.source" placeholder="перевод со счёта…" /></div>
             </template>
             <template #footer>

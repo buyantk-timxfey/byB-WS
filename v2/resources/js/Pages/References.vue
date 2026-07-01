@@ -5,6 +5,7 @@ import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
+import SearchSelect from '@/Components/SearchSelect.vue';
 import { money, num } from '@/lib/format';
 
 const props = defineProps<{
@@ -182,7 +183,7 @@ function destroy() {
             <template v-else-if="dir === 'nomenclature'">
                 <div class="fld"><label>Наименование</label><input v-model="form.name" /></div>
                 <div class="fld-row">
-                    <div class="fld"><label>Группа</label><select v-model="form.group_id"><option :value="null">—</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.name }}</option></select></div>
+                    <div class="fld"><label>Группа</label><SearchSelect v-model="form.group_id" :options="groups" placeholder="—" /></div>
                     <div class="fld"><label>Ед. изм.</label><input v-model="form.unit" /></div>
                 </div>
                 <div class="fld"><label>Артикул</label><input v-model="form.article" /></div>

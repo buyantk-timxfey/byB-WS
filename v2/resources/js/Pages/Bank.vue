@@ -5,6 +5,7 @@ import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
+import SearchSelect from '@/Components/SearchSelect.vue';
 import { money, signed, initials } from '@/lib/format';
 
 type Line = { id: number; date: string; party: string; purpose: string | null; account: string; amount: number; status: string; inn: string | null; link: string | null };
@@ -160,10 +161,12 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                 </div>
                 <div class="fld" v-if="cur.amount < 0">
                     <label>Или отнести на статью</label>
-                    <select @change="pickArticle(Number(($event.target as HTMLSelectElement).value))">
-                        <option value="">— выбрать статью —</option>
-                        <option v-for="a in articles" :key="a.id" :value="a.id">{{ a.name }}</option>
-                    </select>
+                    <SearchSelect
+                        :modelValue="sel?.target_type === 'expense_article' ? sel.target_id : null"
+                        :options="articles"
+                        placeholder="— выбрать статью —"
+                        @update:modelValue="(id) => id && pickArticle(id)"
+                    />
                 </div>
                 <button class="link-btn" @click="pickTransfer">Это перевод между своими счетами</button>
                 <div v-if="sel" class="rec-note" style="background:rgba(52,199,89,.12);border-color:rgba(52,199,89,.3);color:var(--income)">

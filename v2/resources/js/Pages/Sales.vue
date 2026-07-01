@@ -5,6 +5,8 @@ import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
+import SearchSelect from '@/Components/SearchSelect.vue';
+import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
 
 type Item = { nomenclature_id: number | null; qty: number | null; price: number | null; cost?: number };
@@ -197,7 +199,7 @@ function payNow() {
             <div class="receipt">
                 <div class="rc-head">
                     <div class="rc-title">КАССОВЫЙ ЧЕК</div>
-                    <input v-model="form.date" type="date" class="rc-date" />
+                    <DatePicker v-model="form.date" />
                 </div>
                 <div class="rc-pay">
                     <button :class="{ on: form.payment_method === 'Карта' }" @click="form.payment_method = 'Карта'">Карта</button>
@@ -206,10 +208,7 @@ function payNow() {
 
                 <div class="rc-lines">
                     <div v-for="(it, i) in form.items" :key="i" class="rc-line">
-                        <select v-model="it.nomenclature_id" class="rc-good">
-                            <option :value="null">— товар —</option>
-                            <option v-for="g in goods" :key="g.id" :value="g.id">{{ g.name }}</option>
-                        </select>
+                        <SearchSelect v-model="it.nomenclature_id" :options="goods" placeholder="— товар —" class="rc-good" />
                         <input v-model.number="it.qty" type="number" placeholder="кол-во" class="rc-qty" />
                         <span class="rc-x">×</span>
                         <input v-model.number="it.price" type="number" placeholder="цена" class="rc-price" />
@@ -239,19 +238,16 @@ function payNow() {
         <AppModal v-else :open="open" :title="editingId ? 'Безналичная продажа' : 'Новая продажа'" @close="open = false">
             <div class="fld-row">
                 <div class="fld"><label>Покупатель</label>
-                    <select v-model="form.counterparty_id">
-                        <option :value="null">— выбрать —</option>
-                        <option v-for="c in buyers" :key="c.id" :value="c.id">{{ c.name }}</option>
-                    </select>
+                    <SearchSelect v-model="form.counterparty_id" :options="buyers" placeholder="— выбрать —" />
                 </div>
                 <div class="fld"><label>Статус</label>
                     <select v-model="form.status"><option>Выставлен</option><option>Оплачен</option><option>Отменён</option></select>
                 </div>
             </div>
             <div class="fld-row">
-                <div class="fld"><label>Дата</label><input v-model="form.date" type="date" /></div>
+                <div class="fld"><label>Дата</label><DatePicker v-model="form.date" /></div>
                 <div class="fld"><label>Счёт зачисления</label>
-                    <select v-model="form.account_id"><option :value="null">—</option><option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option></select>
+                    <SearchSelect v-model="form.account_id" :options="accounts" placeholder="—" />
                 </div>
             </div>
 
@@ -261,10 +257,7 @@ function payNow() {
                     <button class="btn-ghost" style="padding:6px 12px;font-size:13px" @click="addItem">+ Товар</button>
                 </div>
                 <div v-for="(it, i) in form.items" :key="i" class="sale-item">
-                    <select v-model="it.nomenclature_id">
-                        <option :value="null">— товар —</option>
-                        <option v-for="g in goods" :key="g.id" :value="g.id">{{ g.name }}</option>
-                    </select>
+                    <SearchSelect v-model="it.nomenclature_id" :options="goods" placeholder="— товар —" />
                     <input v-model.number="it.qty" type="number" placeholder="кол-во" />
                     <input v-model.number="it.price" type="number" placeholder="цена" />
                     <button class="link-btn link-btn--bad" @click="removeItem(i)">✕</button>
@@ -310,9 +303,8 @@ function payNow() {
 
 /* Кассовый чек */
 .receipt { display: flex; flex-direction: column; gap: 12px; }
-.rc-head { display: flex; align-items: center; justify-content: space-between; }
+.rc-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .rc-title { font-family: 'SF Mono', ui-monospace, monospace; letter-spacing: 2px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
-.rc-date { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 6px 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
 .rc-pay { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 12px; }
 .rc-pay button { padding: 9px 0; border-radius: 9px; border: none; background: transparent; color: var(--ink-2); font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .12s, color .12s; }
 .rc-pay button.on { background: var(--accent, #0a84ff); color: #fff; }
