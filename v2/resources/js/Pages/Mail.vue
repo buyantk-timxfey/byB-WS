@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
+import DOMPurify from 'dompurify';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import AppModal from '@/Components/AppModal.vue';
@@ -36,7 +37,45 @@ function stripHtml(text: string): string {
     });
     return (div.textContent ?? div.innerText ?? '').replace(/\n{3,}/g, '\n\n').trim();
 }
-const selectedBody = computed(() => stripHtml(selected.value?.body ?? ''));
+
+// HTML-письма рендерятся как есть (в изолированном iframe), обычный текст — построчно
+const isHtmlBody = computed(() => !!selected.value?.body && /<[a-z!]/i.test(selected.value.body));
+const selectedBody = computed(() => (isHtmlBody.value ? '' : stripHtml(selected.value?.body ?? '')));
+
+// Санитизирует HTML письма (DOMPurify) и оборачивает в полноценный документ для iframe:
+// CSP запрещает скрипты, ссылки открываются в новой вкладке, картинки не растягивают вёрстку.
+const selectedHtmlDoc = computed(() => {
+    if (!isHtmlBody.value) return '';
+    const clean = DOMPurify.sanitize(selected.value.body, {
+        WHOLE_DOCUMENT: true,
+        FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'textarea', 'select', 'base', 'audio', 'video', 'meta'],
+        FORBID_ATTR: ['srcdoc'],
+    });
+    const doc = new DOMParser().parseFromString(clean, 'text/html');
+    const csp = doc.createElement('meta');
+    csp.setAttribute('http-equiv', 'Content-Security-Policy');
+    csp.setAttribute('content', "script-src 'none'; base-uri 'none';");
+    doc.head.prepend(csp);
+    const charset = doc.createElement('meta');
+    charset.setAttribute('charset', 'utf-8');
+    doc.head.prepend(charset);
+    const base = doc.createElement('base');
+    base.setAttribute('target', '_blank');
+    doc.head.appendChild(base);
+    const reset = doc.createElement('style');
+    reset.textContent = 'html,body{margin:0;padding:10px;font-family:-apple-system,system-ui,sans-serif;font-size:14px;color:#1a1a1a;word-wrap:break-word;overflow-wrap:break-word}img{max-width:100%;height:auto}table{max-width:100%}';
+    doc.head.appendChild(reset);
+    return '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+});
+
+const bodyFrame = ref<HTMLIFrameElement | null>(null);
+function onFrameLoad() {
+    try {
+        const doc = bodyFrame.value?.contentDocument;
+        const h = doc ? Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight ?? 0) : 0;
+        if (bodyFrame.value && h) bodyFrame.value.style.height = h + 'px';
+    } catch {}
+}
 
 function openMsg(m: any) {
     selectedId.value = m.id;
@@ -136,7 +175,15 @@ onUnmounted(() => { if (autoTimer !== null) { clearInterval(autoTimer); autoTime
                         <span v-if="selected.party" class="pill pill--info mr-link"><Icon name="building" :size="12" /> {{ selected.party }}</span>
                     </div>
                 </div>
-                <div class="mr-body">{{ selectedBody }}</div>
+                <iframe
+                    v-if="isHtmlBody"
+                    ref="bodyFrame"
+                    class="mr-body-frame"
+                    sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                    :srcdoc="selectedHtmlDoc"
+                    @load="onFrameLoad"
+                ></iframe>
+                <div v-else class="mr-body">{{ selectedBody }}</div>
                 <div class="mr-actions">
                     <button class="btn-primary pressable" @click="compose = true">Ответить</button>
                     <button class="btn-ghost pressable" @click="router.delete(`/mail/${selected.id}`)">Удалить</button>
@@ -164,6 +211,7 @@ onUnmounted(() => { if (autoTimer !== null) { clearInterval(autoTimer); autoTime
 
 <style scoped>
 .mail-area { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 12px; padding: 10px 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; resize: vertical; }
+.mr-body-frame { width: 100%; min-height: 120px; border: 0; background: #fff; border-radius: 8px; }
 .sync-error { display: flex; align-items: center; gap: 8px; padding: 10px 14px; margin-bottom: 12px; background: color-mix(in srgb, var(--expense) 12%, transparent); border: 1px solid color-mix(in srgb, var(--expense) 30%, transparent); border-radius: 12px; color: var(--expense); font-size: 13px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

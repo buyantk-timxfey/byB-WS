@@ -27,7 +27,7 @@ class MailController extends Controller
                 'from'       => $m->from_name ?? $m->from_email ?? '—', 'email' => $m->from_email,
                 'subject'    => $m->subject,
                 'preview'    => $this->cleanBody($m->preview),
-                'body'       => $this->cleanBody($m->body),
+                'body'       => (string) $m->body,
                 'time'       => optional($m->date)->format('d.m H:i'), 'unread' => ! $m->is_read,
                 'attach'     => $m->has_attach ? 1 : 0, 'party' => $m->counterparty?->name,
             ]);
@@ -344,7 +344,7 @@ class MailController extends Controller
                         'account_id' => $account->id, 'folder' => $targetFolder, 'uid' => (string) $uid,
                         'from_name'  => $fromName ?: null, 'from_email' => $fromEmail ?: null,
                         'subject'    => $subject ?: null,
-                        'preview'    => mb_substr(trim($body), 0, 120), 'body' => $body,
+                        'preview'    => $this->makePreview($body), 'body' => $body,
                         'date'       => $msg->date ? date('Y-m-d H:i:s', strtotime($msg->date) ?: time()) : now(),
                         'is_read'    => (bool) ($msg->seen ?? false),
                     ]);
@@ -483,14 +483,9 @@ class MailController extends Controller
         };
         $body = (string) @mb_convert_encoding($body, 'UTF-8', $charset);
         if ($subtype === 'html') {
-            // Удаляем содержимое <style> и <script> до strip_tags, иначе CSS попадает в текст
-            $body = preg_replace('/<style[^>]*>.*?<\/style>/si', '', $body);
-            $body = preg_replace('/<script[^>]*>.*?<\/script>/si', '', $body);
-            // Вставляем перенос строки на месте блочных тегов — иначе соседние <div>/<p>
-            // без пробела между ними склеиваются strip_tags() в сплошной текст
-            $body = preg_replace('/<\/?(?:div|p|br|tr|td|li|h[1-6]|table|blockquote)(?:\s[^>]*)?>/i', "\n", $body);
-            $body = trim((string) preg_replace('/[ \t]*\R+[ \t]*/u', "\n", strip_tags($body)));
-            $body = html_entity_decode($body, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            // HTML сохраняем целиком (для рендера на фронтенде в изолированном iframe
+            // через DOMPurify) — убираем только <script>, стили и вёрстку не трогаем.
+            $body = trim((string) preg_replace('/<script\b[^>]*>.*?<\/script>/si', '', $body));
         }
 
         return $body;
@@ -564,7 +559,7 @@ class MailController extends Controller
                 MailMessage::create([
                     'account_id' => $account->id, 'folder' => $targetFolder, 'uid' => (string) $uid,
                     'from_name'  => $fromName, 'from_email' => $fromEmail, 'subject' => $subject,
-                    'preview'    => mb_substr(trim($body), 0, 120), 'body' => $body,
+                    'preview'    => $this->makePreview($body), 'body' => $body,
                     'date'       => $date, 'is_read' => $msg['seen'],
                 ]);
             }
@@ -675,17 +670,32 @@ class MailController extends Controller
         if (! mb_check_encoding($out, 'UTF-8')) {
             $out = (string) @mb_convert_encoding($out, 'UTF-8', 'Windows-1251, ISO-8859-1, UTF-8');
         }
-        // Та же логика что и в fetchPlainBody: убираем <style>/<script> ДО strip_tags
+        // HTML-письма сохраняем целиком (для полноценного рендера на фронтенде в
+        // изолированном sandbox-iframe через DOMPurify) — убираем только <script>.
+        // Санитизация от XSS выполняется на фронтенде (DOMPurify + sandbox без allow-scripts).
         if (preg_match('/<[a-z!]/i', $out)) {
-            $out = preg_replace('/<style[^>]*>.*?<\/style>/si', '', $out);
-            $out = preg_replace('/<script[^>]*>.*?<\/script>/si', '', $out);
-            // Вставляем перенос строки на месте блочных тегов — иначе соседние <div>/<p>
-            // без пробела между ними склеиваются strip_tags() в сплошной текст
-            $out = preg_replace('/<\/?(?:div|p|br|tr|td|li|h[1-6]|table|blockquote)(?:\s[^>]*)?>/i', "\n", $out);
-            $out = html_entity_decode(strip_tags($out), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-            $out = trim((string) preg_replace('/[ \t]*\R+[ \t]*/u', "\n", $out));
+            $out = trim((string) preg_replace('/<script\b[^>]*>.*?<\/script>/si', '', $out));
         }
 
         return $out;
+    }
+
+    // Короткий текстовый превью для списка писем — всегда чистый текст без тегов,
+    // независимо от того, HTML тело письма или plain.
+    private function makePreview(string $body): string
+    {
+        $text = trim($body);
+        if ($text === '') {
+            return '';
+        }
+        if (preg_match('/<[a-z!]/i', $text)) {
+            $text = (string) preg_replace('/<style\b[^>]*>.*?<\/style>/si', '', $text);
+            $text = (string) preg_replace('/<script\b[^>]*>.*?<\/script>/si', '', $text);
+            $text = (string) preg_replace('/<\/?(?:div|p|br|tr|td|li|h[1-6]|table|blockquote)(?:\s[^>]*)?>/i', ' ', $text);
+            $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $text = (string) preg_replace('/\s+/u', ' ', $text);
+        }
+
+        return mb_substr(trim($text), 0, 120);
     }
 }
