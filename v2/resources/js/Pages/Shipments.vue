@@ -219,7 +219,7 @@ function destroy() {
                     <thead>
                         <tr>
                             <th>№</th><th>Дата</th><th>Поставщик</th><th>Название</th>
-                            <th class="num">Сумма</th><th class="pay-col"><Icon name="paperclip" :size="14" /></th><th>Статус</th><th>ETA</th>
+                            <th class="num">Сумма</th><th class="pay-col"><Icon name="link" :size="14" /></th><th>Статус</th><th>ETA</th>
                         </tr>
                     </thead>
                     <tbody>
