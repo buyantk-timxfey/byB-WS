@@ -39,11 +39,12 @@ function cleanupGoods() {
 const open = ref(false);
 const editingId = ref<number | null>(null);
 const accountColors = ['#0a84ff', '#ef3124', '#34c759', '#ff9f0a', '#af52de', '#5e5ce6', '#ff375f', '#64748b'];
-const form = useForm<Record<string, any>>({
+const blankForm = {
     type: 'Оба', name: '', inn: '', contact: '', comment: '',
     group_id: null, unit: 'шт', article: '',
     site: '', note: '', last4: '', color: accountColors[0],
-});
+};
+const form = useForm<Record<string, any>>({ ...blankForm });
 
 function create() {
     editingId.value = null;
@@ -66,7 +67,19 @@ function payload() {
 }
 function submit() {
     form.transform(payload);
-    const opts = { onSuccess: () => { open.value = false; } };
+    const wasCreate = !editingId.value;
+    const opts = {
+        onSuccess: () => {
+            open.value = false;
+            // Inertia после успешной отправки сам делает отправленные значения новым
+            // "дефолтом" для reset() — из-за этого создание следующей записи открывало
+            // форму, уже заполненную предыдущей. Возвращаем дефолты к пустым явно.
+            if (wasCreate) {
+                form.defaults({ ...blankForm });
+                form.reset();
+            }
+        },
+    };
     if (editingId.value) form.put(`/references/${dir.value}/${editingId.value}`, opts);
     else form.post(`/references/${dir.value}`, opts);
 }
