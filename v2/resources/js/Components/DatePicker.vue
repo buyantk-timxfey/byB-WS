@@ -19,6 +19,16 @@ function parseVal(v: string): Date | null {
 const open = ref(false);
 const root = ref<HTMLElement | null>(null);
 const cur = ref(parseVal(props.modelValue) ?? new Date());
+const popStyle = ref<Record<string, string>>({});
+
+// Попап рендерится через Teleport в <body> с fixed-позицией по координатам поля —
+// иначе position:absolute внутри модалки раздувает её scrollHeight (особенно
+// заметно на Windows, где скроллбар всегда видимый, в отличие от macOS).
+function updatePosition() {
+    const r = root.value?.getBoundingClientRect();
+    if (!r) return;
+    popStyle.value = { position: 'fixed', left: `${r.left}px`, top: `${r.bottom + 6}px` };
+}
 
 watch(() => props.modelValue, (v) => {
     const d = parseVal(v);
@@ -46,13 +56,24 @@ function pick(key: string) { emit('update:modelValue', key); open.value = false;
 function clear() { emit('update:modelValue', ''); open.value = false; }
 function toggle() {
     open.value = !open.value;
-    if (open.value) cur.value = parseVal(props.modelValue) ?? new Date();
+    if (open.value) {
+        cur.value = parseVal(props.modelValue) ?? new Date();
+        updatePosition();
+    }
 }
 function onClickOutside(e: MouseEvent) {
     if (root.value && !root.value.contains(e.target as Node)) open.value = false;
 }
-onMounted(() => document.addEventListener('mousedown', onClickOutside));
-onUnmounted(() => document.removeEventListener('mousedown', onClickOutside));
+onMounted(() => {
+    document.addEventListener('mousedown', onClickOutside);
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+});
+onUnmounted(() => {
+    document.removeEventListener('mousedown', onClickOutside);
+    window.removeEventListener('scroll', updatePosition, true);
+    window.removeEventListener('resize', updatePosition);
+});
 </script>
 
 <template>
@@ -61,29 +82,31 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside));
             <span :class="{ 'dpick-ph': !modelValue }">{{ modelValue ? fdate(modelValue) : (placeholder ?? 'Выбрать дату') }}</span>
             <Icon name="calendar" :size="16" class="dpick-ic" />
         </button>
-        <div v-if="open" class="dpick-pop glass-strong">
-            <div class="dpick-head">
-                <button type="button" class="pressable dpick-nav" @click="step(-1)"><Icon name="chevron-left" :size="16" /></button>
-                <span>{{ title }}</span>
-                <button type="button" class="pressable dpick-nav" @click="step(1)"><Icon name="chevron-right" :size="16" /></button>
+        <Teleport to="body">
+            <div v-if="open" class="dpick-pop glass-strong" :style="popStyle">
+                <div class="dpick-head">
+                    <button type="button" class="pressable dpick-nav" @click="step(-1)"><Icon name="chevron-left" :size="16" /></button>
+                    <span>{{ title }}</span>
+                    <button type="button" class="pressable dpick-nav" @click="step(1)"><Icon name="chevron-right" :size="16" /></button>
+                </div>
+                <div class="dpick-wd">
+                    <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+                </div>
+                <div class="dpick-grid">
+                    <template v-for="(c, i) in cells" :key="i">
+                        <div v-if="!c"></div>
+                        <button
+                            v-else
+                            type="button"
+                            class="dpick-day"
+                            :class="{ today: c.key === todayKey, sel: c.key === selectedKey }"
+                            @click="pick(c.key)"
+                        >{{ c.d }}</button>
+                    </template>
+                </div>
+                <button v-if="modelValue" type="button" class="dpick-clear" @click="clear">Очистить</button>
             </div>
-            <div class="dpick-wd">
-                <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
-            </div>
-            <div class="dpick-grid">
-                <template v-for="(c, i) in cells" :key="i">
-                    <div v-if="!c"></div>
-                    <button
-                        v-else
-                        type="button"
-                        class="dpick-day"
-                        :class="{ today: c.key === todayKey, sel: c.key === selectedKey }"
-                        @click="pick(c.key)"
-                    >{{ c.d }}</button>
-                </template>
-            </div>
-            <button v-if="modelValue" type="button" class="dpick-clear" @click="clear">Очистить</button>
-        </div>
+        </Teleport>
     </div>
 </template>
 
@@ -93,7 +116,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside));
 .dpick.open .dpick-input { border-color: var(--ink-3); }
 .dpick-ph { color: var(--ink-3); }
 .dpick-ic { color: var(--ink-3); flex-shrink: 0; }
-.dpick-pop { position: absolute; left: 0; top: calc(100% + 6px); z-index: 30; width: 280px; border-radius: 16px; padding: 12px; }
+.dpick-pop { position: fixed; z-index: 100; width: 280px; border-radius: 16px; padding: 12px; }
 .dpick-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 14px; font-weight: 600; }
 .dpick-nav { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; color: var(--ink-2); }
 .dpick-wd { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; color: var(--ink-3); margin-bottom: 4px; }

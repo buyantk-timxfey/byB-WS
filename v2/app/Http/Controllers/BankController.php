@@ -35,6 +35,10 @@ class BankController extends Controller
                 'amount' => (float) $l->amount, 'status' => $l->status,
                 'inn' => $l->inn,
                 'link' => $this->matchLabel($l),
+                'match' => $l->matches->first() ? [
+                    'target_type' => $l->matches->first()->target_type,
+                    'target_id'   => $l->matches->first()->target_id,
+                ] : null,
             ]);
 
         return Inertia::render('Bank', [

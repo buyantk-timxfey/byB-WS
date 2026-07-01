@@ -8,7 +8,11 @@ import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
 import { money, signed, initials } from '@/lib/format';
 
-type Line = { id: number; date: string; party: string; purpose: string | null; account: string; amount: number; status: string; inn: string | null; link: string | null };
+type Line = {
+    id: number; date: string; party: string; purpose: string | null; account: string; amount: number;
+    status: string; inn: string | null; link: string | null;
+    match: { target_type: string; target_id: number | null } | null;
+};
 type Doc = { id: number; number: string; party: string; sum: number; debt: number; inn: string | null };
 
 const props = defineProps<{
@@ -39,7 +43,9 @@ const candidates = computed<Doc[]>(() => cur.value ? (cur.value.amount > 0 ? pro
 
 function reconcile(l: Line) {
     cur.value = l;
-    sel.value = null;
+    // Если операция уже разнесена (полностью или частично) — подставляем текущий выбор,
+    // чтобы модалка при повторном открытии показывала, куда операция отнесена сейчас.
+    sel.value = l.match ? { target_type: l.match.target_type, target_id: l.match.target_id, amount: Math.abs(l.amount) } : null;
     open.value = true;
 }
 function pickDoc(d: Doc) {
