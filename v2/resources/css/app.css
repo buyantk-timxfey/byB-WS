@@ -62,24 +62,34 @@
         }
     }
 
-    /* Windows (Chrome/Edge) рендерит backdrop-filter слабее, чем macOS/Safari —
-       та же прозрачность выглядит гораздо более "сквозной". Класс ставится в
-       app.ts по navigator.userAgent. Поднимаем плотность стекла компенсирующе. */
+    /* Windows (Chrome/Edge/Firefox) рендерит backdrop-filter ненадёжно — на разных
+       машинах то слабее, то вообще без блюра, из-за чего подбор прозрачности через
+       alpha не даёт стабильного результата. Вместо попытки сделать полупрозрачное
+       "стекло" убедительным — на Windows делаем его полностью непрозрачным (alpha=1)
+       и выключаем сам backdrop-filter, чтобы вид не зависел от качества рендеринга.
+       Класс ставится в app.ts по navigator.userAgent. На macOS/iOS ничего не меняется. */
     html.is-windows {
-        --glass-fill: rgba(255, 255, 255, 0.97);
-        --glass-fill-strong: rgba(255, 255, 255, 0.99);
-        /* Полупрозрачная белая рамка на светлом фоне без сильного блюра почти не видна —
-           берём тёмную, чтобы граница читалась независимо от качества blur. */
+        --glass-fill: #f4f5f8;
+        --glass-fill-strong: #f8f9fb;
+        --glass-solid: #f8f9fb;
         --glass-border: rgba(0, 0, 0, 0.16);
         --glass-highlight: rgba(255, 255, 255, 0.7);
     }
     @media (prefers-color-scheme: dark) {
         html.is-windows {
-            --glass-fill: rgba(20, 20, 24, 0.92);
-            --glass-fill-strong: rgba(20, 20, 24, 0.97);
+            --glass-fill: #1c1c22;
+            --glass-fill-strong: #202027;
+            --glass-solid: #202027;
             --glass-border: rgba(255, 255, 255, 0.24);
             --glass-highlight: rgba(255, 255, 255, 0.22);
         }
+    }
+    html.is-windows .glass,
+    html.is-windows .glass-strong,
+    html.is-windows .editbtn,
+    html.is-windows .jtable thead th {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
     }
 
     html {

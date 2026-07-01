@@ -310,11 +310,6 @@ function destroy() {
                     </div>
                     <button v-else type="button" class="btn-ghost pressable" style="margin-top:8px" @click="showPayPick = true"><Icon name="plus" :size="14" /> Привязать оплату</button>
                     <div v-if="!bankCandidates.length && !(currentRow?.payments ?? []).length" class="text-ink-3" style="font-size:12px;margin-top:6px">Нет неразнесённых операций в выписке — сначала загрузите её на странице Банк.</div>
-
-                    <div class="modal-total">
-                        <span class="text-ink-2 text-[14px]">Долг поставщику</span>
-                        <span class="tnum text-[18px] font-bold">{{ money(currentDebt) }}</span>
-                    </div>
                 </template>
             </div>
 
