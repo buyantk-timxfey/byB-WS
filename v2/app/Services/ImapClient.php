@@ -88,9 +88,70 @@ class ImapClient
     }
 
     /** Заголовки (From/Subject/Date), тело и флаг прочтения по UID.
-     *  Тянет несколько BODY-частей за один запрос, чтобы корректно обрабатывать
-     *  вложенные multipart (где BODY[1] содержит сырые MIME-разделители). */
+     *  Сначала разбирает BODYSTRUCTURE, чтобы найти реальный путь к TEXT/HTML или
+     *  TEXT/PLAIN части независимо от глубины вложенности (multipart/related с
+     *  картинками внутри multipart/alternative и т.п. — путь может быть "1.1.2").
+     *  Если структуру разобрать не удалось — используется старая эвристика с
+     *  фиксированными номерами частей. */
     public function fetch(int $uid): array
+    {
+        try {
+            $result = $this->fetchViaStructure($uid);
+            if ($result['body'] !== '') {
+                return $result;
+            }
+        } catch (\Throwable) {
+            // структура не распарсилась — падаем в эвристику ниже
+        }
+
+        return $this->fetchHeuristic($uid);
+    }
+
+    private function fetchViaStructure(int $uid): array
+    {
+        $resp = $this->command(
+            "UID FETCH $uid (FLAGS BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)] BODYSTRUCTURE)"
+        );
+        $header = '';
+        foreach ($this->extractLiterals($resp) as $lit) {
+            if (stripos($lit['key'], '[HEADER') !== false) {
+                $header = $lit['value'];
+            }
+        }
+        $seen = (bool) preg_match('/FLAGS \([^)]*\\\\Seen/i', $resp);
+
+        $path = null;
+        $kw   = stripos($resp, 'BODYSTRUCTURE');
+        if ($kw !== false) {
+            $paren = strpos($resp, '(', $kw);
+            if ($paren !== false) {
+                $expr = $this->extractBalanced($resp, $paren);
+                if ($expr !== null) {
+                    $pos  = 0;
+                    $tree = $this->parseImapNode($expr, $pos);
+                    if (is_array($tree)) {
+                        $path = $this->pickTextPath($tree);
+                    }
+                }
+            }
+        }
+
+        $body = '';
+        if ($path !== null) {
+            $bresp = $this->command("UID FETCH $uid (BODY.PEEK[$path])");
+            foreach ($this->extractLiterals($bresp) as $lit) {
+                if (preg_match('/BODY(?:\.PEEK)?\[/i', $lit['key'])) {
+                    $body = $lit['value'];
+                }
+            }
+        }
+
+        return ['header' => $header, 'body' => $body, 'seen' => $seen];
+    }
+
+    // Запасной путь на случай, если BODYSTRUCTURE не удалось разобрать: фиксированные
+    // номера частей, HTML предпочтителен (см. историю в комментариях коммитов).
+    private function fetchHeuristic(int $uid): array
     {
         $resp = $this->command(
             "UID FETCH $uid (FLAGS BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)] BODY.PEEK[1] BODY.PEEK[1.1] BODY.PEEK[1.2] BODY.PEEK[2])"
@@ -104,12 +165,6 @@ class ImapClient
                 $parts[$m[1]] = $lit['value'];
             }
         }
-        // Порядок: HTML-часть вложенного multipart (1.2) предпочтительна — у многих
-        // отправителей авто-сгенерированная plain-text альтернатива (1.1) склеена без
-        // переносов строк, тогда как их же HTML-версия структурирована тегами (div/p/br),
-        // которые decodeBody() превращает в переносы. Плоские части (1) — для не-multipart
-        // писем. Вложения (PDF/PNG, часто part 2) в конце и обнаруживаются как бинарные
-        // в decodeBody, что возвращает пустую строку.
         $body = '';
         foreach (['1.2', '1.1', '1', '2'] as $part) {
             $candidate = $parts[$part] ?? '';
@@ -121,6 +176,134 @@ class ImapClient
         $seen = (bool) preg_match('/FLAGS \([^)]*\\\\Seen/i', $resp);
 
         return ['header' => $header, 'body' => $body, 'seen' => $seen];
+    }
+
+    // Вытаскивает сбалансированную скобочную группу, начиная с позиции открывающей '(' —
+    // учитывает кавычки, чтобы скобки внутри строк не ломали подсчёт глубины.
+    private function extractBalanced(string $s, int $start): ?string
+    {
+        $depth   = 0;
+        $n       = strlen($s);
+        $inQuote = false;
+        for ($i = $start; $i < $n; $i++) {
+            $c = $s[$i];
+            if ($inQuote) {
+                if ($c === '\\') {
+                    $i++;
+                } elseif ($c === '"') {
+                    $inQuote = false;
+                }
+
+                continue;
+            }
+            if ($c === '"') {
+                $inQuote = true;
+
+                continue;
+            }
+            if ($c === '(') {
+                $depth++;
+            } elseif ($c === ')') {
+                $depth--;
+                if ($depth === 0) {
+                    return substr($s, $start, $i - $start + 1);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    // Простой рекурсивный парсер S-выражений IMAP (списки, кавычки, NIL, атомы) в
+    // вложенный PHP-массив. NIL превращается в null.
+    private function parseImapNode(string $s, int &$pos)
+    {
+        $n = strlen($s);
+        while ($pos < $n && ctype_space($s[$pos])) {
+            $pos++;
+        }
+        if ($pos >= $n) {
+            return null;
+        }
+        if ($s[$pos] === '(') {
+            $pos++;
+            $list = [];
+            while (true) {
+                while ($pos < $n && ctype_space($s[$pos])) {
+                    $pos++;
+                }
+                if ($pos >= $n) {
+                    break;
+                }
+                if ($s[$pos] === ')') {
+                    $pos++;
+                    break;
+                }
+                $list[] = $this->parseImapNode($s, $pos);
+            }
+
+            return $list;
+        }
+        if ($s[$pos] === '"') {
+            $pos++;
+            $out = '';
+            while ($pos < $n && $s[$pos] !== '"') {
+                if ($s[$pos] === '\\' && $pos + 1 < $n) {
+                    $pos++;
+                }
+                $out .= $s[$pos];
+                $pos++;
+            }
+            $pos++; // закрывающая кавычка
+
+            return $out;
+        }
+        $startAt = $pos;
+        while ($pos < $n && ! ctype_space($s[$pos]) && $s[$pos] !== '(' && $s[$pos] !== ')') {
+            $pos++;
+        }
+        $atom = substr($s, $startAt, $pos - $startAt);
+
+        return strtoupper($atom) === 'NIL' ? null : $atom;
+    }
+
+    // Ищет путь к части TEXT/HTML в дереве BODYSTRUCTURE, иначе TEXT/PLAIN.
+    private function pickTextPath(array $node): ?string
+    {
+        return $this->findTextPart($node, '', 'HTML') ?? $this->findTextPart($node, '', 'PLAIN');
+    }
+
+    private function findTextPart($node, string $prefix, string $want): ?string
+    {
+        if (! is_array($node) || $node === []) {
+            return null;
+        }
+        // Многочастная структура: ведущие элементы сами являются списками (частями),
+        // за ними следует атом с именем multipart-подтипа (ALTERNATIVE/RELATED/MIXED).
+        if (is_array($node[0] ?? null)) {
+            $i = 1;
+            foreach ($node as $child) {
+                if (! is_array($child)) {
+                    break;
+                }
+                $path  = $prefix === '' ? (string) $i : "$prefix.$i";
+                $found = $this->findTextPart($child, $path, $want);
+                if ($found !== null) {
+                    return $found;
+                }
+                $i++;
+            }
+
+            return null;
+        }
+        // Одиночная часть: [0]=TYPE [1]=SUBTYPE ...
+        $type    = strtoupper((string) ($node[0] ?? ''));
+        $subtype = strtoupper((string) ($node[1] ?? ''));
+        if ($type === 'TEXT' && $subtype === $want) {
+            return $prefix === '' ? '1' : $prefix;
+        }
+
+        return null;
     }
 
     public function close(): void
