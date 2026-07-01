@@ -10,7 +10,7 @@ import SearchSelect from '@/Components/SearchSelect.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
 
-type Item = { name: string; qty: number | null; price: number | null; vat_rate: number | null; vat_amount: number | null };
+type Item = { nomenclature_id: number | null; qty: number | null; price: number | null; vat_rate: number | null; vat_amount: number | null };
 type Row = {
     id: number; number: string; date: string; supplier: string; counterparty_id: number | null;
     name: string | null; status: string; eta: string | null; carrier_id: number | null;
@@ -63,7 +63,7 @@ function create() {
     editingId.value = null;
     form.reset();
     form.date = new Date().toISOString().slice(0, 10);
-    form.items = [{ name: '', qty: null, price: null, vat_rate: null, vat_amount: null }];
+    form.items = [{ nomenclature_id: null, qty: null, price: null, vat_rate: null, vat_amount: null }];
     supHint.value = '';
     showSup.value = false;
     open.value = true;
@@ -79,12 +79,12 @@ function openDoc(s: Row) {
     form.tracking = s.tracking ?? '';
     form.delivery = s.delivery;
     form.problem = s.problem;
-    form.items = s.items.map((i) => ({ name: i.name ?? '', qty: i.qty, price: i.price, vat_rate: i.vat_rate ?? null, vat_amount: i.vat_amount ?? null }));
+    form.items = s.items.map((i) => ({ nomenclature_id: i.nomenclature_id, qty: i.qty, price: i.price, vat_rate: i.vat_rate ?? null, vat_amount: i.vat_amount ?? null }));
     supHint.value = '';
     showSup.value = false;
     open.value = true;
 }
-function addItem() { form.items.push({ name: '', qty: null, price: null, vat_rate: null, vat_amount: null }); }
+function addItem() { form.items.push({ nomenclature_id: null, qty: null, price: null, vat_rate: null, vat_amount: null }); }
 function removeItem(i: number) { form.items.splice(i, 1); }
 
 // НДС: цена в поставке уже с НДС, сумма выделяется по формуле Сумма × ставка / (100 + ставка).
@@ -114,6 +114,23 @@ async function saveSup() {
         showSup.value = false; supForm.value = { name: '' };
     } catch { alert('Не удалось создать поставщика'); }
     supSaving.value = false;
+}
+
+// ── Быстрое создание товара прямо в позиции (чтобы не плодить дубли в номенклатуре) ──
+const showGoodQuick = ref<number | null>(null);
+const goodQuickForm = ref({ name: '', unit: 'шт' });
+const goodQuickSaving = ref(false);
+async function saveGood(i: number) {
+    if (!goodQuickForm.value.name.trim()) return;
+    goodQuickSaving.value = true;
+    try {
+        const { data } = await axios.post('/quick/nomenclature', goodQuickForm.value);
+        goods.value.push(data);
+        form.items[i].nomenclature_id = data.id;
+        showGoodQuick.value = null;
+        goodQuickForm.value = { name: '', unit: 'шт' };
+    } catch { alert('Не удалось создать товар'); }
+    goodQuickSaving.value = false;
 }
 
 function submit() {
@@ -217,15 +234,20 @@ function destroy() {
                     <span class="h2">Товары</span>
                     <button class="btn-ghost" style="padding:6px 12px;font-size:13px" @click="addItem">Добавить</button>
                 </div>
-                <datalist id="goods-list">
-                    <option v-for="g in goods" :key="g.id" :value="g.name" />
-                </datalist>
                 <div v-for="(it, i) in form.items" :key="i" class="ship-item">
                     <div class="ship-item-main">
-                        <input v-model="it.name" list="goods-list" placeholder="наименование товара" />
+                        <div class="ship-item-good">
+                            <SearchSelect v-model="it.nomenclature_id" :options="goods" placeholder="— товар —" />
+                            <button type="button" class="add-btn-sm pressable" :class="{ on: showGoodQuick === i }" @click="showGoodQuick = showGoodQuick === i ? null : i" title="Создать товар">+</button>
+                        </div>
                         <input v-model.number="it.qty" type="number" placeholder="кол-во" @input="applyAutoVat(it)" />
                         <input v-model.number="it.price" type="number" placeholder="цена" @input="applyAutoVat(it)" />
                         <button class="link-btn link-btn--bad" @click="removeItem(i)">✕</button>
+                    </div>
+                    <div v-if="showGoodQuick === i" class="quick-form">
+                        <input v-model="goodQuickForm.name" placeholder="Наименование товара" @keyup.enter="saveGood(i)" />
+                        <input v-model="goodQuickForm.unit" placeholder="ед." style="max-width:70px" />
+                        <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="goodQuickSaving" @click="saveGood(i)">Создать</button>
                     </div>
                     <div class="ship-item-vat">
                         <select v-model="it.vat_rate" @change="applyAutoVat(it)">
@@ -262,6 +284,10 @@ function destroy() {
 .ship-item { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px solid var(--glass-border); }
 .ship-item-main { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; }
 .ship-item-main input { height: 40px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
+.ship-item-good { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.ship-item-good .ssel { flex: 1; min-width: 0; }
+.add-btn-sm { flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); font-size: 17px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.add-btn-sm.on { background: var(--ink); color: var(--bg); }
 .ship-item-vat { display: grid; grid-template-columns: 110px 1fr; gap: 8px; }
 .ship-item-vat select, .ship-item-vat input { height: 34px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 9px; padding: 0 9px; color: var(--ink-2); font-size: 12px; font-family: inherit; outline: none; }
 .ship-item-vat input:disabled { opacity: .5; }
