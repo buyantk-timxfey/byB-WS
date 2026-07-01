@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
 
-defineProps<{ open: boolean; title?: string; subtitle?: string }>();
+defineProps<{ open: boolean; title?: string; subtitle?: string; wide?: boolean }>();
 const emit = defineEmits(['close']);
 
 const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') emit('close'); };
@@ -12,7 +12,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey));
 <template>
     <Teleport to="body">
         <div v-if="open" class="modal-ov">
-            <div class="modal-box glass-strong">
+            <div class="modal-box glass-strong" :class="{ 'modal-box--wide': wide }">
                 <div class="modal-grip"></div>
                 <div class="drawer-head">
                     <div>

@@ -199,7 +199,7 @@ function destroy() {
             </div>
         </div>
 
-        <AppModal :open="open" :title="editingId ? 'Поставка' : 'Новая поставка'" @close="open = false">
+        <AppModal :open="open" wide :title="editingId ? 'Поставка' : 'Новая поставка'" @close="open = false">
             <div class="fld-row">
                 <div class="fld"><label>Поставщик</label>
                     <div class="sel-add">

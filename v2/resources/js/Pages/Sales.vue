@@ -195,7 +195,7 @@ function payNow() {
         </AppModal>
 
         <!-- Касса: кассовый чек -->
-        <AppModal v-if="saleType === 'Касса'" :open="open" :title="editingId ? 'Кассовый чек' : 'Новый чек'" @close="open = false">
+        <AppModal v-if="saleType === 'Касса'" :open="open" wide :title="editingId ? 'Кассовый чек' : 'Новый чек'" @close="open = false">
             <div class="receipt">
                 <div class="rc-head">
                     <div class="rc-title">КАССОВЫЙ ЧЕК</div>
@@ -235,7 +235,7 @@ function payNow() {
         </AppModal>
 
         <!-- Безналичная продажа -->
-        <AppModal v-else :open="open" :title="editingId ? 'Безналичная продажа' : 'Новая продажа'" @close="open = false">
+        <AppModal v-else :open="open" wide :title="editingId ? 'Безналичная продажа' : 'Новая продажа'" @close="open = false">
             <div class="fld-row">
                 <div class="fld"><label>Покупатель</label>
                     <SearchSelect v-model="form.counterparty_id" :options="buyers" placeholder="— выбрать —" />
