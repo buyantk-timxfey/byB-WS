@@ -29,6 +29,11 @@ function stripHtml(text: string): string {
     const div = document.createElement('div');
     div.innerHTML = text;
     div.querySelectorAll('style, script, head').forEach((el) => el.remove());
+    // Вставляем перенос строки на месте блочных элементов — иначе textContent
+    // склеивает соседние <div>/<p> без пробела в сплошной текст
+    div.querySelectorAll('div, p, br, tr, td, li, h1, h2, h3, h4, h5, h6, table, blockquote').forEach((el) => {
+        el.after(document.createTextNode('\n'));
+    });
     return (div.textContent ?? div.innerText ?? '').replace(/\n{3,}/g, '\n\n').trim();
 }
 const selectedBody = computed(() => stripHtml(selected.value?.body ?? ''));

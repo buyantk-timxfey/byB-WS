@@ -475,6 +475,9 @@ class MailController extends Controller
             // Удаляем содержимое <style> и <script> до strip_tags, иначе CSS попадает в текст
             $body = preg_replace('/<style[^>]*>.*?<\/style>/si', '', $body);
             $body = preg_replace('/<script[^>]*>.*?<\/script>/si', '', $body);
+            // Вставляем перенос строки на месте блочных тегов — иначе соседние <div>/<p>
+            // без пробела между ними склеиваются strip_tags() в сплошной текст
+            $body = preg_replace('/<\/?(?:div|p|br|tr|td|li|h[1-6]|table|blockquote)(?:\s[^>]*)?>/i', "\n", $body);
             $body = trim((string) preg_replace('/[ \t]*\R+[ \t]*/u', "\n", strip_tags($body)));
             $body = html_entity_decode($body, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
@@ -665,6 +668,9 @@ class MailController extends Controller
         if (preg_match('/<[a-z!]/i', $out)) {
             $out = preg_replace('/<style[^>]*>.*?<\/style>/si', '', $out);
             $out = preg_replace('/<script[^>]*>.*?<\/script>/si', '', $out);
+            // Вставляем перенос строки на месте блочных тегов — иначе соседние <div>/<p>
+            // без пробела между ними склеиваются strip_tags() в сплошной текст
+            $out = preg_replace('/<\/?(?:div|p|br|tr|td|li|h[1-6]|table|blockquote)(?:\s[^>]*)?>/i', "\n", $out);
             $out = html_entity_decode(strip_tags($out), ENT_QUOTES | ENT_HTML5, 'UTF-8');
             $out = trim((string) preg_replace('/[ \t]*\R+[ \t]*/u', "\n", $out));
         }
