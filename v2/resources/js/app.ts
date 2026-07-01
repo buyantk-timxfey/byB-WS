@@ -6,6 +6,12 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, DefineComponent, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
+// Windows (Chrome/Edge) рендерит backdrop-filter слабее, чем macOS/Safari — стекло
+// выглядит гораздо более прозрачным. Класс включает компенсирующую плотность в app.css.
+if (/Windows/i.test(navigator.userAgent)) {
+    document.documentElement.classList.add('is-windows');
+}
+
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
