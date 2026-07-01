@@ -70,7 +70,7 @@ function create() {
     form.items = [{ nomenclature_id: null, qty: null, price: null, vat_rate: null, vat_amount: null }];
     supHint.value = '';
     showSup.value = false;
-    showPayPick.value = false; payLineId.value = null; payAmount.value = null;
+    showPayPick.value = false; payLineId.value = null; payAmount.value = null; editPayAmount.value = false;
     open.value = true;
 }
 function openDoc(s: Row) {
@@ -87,7 +87,7 @@ function openDoc(s: Row) {
     form.items = s.items.map((i) => ({ nomenclature_id: i.nomenclature_id, qty: i.qty, price: i.price, vat_rate: i.vat_rate ?? null, vat_amount: i.vat_amount ?? null }));
     supHint.value = '';
     showSup.value = false;
-    showPayPick.value = false; payLineId.value = null; payAmount.value = null;
+    showPayPick.value = false; payLineId.value = null; payAmount.value = null; editPayAmount.value = false;
     open.value = true;
 }
 function addItem() { form.items.push({ nomenclature_id: null, qty: null, price: null, vat_rate: null, vat_amount: null }); }
@@ -105,15 +105,19 @@ const bankCandOptions = computed(() => [...props.bankCandidates]
 const showPayPick = ref(false);
 const payLineId = ref<number | null>(null);
 const payAmount = ref<number | null>(null);
+const editPayAmount = ref(false);
+// Сумма почти всегда — это либо весь остаток операции, либо весь долг поставки (что меньше),
+// поэтому подставляем её сами и прячем поле — редактировать нужно только для разбивки платежа.
 function pickPayLine(id: number | null) {
     payLineId.value = id;
+    editPayAmount.value = false;
     const cand = props.bankCandidates.find((c) => c.id === id);
     if (cand) payAmount.value = Math.round(Math.min(currentDebt.value, cand.remaining) * 100) / 100;
 }
 function attachPayment() {
     if (!editingId.value || !payLineId.value || !payAmount.value) return;
     router.post(`/shipments/${editingId.value}/match`, { bank_line_id: payLineId.value, amount: payAmount.value }, {
-        onSuccess: () => { showPayPick.value = false; payLineId.value = null; payAmount.value = null; },
+        onSuccess: () => { showPayPick.value = false; payLineId.value = null; payAmount.value = null; editPayAmount.value = false; },
     });
 }
 function detachPayment(p: Payment) {
@@ -305,8 +309,11 @@ function destroy() {
                         <div style="flex:1;min-width:220px">
                             <SearchSelect :modelValue="payLineId" :options="bankCandOptions" placeholder="— выбрать операцию из выписки —" @update:modelValue="pickPayLine" />
                         </div>
-                        <input v-model.number="payAmount" type="number" step="0.01" placeholder="Сумма" style="max-width:120px" />
-                        <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="!payLineId || !payAmount" @click="attachPayment">Привязать</button>
+                        <template v-if="payLineId">
+                            <input v-if="editPayAmount" v-model.number="payAmount" type="number" step="0.01" placeholder="Сумма" style="max-width:120px" />
+                            <span v-else class="tnum" style="font-weight:600;white-space:nowrap">{{ money(payAmount ?? 0) }} <button type="button" class="link-btn" style="font-size:12px;padding:0" @click="editPayAmount = true">изменить</button></span>
+                            <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="!payAmount" @click="attachPayment">Привязать</button>
+                        </template>
                     </div>
                     <button v-else type="button" class="btn-ghost pressable" style="margin-top:8px" @click="showPayPick = true"><Icon name="plus" :size="14" /> Привязать оплату</button>
                     <div v-if="!bankCandidates.length && !(currentRow?.payments ?? []).length" class="text-ink-3" style="font-size:12px;margin-top:6px">Нет неразнесённых операций в выписке — сначала загрузите её на странице Банк.</div>
