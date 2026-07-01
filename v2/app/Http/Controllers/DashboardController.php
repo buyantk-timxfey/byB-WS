@@ -44,6 +44,22 @@ class DashboardController extends Controller
         $profSpark = $spark(fn ($a, $b) => round((
             (float) Turnover::where('type', 'income')->whereBetween('date', [$a, $b])->sum('amount')
             - (float) Turnover::whereIn('type', ['cogs', 'acquiring', 'expense'])->whereBetween('date', [$a, $b])->sum('amount')) / 1000));
+        // Маржа/ROI/Закупки раньше показывали чужой спарклайн (profSpark/incSpark на всех карточках) —
+        // у каждой метрики теперь свой ряд по тем же 8 месяцам.
+        $marginSpark = $spark(function ($a, $b) {
+            $inc = (float) Turnover::where('type', 'income')->whereBetween('date', [$a, $b])->sum('amount');
+            $costs = (float) Turnover::whereIn('type', ['cogs', 'acquiring', 'expense'])->whereBetween('date', [$a, $b])->sum('amount');
+
+            return $inc > 0 ? round(($inc - $costs) / $inc * 100, 1) : 0;
+        });
+        $roiSpark = $spark(function ($a, $b) {
+            $inc = (float) Turnover::where('type', 'income')->whereBetween('date', [$a, $b])->sum('amount');
+            $costs = (float) Turnover::whereIn('type', ['cogs', 'acquiring', 'expense'])->whereBetween('date', [$a, $b])->sum('amount');
+
+            return $costs > 0 ? round(($inc - $costs) / $costs * 100) : 0;
+        });
+        $purchSpark = $spark(fn ($a, $b) => round((float) Shipment::whereNotNull('posted_at')
+            ->whereBetween('date', [$a, $b])->get()->sum(fn ($s) => $s->total()) / 1000));
 
         // Прошлый месяц — для динамики KPI
         $pm = $now->copy()->subMonthNoOverflow();
@@ -79,9 +95,9 @@ class DashboardController extends Controller
         $kpis = [
             ['label' => 'Выручка', 'value' => $this->m($revenue), 'delta' => $revD, 'down' => $revDown, 'sub' => 'пред. мес: '.$this->m($revP), 'spark' => $incSpark, 'color' => 'var(--income)'],
             ['label' => 'Прибыль', 'value' => $this->m($gross), 'delta' => $grD, 'down' => $grDown, 'sub' => 'пред. мес: '.$this->m($grossP), 'spark' => $profSpark, 'color' => 'var(--income)'],
-            ['label' => 'Маржа', 'value' => round($margin, 1).'%', 'delta' => $mD, 'down' => $mDown, 'sub' => 'пред. мес: '.round($marginP, 1).'%', 'spark' => $profSpark, 'color' => 'var(--income)'],
-            ['label' => 'ROI', 'value' => (($cogs + $acq + $exp) > 0 ? round($gross / ($cogs + $acq + $exp) * 100) : 0).'%', 'delta' => '', 'down' => false, 'sub' => 'прибыль / затраты', 'spark' => $profSpark, 'color' => 'var(--income)'],
-            ['label' => 'Закупки', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true, 'sub' => 'пред. мес: '.$this->m($purchP), 'spark' => $incSpark, 'color' => 'var(--expense)'],
+            ['label' => 'Маржа', 'value' => round($margin, 1).'%', 'delta' => $mD, 'down' => $mDown, 'sub' => 'пред. мес: '.round($marginP, 1).'%', 'spark' => $marginSpark, 'color' => 'var(--income)'],
+            ['label' => 'ROI', 'value' => (($cogs + $acq + $exp) > 0 ? round($gross / ($cogs + $acq + $exp) * 100) : 0).'%', 'delta' => '', 'down' => false, 'sub' => 'прибыль / затраты', 'spark' => $roiSpark, 'color' => 'var(--income)'],
+            ['label' => 'Закупки', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true, 'sub' => 'пред. мес: '.$this->m($purchP), 'spark' => $purchSpark, 'color' => 'var(--expense)'],
         ];
 
         $accounts = Account::orderBy('sort_order')->orderBy('name')->get()->map(fn ($a) => ['name' => $a->name, 'balance' => $a->balance()]);
