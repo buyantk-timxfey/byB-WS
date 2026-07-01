@@ -18,6 +18,7 @@ function parseVal(v: string): Date | null {
 
 const open = ref(false);
 const root = ref<HTMLElement | null>(null);
+const popEl = ref<HTMLElement | null>(null);
 const cur = ref(parseVal(props.modelValue) ?? new Date());
 const popStyle = ref<Record<string, string>>({});
 
@@ -62,7 +63,13 @@ function toggle() {
     }
 }
 function onClickOutside(e: MouseEvent) {
-    if (root.value && !root.value.contains(e.target as Node)) open.value = false;
+    const t = e.target as Node;
+    // Попап вынесен через Teleport в <body> и физически больше не находится
+    // внутри root — проверяем обе части (поле и сам попап), иначе клик по дню/
+    // стрелке навигации считался бы "кликом снаружи" и закрывал попап ДО того,
+    // как успевал сработать выбор (mousedown срабатывает раньше click).
+    if (root.value?.contains(t) || popEl.value?.contains(t)) return;
+    open.value = false;
 }
 onMounted(() => {
     document.addEventListener('mousedown', onClickOutside);
@@ -83,7 +90,7 @@ onUnmounted(() => {
             <Icon name="calendar" :size="16" class="dpick-ic" />
         </button>
         <Teleport to="body">
-            <div v-if="open" class="dpick-pop glass-strong" :style="popStyle">
+            <div v-if="open" ref="popEl" class="dpick-pop glass-strong" :style="popStyle">
                 <div class="dpick-head">
                     <button type="button" class="pressable dpick-nav" @click="step(-1)"><Icon name="chevron-left" :size="16" /></button>
                     <span>{{ title }}</span>

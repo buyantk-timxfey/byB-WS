@@ -12,6 +12,7 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: number | null): void }>()
 const open = ref(false);
 const query = ref('');
 const root = ref<HTMLElement | null>(null);
+const dropEl = ref<HTMLElement | null>(null);
 const inputEl = ref<HTMLInputElement | null>(null);
 const highlighted = ref(0);
 const dropStyle = ref<Record<string, string>>({});
@@ -72,7 +73,13 @@ function onKey(e: KeyboardEvent) {
 watch(query, () => { highlighted.value = 0; });
 
 function onClickOutside(e: MouseEvent) {
-    if (root.value && !root.value.contains(e.target as Node)) hide();
+    const t = e.target as Node;
+    // Список вынесен через Teleport в <body> и физически больше не находится
+    // внутри root — проверяем обе части (поле и сам всплывающий список),
+    // иначе клик по любой опции считался бы "кликом снаружи" и закрывал
+    // список ДО того, как успевал сработать выбор.
+    if (root.value?.contains(t) || dropEl.value?.contains(t)) return;
+    hide();
 }
 // Капчурим scroll (не всплывает), чтобы отслеживать прокрутку и модалки, и страницы.
 onMounted(() => {
@@ -100,7 +107,7 @@ onUnmounted(() => {
         />
         <Icon name="chevron-down" :size="15" class="ssel-chev" />
         <Teleport to="body">
-            <div v-if="open" class="ssel-drop glass-strong" :style="dropStyle">
+            <div v-if="open" ref="dropEl" class="ssel-drop glass-strong" :style="dropStyle">
                 <button type="button" class="ssel-item" @mousedown.prevent="pick(null)">— выбрать —</button>
                 <button
                     v-for="(o, i) in filtered"

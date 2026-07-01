@@ -154,6 +154,10 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                     <div class="rec-l">Назначение</div><div class="rec-v">{{ cur.purpose }}</div>
                     <div class="rec-l">Счёт</div><div class="rec-v">{{ cur.account }}</div>
                 </div>
+                <div v-if="cur.link" class="rec-note" style="background:rgba(10,132,255,.12);border-color:rgba(10,132,255,.3);color:var(--info,#0a84ff)">
+                    Уже сопоставлено: {{ cur.link }}
+                    <span v-if="(sel?.target_type === 'sale' || sel?.target_type === 'shipment') && !candidates.some((c) => c.id === sel?.target_id)"> · документ полностью закрыт, поэтому его нет в списке ниже</span>
+                </div>
                 <div>
                     <span class="h2">{{ cur.amount > 0 ? 'Продажи с долгом' : 'Поставки с долгом' }}</span>
                     <div v-for="d in candidates" :key="d.id" class="cand" :class="{ 'cand--best': sel?.target_id === d.id && (sel?.target_type==='sale'||sel?.target_type==='shipment') }" @click="pickDoc(d)" style="cursor:pointer">
