@@ -25,7 +25,12 @@ watch(() => form.errors.pin, () => { dots.value = ''; });
     <div class="pin-wrap">
         <div class="orbs" aria-hidden="true"><i class="orb-a"></i><i class="orb-b"></i><i class="orb-c"></i><i class="orb-d"></i></div>
         <div class="pin-card glass-strong">
-            <div class="pin-logo"><span>bB</span></div>
+            <div class="pin-logo">
+                <picture>
+                    <source srcset="/images/logo-white.png" media="(prefers-color-scheme: dark)" />
+                    <img src="/images/logo-black.png" alt="byBuka" />
+                </picture>
+            </div>
             <div class="pin-title">byBuka</div>
             <div class="pin-sub">{{ locked ? 'Сессия заблокирована из-за бездействия' : 'Введите PIN' }}</div>
 
@@ -50,7 +55,8 @@ watch(() => form.errors.pin, () => { dots.value = ''; });
 <style scoped>
 .pin-wrap { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .pin-card { width: min(360px, 100%); border-radius: 28px; padding: 32px 28px; display: flex; flex-direction: column; align-items: center; }
-.pin-logo { width: 56px; height: 56px; border-radius: 16px; background: var(--ink); color: var(--bg); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; }
+.pin-logo { display: flex; align-items: center; justify-content: center; }
+.pin-logo img { width: 48px; height: 48px; object-fit: contain; }
 .pin-title { font-size: 22px; font-weight: 700; margin-top: 14px; }
 .pin-sub { font-size: 14px; color: var(--ink-2); margin-top: 4px; }
 .pin-dots { display: flex; gap: 14px; margin: 24px 0 6px; height: 16px; }

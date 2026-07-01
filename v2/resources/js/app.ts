@@ -1,7 +1,7 @@
 import '../css/app.css';
 import './bootstrap';
 
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, DefineComponent, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
@@ -11,6 +11,14 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 if (/Windows/i.test(navigator.userAgent)) {
     document.documentElement.classList.add('is-windows');
 }
+
+// SPA-переход не перезагружает страницу, поэтому мобильный Safari не всегда
+// сам скрывает системную клавиатуру, если раньше был сфокусирован текстовый
+// input (например, поля логина/пароля) — снимаем фокус на каждой навигации,
+// иначе клавиатура остаётся видимой даже на страницах без единого input (PIN).
+router.on('navigate', () => {
+    (document.activeElement as HTMLElement | null)?.blur();
+});
 
 const appName = import.meta.env.VITE_APP_NAME || 'byBuka';
 

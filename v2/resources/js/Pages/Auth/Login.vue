@@ -13,6 +13,12 @@ const submit = () => form.post(route('login'), { onFinish: () => form.reset('pas
         <div class="orbs" aria-hidden="true"><i class="orb-a"></i><i class="orb-b"></i><i class="orb-c"></i><i class="orb-d"></i></div>
 
         <form class="login-card glass-strong" @submit.prevent="submit">
+            <div class="login-logo">
+                <picture>
+                    <source srcset="/images/logo-white.png" media="(prefers-color-scheme: dark)" />
+                    <img src="/images/logo-black.png" alt="byBuka" />
+                </picture>
+            </div>
             <div class="login-title">byBuka</div>
             <div class="login-sub">Вход в систему</div>
 
@@ -45,6 +51,8 @@ const submit = () => form.post(route('login'), { onFinish: () => form.reset('pas
 <style scoped>
 .login-wrap { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .login-card { width: min(380px, 100%); border-radius: 28px; padding: 32px 30px; display: flex; flex-direction: column; gap: 14px; }
+.login-logo { display: flex; justify-content: center; margin-bottom: -4px; }
+.login-logo img { width: 44px; height: 44px; object-fit: contain; }
 .login-title { font-size: 26px; font-weight: 800; letter-spacing: -.02em; text-align: center; }
 .login-sub { font-size: 14px; color: var(--ink-2); text-align: center; margin-top: -8px; margin-bottom: 8px; }
 .login-status { font-size: 13px; color: var(--income); text-align: center; }
