@@ -15,12 +15,32 @@ function parseVal(v: string): Date | null {
     const d = new Date(v + 'T00:00:00');
     return isNaN(d.getTime()) ? null : d;
 }
+// Ручной ввод в формате дд.мм.гггг → ISO-ключ. Возвращает null, если дата некорректна
+// (в т.ч. "31.02.2026" — new Date() в JS такое молча "перекатывает" на март).
+function parseTyped(s: string): string | null {
+    const m = s.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (!m) return null;
+    const d = Number(m[1]);
+    const mo = Number(m[2]);
+    const y = Number(m[3]);
+    const dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+
+    return `${y}-${pad(mo)}-${pad(d)}`;
+}
 
 const open = ref(false);
 const root = ref<HTMLElement | null>(null);
 const popEl = ref<HTMLElement | null>(null);
 const cur = ref(parseVal(props.modelValue) ?? new Date());
 const popStyle = ref<Record<string, string>>({});
+const text = ref(props.modelValue ? fdate(props.modelValue) : '');
+
+watch(() => props.modelValue, (v) => {
+    const d = parseVal(v);
+    if (d) cur.value = d;
+    text.value = v ? fdate(v) : '';
+});
 
 // Попап рендерится через Teleport в <body> с fixed-позицией по координатам поля —
 // иначе position:absolute внутри модалки раздувает её scrollHeight (особенно
@@ -30,11 +50,6 @@ function updatePosition() {
     if (!r) return;
     popStyle.value = { position: 'fixed', left: `${r.left}px`, top: `${r.bottom + 6}px` };
 }
-
-watch(() => props.modelValue, (v) => {
-    const d = parseVal(v);
-    if (d) cur.value = d;
-});
 
 const title = computed(() => `${monthNames[cur.value.getMonth()]} ${cur.value.getFullYear()}`);
 const now = new Date();
@@ -54,13 +69,30 @@ const cells = computed(() => {
 
 function step(n: number) { cur.value = new Date(cur.value.getFullYear(), cur.value.getMonth() + n, 1); }
 function pick(key: string) { emit('update:modelValue', key); open.value = false; }
-function clear() { emit('update:modelValue', ''); open.value = false; }
+function clear() { emit('update:modelValue', ''); text.value = ''; open.value = false; }
 function toggle() {
     open.value = !open.value;
     if (open.value) {
         cur.value = parseVal(props.modelValue) ?? new Date();
         updatePosition();
     }
+}
+function onTextBlur() {
+    if (text.value.trim() === '') {
+        if (props.modelValue) emit('update:modelValue', '');
+        return;
+    }
+    const iso = parseTyped(text.value);
+    if (iso) {
+        emit('update:modelValue', iso);
+    } else {
+        // Некорректный ввод — откатываем к последнему валидному значению
+        text.value = props.modelValue ? fdate(props.modelValue) : '';
+    }
+}
+function onTextEnter(e: KeyboardEvent) {
+    onTextBlur();
+    (e.target as HTMLInputElement).blur();
 }
 function onClickOutside(e: MouseEvent) {
     const t = e.target as Node;
@@ -85,10 +117,19 @@ onUnmounted(() => {
 
 <template>
     <div ref="root" class="dpick" :class="{ open }">
-        <button type="button" class="dpick-input" @click="toggle">
-            <span :class="{ 'dpick-ph': !modelValue }">{{ modelValue ? fdate(modelValue) : (placeholder ?? 'Выбрать дату') }}</span>
-            <Icon name="calendar" :size="16" class="dpick-ic" />
-        </button>
+        <div class="dpick-input">
+            <input
+                v-model="text"
+                class="dpick-text"
+                :placeholder="placeholder ?? 'дд.мм.гггг'"
+                inputmode="numeric"
+                @blur="onTextBlur"
+                @keydown.enter.prevent="onTextEnter"
+            />
+            <button type="button" class="dpick-ic-btn" @click="toggle">
+                <Icon name="calendar" :size="16" class="dpick-ic" />
+            </button>
+        </div>
         <Teleport to="body">
             <div v-if="open" ref="popEl" class="dpick-pop glass-strong" :style="popStyle">
                 <div class="dpick-head">
@@ -119,10 +160,11 @@ onUnmounted(() => {
 
 <style scoped>
 .dpick { position: relative; }
-.dpick-input { width: 100%; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 12px; padding: 0 12px; height: 42px; box-sizing: border-box; color: var(--ink); font-size: 14px; font-family: inherit; cursor: pointer; text-align: left; }
+.dpick-input { width: 100%; display: flex; align-items: center; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 12px; height: 42px; box-sizing: border-box; }
 .dpick.open .dpick-input { border-color: var(--ink-3); }
-.dpick-ph { color: var(--ink-3); }
-.dpick-ic { color: var(--ink-3); flex-shrink: 0; }
+.dpick-text { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; padding: 0 0 0 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
+.dpick-text::placeholder { color: var(--ink-3); }
+.dpick-ic-btn { flex-shrink: 0; width: 38px; height: 100%; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; cursor: pointer; color: var(--ink-3); }
 .dpick-pop { position: fixed; z-index: 100; width: 280px; border-radius: 16px; padding: 12px; }
 .dpick-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 14px; font-weight: 600; }
 .dpick-nav { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; color: var(--ink-2); }

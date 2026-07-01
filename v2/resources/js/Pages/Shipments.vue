@@ -200,74 +200,84 @@ function destroy() {
         </div>
 
         <AppModal :open="open" wide :title="editingId ? 'Поставка' : 'Новая поставка'" @close="open = false">
-            <div class="fld-row">
+            <!-- Поставщик -->
+            <div class="modal-sec">
+                <div class="modal-sec-h"><Icon name="building" :size="14" /> Поставщик</div>
                 <div class="fld"><label>Поставщик</label>
                     <div class="sel-add">
                         <SearchSelect v-model="form.counterparty_id" :options="suppliers" placeholder="— выбрать —" />
                         <button type="button" class="add-btn pressable" :class="{ on: showSup }" @click="showSup = !showSup" title="Создать поставщика">+</button>
                     </div>
                 </div>
+                <div v-if="showSup" class="quick-form">
+                    <input v-model="supForm.name" placeholder="Наименование поставщика" @keyup.enter="saveSup" />
+                    <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="supSaving" @click="saveSup">Создать</button>
+                </div>
+                <div v-if="supHint" class="sup-hint">Поставщик «{{ supHint }}» создан. Дозаполните карточку (ИНН, контакты) в Справочниках.</div>
+                <div class="fld" style="margin-top:12px"><label>Название поставки</label><input v-model="form.name" placeholder="необязательно" /></div>
+            </div>
+
+            <!-- Статус и сроки -->
+            <div class="modal-sec">
+                <div class="modal-sec-h"><Icon name="calendar" :size="14" /> Статус и сроки</div>
                 <div class="fld"><label>Статус</label>
                     <select v-model="form.status"><option>Ожидает отправки</option><option>В пути</option><option>Завершено</option></select>
                 </div>
-            </div>
-            <div v-if="showSup" class="quick-form">
-                <input v-model="supForm.name" placeholder="Наименование поставщика" @keyup.enter="saveSup" />
-                <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="supSaving" @click="saveSup">Создать</button>
-            </div>
-            <div v-if="supHint" class="sup-hint">Поставщик «{{ supHint }}» создан. Дозаполните карточку (ИНН, контакты) в Справочниках.</div>
-            <div class="fld"><label>Название поставки</label><input v-model="form.name" /></div>
-            <div class="fld-row">
-                <div class="fld"><label>Дата заказа</label><DatePicker v-model="form.date" placeholder="Дата заказа" /></div>
-                <div class="fld"><label>ETA</label><DatePicker v-model="form.eta" placeholder="—" /></div>
-            </div>
-            <div class="fld-row">
-                <div class="fld"><label>Транспортная компания</label>
-                    <SearchSelect v-model="form.carrier_id" :options="carriers" placeholder="—" />
+                <div class="fld-row" style="margin-top:12px">
+                    <div class="fld"><label>Дата заказа</label><DatePicker v-model="form.date" placeholder="дд.мм.гггг" /></div>
+                    <div class="fld"><label>ETA</label><DatePicker v-model="form.eta" placeholder="дд.мм.гггг" /></div>
                 </div>
-                <div class="fld"><label>Трек-номер</label><input v-model="form.tracking" placeholder="—" /></div>
             </div>
-            <div class="fld"><label>Стоимость доставки</label><input v-model.number="form.delivery" type="number" /></div>
 
-            <div>
-                <div class="items-h">
-                    <span class="h2">Товары</span>
-                    <button class="btn-ghost" style="padding:6px 12px;font-size:13px" @click="addItem">Добавить</button>
+            <!-- Доставка -->
+            <div class="modal-sec">
+                <div class="modal-sec-h"><Icon name="truck" :size="14" /> Доставка</div>
+                <div class="fld-row">
+                    <div class="fld"><label>Транспортная компания</label>
+                        <SearchSelect v-model="form.carrier_id" :options="carriers" placeholder="—" />
+                    </div>
+                    <div class="fld"><label>Трек-номер</label><input v-model="form.tracking" placeholder="—" /></div>
                 </div>
-                <div v-for="(it, i) in form.items" :key="i" class="ship-item">
-                    <div class="ship-item-main">
-                        <div class="ship-item-good">
-                            <SearchSelect v-model="it.nomenclature_id" :options="goods" placeholder="— товар —" />
-                            <button type="button" class="add-btn-sm pressable" :class="{ on: showGoodQuick === i }" @click="showGoodQuick = showGoodQuick === i ? null : i" title="Создать товар">+</button>
-                        </div>
-                        <input v-model.number="it.qty" type="number" placeholder="кол-во" @input="applyAutoVat(it)" />
-                        <input v-model.number="it.price" type="number" placeholder="цена" @input="applyAutoVat(it)" />
-                        <button class="link-btn link-btn--bad" @click="removeItem(i)">✕</button>
+                <div class="fld" style="margin-top:12px"><label>Стоимость доставки</label><input v-model.number="form.delivery" type="number" /></div>
+            </div>
+
+            <!-- Товары -->
+            <div class="modal-sec">
+                <div class="modal-sec-h">
+                    <Icon name="package" :size="14" /> Товары
+                    <button class="btn-ghost pressable" style="margin-left:auto;padding:6px 12px;font-size:13px" @click="addItem"><Icon name="plus" :size="14" /> Добавить</button>
+                </div>
+                <div v-for="(it, i) in form.items" :key="i" class="good-card">
+                    <div class="good-card-row1">
+                        <SearchSelect v-model="it.nomenclature_id" :options="goods" placeholder="— выбрать товар —" />
+                        <button type="button" class="add-btn-sm pressable" :class="{ on: showGoodQuick === i }" @click="showGoodQuick = showGoodQuick === i ? null : i" title="Создать товар">+</button>
+                        <button type="button" class="good-card-remove pressable" @click="removeItem(i)" title="Удалить позицию">✕</button>
                     </div>
                     <div v-if="showGoodQuick === i" class="quick-form">
                         <input v-model="goodQuickForm.name" placeholder="Наименование товара" @keyup.enter="saveGood(i)" />
                         <input v-model="goodQuickForm.unit" placeholder="ед." style="max-width:70px" />
                         <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="goodQuickSaving" @click="saveGood(i)">Создать</button>
                     </div>
-                    <div class="ship-item-vat">
-                        <select v-model="it.vat_rate" @change="applyAutoVat(it)">
-                            <option :value="null">Без НДС</option>
-                            <option v-for="v in vatRates" :key="v.id" :value="v.rate">{{ v.rate }}%</option>
-                        </select>
-                        <input
-                            v-model.number="it.vat_amount"
-                            type="number" step="0.01"
-                            :disabled="it.vat_rate === null"
-                            placeholder="Сумма НДС"
-                        />
+                    <div class="good-card-grid">
+                        <div class="fld"><label>Количество</label><input v-model.number="it.qty" type="number" placeholder="0" @input="applyAutoVat(it)" /></div>
+                        <div class="fld"><label>Цена за ед.</label><input v-model.number="it.price" type="number" placeholder="0" @input="applyAutoVat(it)" /></div>
+                        <div class="fld"><label>НДС</label>
+                            <select v-model="it.vat_rate" @change="applyAutoVat(it)">
+                                <option :value="null">Без НДС</option>
+                                <option v-for="v in vatRates" :key="v.id" :value="v.rate">{{ v.rate }}%</option>
+                            </select>
+                        </div>
+                        <div class="fld"><label>Сумма НДС</label>
+                            <input v-model.number="it.vat_amount" type="number" step="0.01" placeholder="0" :disabled="it.vat_rate === null" />
+                        </div>
                     </div>
                 </div>
-                <div v-if="!form.items.length" class="text-ink-3" style="padding:12px 0;font-size:14px">Добавьте позиции: введите наименование, количество и цену</div>
-            </div>
+                <div v-if="!form.items.length" class="text-ink-3" style="padding:12px 0;font-size:14px">Добавьте позиции: выберите товар, количество и цену</div>
 
-            <div class="flex items-center justify-between" style="padding-top:6px;border-top:1px solid var(--glass-border)">
-                <span class="text-ink-2 text-[14px]">Итого (товары + доставка)</span>
-                <span class="tnum text-[18px] font-bold">{{ money(formTotal) }}</span>
+                <div class="modal-total">
+                    <span class="text-ink-2 text-[14px]">Итого (товары + доставка)</span>
+                    <span class="tnum text-[18px] font-bold">{{ money(formTotal) }}</span>
+                </div>
             </div>
 
             <template #footer>
@@ -281,16 +291,26 @@ function destroy() {
 </template>
 
 <style scoped>
-.ship-item { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px solid var(--glass-border); }
-.ship-item-main { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; }
-.ship-item-main input { height: 40px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
-.ship-item-good { display: flex; gap: 6px; align-items: center; min-width: 0; }
-.ship-item-good .ssel { flex: 1; min-width: 0; }
+/* Секции модалки — сгруппированные поля с заголовком, разделены тонкой линией */
+.modal-sec { padding: 18px 0; border-top: 1px solid var(--glass-border); }
+.modal-sec:first-child { padding-top: 0; border-top: 0; }
+.modal-sec-h { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); margin-bottom: 12px; }
+
+/* Карточка товара — просторнее, все поля с подписями */
+.good-card { border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px; background: var(--glass-fill); margin-bottom: 10px; }
+.good-card-row1 { display: flex; gap: 8px; align-items: center; }
+.good-card-row1 .ssel { flex: 1; min-width: 0; }
+.good-card-remove { flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--glass-border); background: transparent; color: var(--expense); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.good-card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+.good-card-grid label { font-size: 11px; }
+.good-card-grid input, .good-card-grid select { height: 38px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--bg); border-radius: 9px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
+.good-card-grid input:disabled { opacity: .5; }
+@media (max-width: 640px) { .good-card-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.modal-total { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--glass-border); }
+
 .add-btn-sm { flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); font-size: 17px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .add-btn-sm.on { background: var(--ink); color: var(--bg); }
-.ship-item-vat { display: grid; grid-template-columns: 110px 1fr; gap: 8px; }
-.ship-item-vat select, .ship-item-vat input { height: 34px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 9px; padding: 0 9px; color: var(--ink-2); font-size: 12px; font-family: inherit; outline: none; }
-.ship-item-vat input:disabled { opacity: .5; }
 .sel-add { display: flex; gap: 8px; align-items: center; }
 .sel-add .ssel { flex: 1; min-width: 0; }
 .add-btn { flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); font-size: 20px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
