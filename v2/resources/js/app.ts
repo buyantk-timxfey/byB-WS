@@ -7,12 +7,6 @@ import { createApp, DefineComponent, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { applyTheme } from './lib/theme';
 
-// Windows (Chrome/Edge) рендерит backdrop-filter слабее, чем macOS/Safari — стекло
-// выглядит гораздо более прозрачным. Класс включает компенсирующую плотность в app.css.
-if (/Windows/i.test(navigator.userAgent)) {
-    document.documentElement.classList.add('is-windows');
-}
-
 // SPA-переход не перезагружает страницу, поэтому мобильный Safari не всегда
 // сам скрывает системную клавиатуру, если раньше был сфокусирован текстовый
 // input (например, поля логина/пароля). Снимаем фокус ДО начала перехода

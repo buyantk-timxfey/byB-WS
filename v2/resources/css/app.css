@@ -62,29 +62,6 @@
         }
     }
 
-    /* Windows (Chrome/Edge/Firefox) рендерит backdrop-filter ненадёжно — на разных
-       машинах то слабее, то вообще без блюра, из-за чего подбор прозрачности через
-       alpha не даёт стабильного результата. Вместо попытки сделать полупрозрачное
-       "стекло" убедительным — на Windows делаем его полностью непрозрачным (alpha=1)
-       и выключаем сам backdrop-filter, чтобы вид не зависел от качества рендеринга.
-       Класс ставится в app.ts по navigator.userAgent. На macOS/iOS ничего не меняется. */
-    html.is-windows {
-        --glass-fill: #f4f5f8;
-        --glass-fill-strong: #f8f9fb;
-        --glass-solid: #f8f9fb;
-        --glass-border: rgba(0, 0, 0, 0.16);
-        --glass-highlight: rgba(255, 255, 255, 0.7);
-    }
-    @media (prefers-color-scheme: dark) {
-        html.is-windows {
-            --glass-fill: #1c1c22;
-            --glass-fill-strong: #202027;
-            --glass-solid: #202027;
-            --glass-border: rgba(255, 255, 255, 0.24);
-            --glass-highlight: rgba(255, 255, 255, 0.22);
-        }
-    }
-
     /* Тема выбирается в Настройках (светлая/тёмная/системная/по времени) —
        app.ts ставит соответствующий класс на <html>. Без класса (режим "системная")
        работает как раньше — через prefers-color-scheme выше. Значения продублированы
@@ -123,23 +100,6 @@
         --orb-c: rgba(175, 82, 222, 0.45);
         --orb-d: rgba(255, 159, 10, 0.3);
     }
-    /* Windows + принудительная тема — те же плотные/непрозрачные значения glass,
-       что и выше, но без привязки к prefers-color-scheme (тема может не совпадать с OS). */
-    html.is-windows.theme-light {
-        --glass-fill: #f4f5f8;
-        --glass-fill-strong: #f8f9fb;
-        --glass-solid: #f8f9fb;
-        --glass-border: rgba(0, 0, 0, 0.16);
-        --glass-highlight: rgba(255, 255, 255, 0.7);
-    }
-    html.is-windows.theme-dark {
-        --glass-fill: #1c1c22;
-        --glass-fill-strong: #202027;
-        --glass-solid: #202027;
-        --glass-border: rgba(255, 255, 255, 0.24);
-        --glass-highlight: rgba(255, 255, 255, 0.22);
-    }
-
     html {
         color-scheme: light dark;
     }
@@ -256,20 +216,6 @@
         backdrop-filter: none;
     }
     .orbs { display: none; }
-}
-
-/* Windows — те же .glass/.glass-strong/.editbtn/.jtable thead th объявлены внутри
-   @layer components (или вовсе без слоя для .editbtn) с backdrop-filter: blur(...).
-   Правило внутри @layer base их не перебивало — по спеке cascade layers порядок
-   слоёв важнее специфичности, более поздний слой всегда выигрывает у более раннего
-   независимо от селектора. Поэтому здесь — намеренно вне @layer (у неслоёных правил
-   наивысший приоритет), как и блок reduced-transparency выше. */
-html.is-windows .glass,
-html.is-windows .glass-strong,
-html.is-windows .editbtn,
-html.is-windows .jtable thead th {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
