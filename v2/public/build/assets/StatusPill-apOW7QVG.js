@@ -1,1 +1,0 @@
-import{A as e,E as t,J as n,T as r,dt as i,st as a,x as o}from"./app-CV5uWs7n.js";t(),n();var s=r({__name:`StatusPill`,props:{text:{},variant:{}},setup(t){return(n,r)=>(e(),o(`span`,{class:a([`pill`,`pill--`+(t.variant||`neutral`)])},i(t.text),3))}});export{s as t};
