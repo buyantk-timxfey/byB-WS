@@ -117,9 +117,10 @@ class DashboardController extends Controller
         $monthIn = (float) BankLine::whereBetween('date', [$from, $to])->where('amount', '>', 0)->sum('amount');
         $monthOut = abs((float) BankLine::whereBetween('date', [$from, $to])->where('amount', '<', 0)->sum('amount'));
 
-        // Трекер поставок (кроме завершённых)
+        // Трекер поставок (кроме завершённых): маршрут с грузовиком, остаток дней,
+        // цвет-статус для свечения карточки (ok / warn ≤2 дн до ETA / bad / wait).
         $shipments = Shipment::with('counterparty:id,name')->where('status', '!=', 'Завершено')
-            ->orderBy('eta')->limit(10)->get()->map(function (Shipment $s) {
+            ->orderBy('eta')->limit(10)->get()->map(function (Shipment $s) use ($now) {
                 $start = $s->date ? Carbon::parse($s->date) : null;
                 $eta = $s->eta ? Carbon::parse($s->eta) : null;
                 $overdue = $eta && $eta->isPast();
@@ -128,13 +129,18 @@ class DashboardController extends Controller
                 if ($start && $eta && $eta->gt($start)) {
                     $pct = (int) min(100, max(0, round(Carbon::now()->diffInDays($start, false) * -1 / $start->diffInDays($eta) * 100)));
                 }
-                $color = $overdue ? 'var(--expense)' : ($wait ? 'var(--ink-3)' : ($pct >= 50 ? 'var(--income)' : 'var(--warn)'));
+                if ($overdue) {
+                    $pct = 100;
+                }
                 $kind = $overdue ? 'overdue' : ($wait ? 'wait' : 'pct');
+                $days = $eta ? (int) $now->copy()->startOfDay()->diffInDays($eta->copy()->startOfDay(), false) : null;
+                $glow = $overdue ? 'bad' : ($wait ? 'wait' : (($days !== null && $days <= 2) ? 'warn' : 'ok'));
 
                 return [
                     'cp' => $s->counterparty?->name ?? '—', 'name' => $s->name ?? $s->number,
-                    'kind' => $kind, 'pct' => $pct, 'color' => $color,
-                    'dates' => ($start ? $start->format('d.m') : '—').' → '.($eta ? $eta->format('d.m') : '—'),
+                    'kind' => $kind, 'pct' => $pct, 'glow' => $glow, 'days' => $days,
+                    'start' => $start ? $start->format('d.m') : '—',
+                    'eta' => $eta ? $eta->format('d.m') : '—',
                 ];
             });
 

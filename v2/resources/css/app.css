@@ -246,12 +246,39 @@
 .kpinum { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin-top: 4px; }
 .kpi-sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 .kpi-spark { width: 100%; height: 34px; display: block; margin-top: auto; overflow: visible; }
-.shipw { align-items: center; text-align: center; }
-.shipw .cp { font-size: 11px; color: var(--ink-3); }
-.shipw .nm { font-size: 13px; font-weight: 600; line-height: 1.1; margin-bottom: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.shipw .dts { font-size: 11px; color: var(--ink-2); margin-top: auto; }
-.ring-s { position: relative; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; margin: 2px auto; }
-.ring-s span { position: absolute; font-size: 13px; font-weight: 600; }
+/* Карточка поставки: маршрут с грузовиком + остаток дней + свечение статуса */
+.shipw { display: flex; flex-direction: column; width: 250px; min-height: 148px; transition: box-shadow .3s ease, border-color .3s ease; }
+.shipw .cp { font-size: 11px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shipw .nm { font-size: 14px; font-weight: 600; line-height: 1.15; margin-top: 1px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sw-days { font-size: 12.5px; font-weight: 700; margin-top: 6px; }
+.sw-days--ok { color: var(--income); }
+.sw-days--warn { color: var(--warn); }
+.sw-days--bad { color: var(--expense); }
+.sw-days--wait { color: var(--ink-3); font-weight: 600; }
+/* Маршрут: точка отправки — трек с заливкой прогресса и грузовиком — точка прибытия */
+.route { display: flex; align-items: center; gap: 6px; margin-top: auto; padding: 14px 2px 4px; }
+.rt-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); flex-shrink: 0; }
+.rt-track { position: relative; flex: 1; height: 4px; border-radius: 999px; background: var(--glass-fill-strong); }
+.rt-fill { height: 100%; border-radius: 999px; background: var(--income); transition: width .5s cubic-bezier(.22,1,.36,1); }
+.rt-fill--warn { background: var(--warn); }
+.rt-fill--bad { background: var(--expense); }
+.rt-fill--wait { background: transparent; }
+.rt-truck { position: absolute; top: 50%; transform: translate(-50%, -58%); color: var(--income); background: var(--bg, #fff); border-radius: 50%; padding: 3px; box-shadow: 0 2px 8px rgba(0,0,0,.18); line-height: 0; transition: left .5s cubic-bezier(.22,1,.36,1); }
+.rt-truck--warn { color: var(--warn); }
+.rt-truck--bad { color: var(--expense); }
+.rt-truck--wait { color: var(--ink-3); }
+.rt-end { width: 10px; height: 10px; border-radius: 50%; border: 2.5px solid var(--ink-3); flex-shrink: 0; }
+.rt-end--bad { border-color: var(--expense); background: rgba(255,69,58,.25); }
+.sw-dates { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+/* Свечение статуса */
+.shipw--ok { border-color: rgba(52,199,89,.28); box-shadow: 0 10px 30px rgba(52,199,89,.14); }
+.shipw--warn { border-color: rgba(255,159,10,.32); box-shadow: 0 10px 30px rgba(255,159,10,.16); }
+.shipw--bad { border-color: rgba(255,69,58,.38); animation: shipw-pulse 2.2s ease-in-out infinite; }
+@keyframes shipw-pulse {
+    0%, 100% { box-shadow: 0 10px 30px rgba(255,69,58,.14); }
+    50% { box-shadow: 0 10px 34px rgba(255,69,58,.32); }
+}
+@media (prefers-reduced-motion: reduce) { .shipw--bad { animation: none; box-shadow: 0 10px 30px rgba(255,69,58,.2); } }
 .accw { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 .accw .it { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 13px; background: var(--glass-fill); }
 .chip { width: 30px; height: 30px; border-radius: 9px; background: var(--glass-fill-strong); display: flex; align-items: center; justify-content: center; color: var(--ink-2); flex: none; }
@@ -286,7 +313,7 @@
 .ships-scroll { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; max-width: 1240px; margin: 0 auto 18px; padding: 2px 2px 8px; }
 .ships-scroll::-webkit-scrollbar { height: 6px; }
 .ships-scroll::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
-.ships-scroll .wgt-s { scroll-snap-align: start; flex: 0 0 168px; }
+.ships-scroll .shipw { scroll-snap-align: start; flex: 0 0 250px; }
 
 /* ── Глобальный поиск ── */
 .search-ov { position: fixed; inset: 0; z-index: 80; display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; background: rgba(0,0,0,.35); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }

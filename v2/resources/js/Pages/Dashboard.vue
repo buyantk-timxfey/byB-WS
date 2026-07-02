@@ -24,7 +24,6 @@ const warehouse = props.warehouse;
 const mailboxes = props.mailboxes;
 const reminders = props.reminders;
 const tx = props.tx;
-const C = 214;
 
 // ── Настройка виджетов: скрыть/показать + порядок (localStorage) ──
 const editMode = ref(false);
@@ -55,6 +54,15 @@ const restore = (id: string) => { hidden.value = hidden.value.filter((x) => x !=
 const hiddenList = computed(() => hidden.value.map((id) => ({ id, label: labelFor(id) })));
 
 const go = (url: string) => { if (!editMode.value) router.visit(url); };
+
+// Подпись остатка дней на карточке поставки
+function daysLabel(s: { kind: string; days: number | null }): string {
+    if (s.kind === 'wait') return 'ожидает отправки';
+    if (s.days === null) return 'без даты прибытия';
+    if (s.days < 0) return `просрочка ${-s.days} дн`;
+    if (s.days === 0) return 'прибывает сегодня';
+    return `ещё ${s.days} дн`;
+}
 
 // Обновление почты: используется и кнопкой в виджете, и автоматически при заходе на главную
 const refreshingMail = ref(false);
@@ -121,20 +129,19 @@ onMounted(() => { refreshMail(); });
                     <a href="/shipments">Все →</a>
                 </div>
                 <div class="ships-scroll">
-                    <div v-for="s in shipments" :key="s.name" class="glass w-pad wgt-s shipw pressable" @click="go('/shipments')">
+                    <div v-for="s in shipments" :key="s.name" class="glass w-pad shipw pressable" :class="'shipw--' + s.glow" @click="go('/shipments')">
                         <div class="cp">{{ s.cp }}</div>
                         <div class="nm">{{ s.name }}</div>
-                        <div class="ring-s">
-                            <svg viewBox="0 0 100 100" width="60" height="60">
-                                <circle v-if="s.kind !== 'overdue'" cx="50" cy="50" r="34" fill="none" stroke="var(--glass-border)" stroke-width="9" />
-                                <circle v-if="s.kind === 'pct'" cx="50" cy="50" r="34" fill="none" :stroke="s.color" stroke-width="9" stroke-linecap="round" :stroke-dasharray="C" :stroke-dashoffset="C * (1 - s.pct / 100)" transform="rotate(-90 50 50)" />
-                                <circle v-if="s.kind === 'overdue'" cx="50" cy="50" r="34" fill="none" stroke="var(--expense)" stroke-width="9" />
-                            </svg>
-                            <span v-if="s.kind === 'pct'">{{ s.pct }}%</span>
-                            <span v-else-if="s.kind === 'wait'" style="font-size:11px;color:var(--ink-2)">Ожидает</span>
-                            <span v-else style="font-size:20px;font-weight:700;color:var(--expense)">×</span>
+                        <div class="sw-days" :class="'sw-days--' + s.glow">{{ daysLabel(s) }}</div>
+                        <div class="route">
+                            <span class="rt-dot"></span>
+                            <div class="rt-track">
+                                <div class="rt-fill" :class="'rt-fill--' + s.glow" :style="{ width: s.pct + '%' }"></div>
+                                <span class="rt-truck" :class="'rt-truck--' + s.glow" :style="{ left: s.pct + '%' }"><Icon name="truck" :size="17" /></span>
+                            </div>
+                            <span class="rt-end" :class="{ 'rt-end--bad': s.glow === 'bad' }"></span>
                         </div>
-                        <div class="dts">{{ s.dates }}</div>
+                        <div class="sw-dates"><span>{{ s.start }}</span><span>{{ s.eta }}</span></div>
                     </div>
                 </div>
             </div>
