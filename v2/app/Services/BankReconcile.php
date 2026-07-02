@@ -66,6 +66,15 @@ class BankReconcile
                         ]);
                         break;
 
+                    case 'income_article':
+                        // Прочие доходы (кэшбэк, проценты) — отдельный тип, чтобы
+                        // не смешивались с выручкой от продаж (income)
+                        Turnover::create([
+                            'date' => $line->date, 'type' => 'income_other', 'article_id' => $m->target_id,
+                            'amount' => $amt, 'doc_type' => 'bank_line', 'doc_id' => $line->id,
+                        ]);
+                        break;
+
                     case 'acquiring':
                         Turnover::create([
                             'date' => $line->date, 'type' => 'acquiring', 'article_id' => $m->target_id,

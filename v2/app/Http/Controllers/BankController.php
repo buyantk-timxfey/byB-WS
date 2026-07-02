@@ -46,7 +46,8 @@ class BankController extends Controller
         return Inertia::render('Bank', [
             'accounts' => $accounts,
             'lines' => $lines,
-            'articles' => ExpenseArticle::orderBy('name')->get(['id', 'name']),
+            'articles' => ExpenseArticle::where('kind', 'expense')->orderBy('name')->get(['id', 'name']),
+            'incomeArticles' => ExpenseArticle::where('kind', 'income')->orderBy('name')->get(['id', 'name']),
             'openSales' => $this->openSales(),
             'openShipments' => $this->openShipments(),
             'importAccounts' => Account::orderBy('sort_order')->orderBy('name')->get(['id', 'name']),
@@ -161,7 +162,7 @@ class BankController extends Controller
     {
         $data = $r->validate([
             'matches' => 'array',
-            'matches.*.target_type' => 'required|in:sale,shipment,expense_article,acquiring,transfer,other',
+            'matches.*.target_type' => 'required|in:sale,shipment,expense_article,income_article,acquiring,transfer,other',
             'matches.*.target_id' => 'nullable|integer',
             'matches.*.amount' => 'required|numeric',
         ]);
@@ -225,6 +226,7 @@ class BankController extends Controller
             'sale' => 'Продажа '.optional(Sale::find($m->target_id))->number,
             'shipment' => 'Поставка '.optional(Shipment::find($m->target_id))->number,
             'expense_article' => 'Статья: '.optional(ExpenseArticle::find($m->target_id))->name,
+            'income_article' => 'Доход: '.optional(ExpenseArticle::find($m->target_id))->name,
             'acquiring' => 'Эквайринг',
             'transfer' => 'Перевод',
             default => null,

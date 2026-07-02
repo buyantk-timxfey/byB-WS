@@ -39,6 +39,7 @@ class ReferenceController extends Controller
             ]],
             'articles' => [ExpenseArticle::class, [
                 'name' => 'required|string|max:255',
+                'kind' => 'nullable|in:expense,income',
             ]],
             'groups' => [NomenclatureGroup::class, [
                 'name' => 'required|string|max:255', 'parent_id' => 'nullable|exists:nomenclature_groups,id',

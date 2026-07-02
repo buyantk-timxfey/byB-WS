@@ -35,7 +35,8 @@ class FinanceController extends Controller
         $cogs = $sum('cogs');
         $acquiring = $sum('acquiring');
         $expenses = $sum('expense');
-        $gross = $revenue - $cogs - $acquiring - $expenses;
+        $otherIncome = $sum('income_other');
+        $gross = $revenue - $cogs - $acquiring - $expenses + $otherIncome;
         $tax = round($gross * $taxRate, 2);
         $net = $gross - $tax;
         $salary = round(max(0, $net) * $salaryRate, 2);
@@ -50,7 +51,7 @@ class FinanceController extends Controller
             $m = $now->copy()->subMonths($i);
             $a = $m->copy()->startOfMonth()->toDateString();
             $b = $m->copy()->endOfMonth()->toDateString();
-            $g = (float) Turnover::whereIn('type', ['income'])->whereBetween('date', [$a, $b])->sum('amount')
+            $g = (float) Turnover::whereIn('type', ['income', 'income_other'])->whereBetween('date', [$a, $b])->sum('amount')
                 - (float) Turnover::whereIn('type', ['cogs', 'acquiring', 'expense'])->whereBetween('date', [$a, $b])->sum('amount');
             $months[] = mb_substr($m->locale('ru')->monthName, 0, 3);
             $profit12[] = round($g / 1000, 1);
@@ -63,7 +64,7 @@ class FinanceController extends Controller
                 : $from->locale('ru')->isoFormat('MMMM YYYY').' — '.$to->locale('ru')->isoFormat('MMMM YYYY'),
             'taxRate' => (float) Setting::get('tax_rate', 16),
             'salaryRate' => (float) Setting::get('salary_rate', 20),
-            'pnl' => compact('revenue', 'cogs', 'acquiring', 'expenses', 'gross', 'tax', 'net', 'salary')
+            'pnl' => compact('revenue', 'cogs', 'acquiring', 'expenses', 'otherIncome', 'gross', 'tax', 'net', 'salary')
                 + ['retained' => $net - $salary, 'salesCount' => $salesCount],
             'metrics' => [
                 'margin' => $revenue > 0 ? round($gross / $revenue * 100, 1) : 0,
@@ -81,7 +82,7 @@ class FinanceController extends Controller
         $rows = Turnover::whereBetween('date', [$from, $to])->orderBy('date')->get();
         $saleNums = Sale::pluck('number', 'id');
         $shipNums = Shipment::pluck('number', 'id');
-        $out = ['income' => [], 'cogs' => [], 'acquiring' => [], 'expense' => []];
+        $out = ['income' => [], 'income_other' => [], 'cogs' => [], 'acquiring' => [], 'expense' => []];
         foreach ($rows as $t) {
             $label = match ($t->doc_type) {
                 'sale' => 'Продажа '.($saleNums[$t->doc_id] ?? $t->doc_id),

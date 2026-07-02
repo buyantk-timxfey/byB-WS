@@ -34,7 +34,7 @@ class DashboardController extends Controller
         $cogs = $sum('cogs');
         $acq = $sum('acquiring');
         $exp = $sum('expense');
-        $gross = $revenue - $cogs - $acq - $exp;
+        $gross = $revenue - $cogs - $acq - $exp + $sum('income_other');
         $purchases = (float) Shipment::whereNotNull('posted_at')->whereBetween('date', [$from, $to])->get()->sum(fn ($s) => $s->total());
 
         // спарклайны: 8 мес
@@ -44,7 +44,7 @@ class DashboardController extends Controller
         })->all();
         $incSpark = $spark(fn ($a, $b) => round((float) Turnover::where('type', 'income')->whereBetween('date', [$a, $b])->sum('amount') / 1000));
         $profSpark = $spark(fn ($a, $b) => round((
-            (float) Turnover::where('type', 'income')->whereBetween('date', [$a, $b])->sum('amount')
+            (float) Turnover::whereIn('type', ['income', 'income_other'])->whereBetween('date', [$a, $b])->sum('amount')
             - (float) Turnover::whereIn('type', ['cogs', 'acquiring', 'expense'])->whereBetween('date', [$a, $b])->sum('amount')) / 1000));
         // Маржа/ROI/Закупки раньше показывали чужой спарклайн (profSpark/incSpark на всех карточках) —
         // у каждой метрики теперь свой ряд по тем же 8 месяцам.
@@ -68,7 +68,7 @@ class DashboardController extends Controller
         $pb = $now->copy()->subDays(30)->toDateString();
         $sumP = fn ($t) => (float) Turnover::where('type', $t)->whereBetween('date', [$pa, $pb])->sum('amount');
         $revP = $sumP('income');
-        $grossP = $revP - $sumP('cogs') - $sumP('acquiring') - $sumP('expense');
+        $grossP = $revP - $sumP('cogs') - $sumP('acquiring') - $sumP('expense') + $sumP('income_other');
         $purchP = (float) Shipment::whereNotNull('posted_at')->whereBetween('date', [$pa, $pb])->get()->sum(fn ($s) => $s->total());
         $marginP = $revP > 0 ? $grossP / $revP * 100 : 0;
         $margin = $revenue > 0 ? $gross / $revenue * 100 : 0;

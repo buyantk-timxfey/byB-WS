@@ -20,6 +20,7 @@ type Doc = { id: number; number: string; party: string; sum: number; debt: numbe
 
 const props = defineProps<{
     accounts: any[]; lines: Line[]; articles: { id: number; name: string }[];
+    incomeArticles: { id: number; name: string }[];
     openSales: Doc[]; openShipments: Doc[]; importAccounts: { id: number; name: string }[];
     balanceSeries: number[];
 }>();
@@ -126,9 +127,13 @@ function pickDoc(d: Doc) {
     const amount = Math.round(Math.max(0, Math.min(remaining.value, d.debt)) * 100) / 100;
     sels.value.push({ target_type: type, target_id: d.id, amount, label: `${d.number} · ${d.party ?? ''}` });
 }
-function pickArticle(id: number) {
+// Статья расхода (для списаний) или дохода (для приходов: кэшбэк, проценты)
+function pickArticle(id: number, type: 'expense_article' | 'income_article' = 'expense_article') {
     if (!cur.value) return;
-    sels.value = [{ target_type: 'expense_article', target_id: id, amount: lineAbs.value }];
+    const list = type === 'income_article' ? props.incomeArticles : props.articles;
+    const name = list.find((a) => a.id === id)?.name;
+    const label = (type === 'income_article' ? 'Доход: ' : 'Статья: ') + (name ?? '');
+    sels.value = [{ target_type: type, target_id: id, amount: lineAbs.value, label }];
 }
 function pickTransfer() {
     if (!cur.value) return;
@@ -296,6 +301,15 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                         :options="articles"
                         placeholder="— выбрать статью —"
                         @update:modelValue="(id) => id && pickArticle(id)"
+                    />
+                </div>
+                <div class="fld" v-else>
+                    <label>Или отнести на статью дохода</label>
+                    <SearchSelect
+                        :modelValue="sels[0]?.target_type === 'income_article' ? sels[0].target_id : null"
+                        :options="incomeArticles"
+                        placeholder="— кэшбэк, проценты и т.п. —"
+                        @update:modelValue="(id) => id && pickArticle(id, 'income_article')"
                     />
                 </div>
                 <button class="link-btn" @click="pickTransfer">Это перевод между своими счетами</button>

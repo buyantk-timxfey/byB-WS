@@ -29,7 +29,7 @@ class SettingController extends Controller
         return Inertia::render('Settings', [
             'settings' => $settings,
             'rules' => ReconRule::with('article:id,name')->orderBy('priority')->get(),
-            'articles' => ExpenseArticle::orderBy('name')->get(['id', 'name']),
+            'articles' => ExpenseArticle::where('kind', 'expense')->orderBy('name')->get(['id', 'name']),   // авто-правила работают только по расходам
             'vatRates' => VatRate::orderBy('rate')->get(['id', 'rate']),
             'devices' => WebauthnCredential::where('user_id', auth()->id())->get(['id', 'name', 'last_used_at']),
             'lastPatch' => Setting::get('last_patch'),

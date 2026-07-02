@@ -7,7 +7,7 @@ import { money, money0, pct } from '@/lib/format';
 
 const props = defineProps<{
     period: string; periodLabel: string; taxRate: number; salaryRate: number;
-    pnl: { revenue: number; cogs: number; acquiring: number; expenses: number; gross: number; tax: number; net: number; salary: number; retained: number; salesCount: number };
+    pnl: { revenue: number; cogs: number; acquiring: number; expenses: number; otherIncome: number; gross: number; tax: number; net: number; salary: number; retained: number; salesCount: number };
     metrics: { margin: number; roi: number; avgCheck: number };
     chart: { months: string[]; profit: number[] };
     drill: Record<string, { doc: string; date: string; sum: number }[]>;
@@ -21,7 +21,7 @@ const open = ref(false);
 const drillTitle = ref('');
 const drillRows = ref<{ doc: string; date: string; sum: number }[]>([]);
 const drillTotal = computed(() => drillRows.value.reduce((a, r) => a + r.sum, 0));
-const titles: Record<string, string> = { income: 'Выручка', cogs: 'Себестоимость проданного', acquiring: 'Эквайринг', expense: 'Прочие расходы ИП' };
+const titles: Record<string, string> = { income: 'Выручка', income_other: 'Прочие доходы', cogs: 'Себестоимость проданного', acquiring: 'Эквайринг', expense: 'Прочие расходы ИП' };
 function drill(key: string) {
     drillRows.value = props.drill[key] ?? [];
     drillTitle.value = titles[key] ?? key;
@@ -71,6 +71,10 @@ function drill(key: string) {
                 <div class="pnl-row pnl-row--out" @click="drill('expense')">
                     <span>− Прочие расходы ИП <span class="pnl-hint">по статьям</span></span>
                     <span class="tnum">{{ money(pnl.expenses) }}</span>
+                </div>
+                <div class="pnl-row pnl-row--in" @click="drill('income_other')">
+                    <span>+ Прочие доходы <span class="pnl-hint">кэшбэк, проценты</span></span>
+                    <span class="tnum" :style="{ color: 'var(--income)' }">{{ money(pnl.otherIncome) }}</span>
                 </div>
                 <div class="pnl-row pnl-row--total">
                     <span>= Валовая прибыль <span class="pnl-hint">маржа {{ pct(metrics.margin) }}</span></span>

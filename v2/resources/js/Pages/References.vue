@@ -17,7 +17,7 @@ const dir = ref<'counterparties' | 'nomenclature' | 'carriers' | 'accounts' | 'a
 const q = ref('');
 const tabs = [
     { id: 'counterparties', label: 'Контрагенты' }, { id: 'nomenclature', label: 'Номенклатура' },
-    { id: 'carriers', label: 'Транспортные компании' }, { id: 'accounts', label: 'Счета' }, { id: 'articles', label: 'Статьи затрат' },
+    { id: 'carriers', label: 'Транспортные компании' }, { id: 'accounts', label: 'Счета' }, { id: 'articles', label: 'Статьи' },
 ] as const;
 
 const list = computed<any[]>(() => {
@@ -43,7 +43,7 @@ const accountColors = ['#0a84ff', '#ef3124', '#34c759', '#ff9f0a', '#af52de', '#
 const blankForm = {
     type: 'Поставщик', name: '', inn: '', contact: '', comment: '',
     group_id: null, unit: 'шт', article: '',
-    site: '', note: '', last4: '', color: accountColors[0],
+    site: '', note: '', last4: '', color: accountColors[0], kind: 'expense',
 };
 const form = useForm<Record<string, any>>({ ...blankForm });
 
@@ -64,7 +64,7 @@ function payload() {
     if (dir.value === 'nomenclature') return { name: form.name, group_id: form.group_id, unit: form.unit, article: form.article, comment: form.comment };
     if (dir.value === 'carriers') return { name: form.name, site: form.site, note: form.note };
     if (dir.value === 'accounts') return { name: form.name, last4: form.last4, color: form.color };
-    return { name: form.name };
+    return { name: form.name, kind: form.kind || 'expense' };
 }
 function submit() {
     form.transform(payload);
@@ -158,13 +158,14 @@ function destroy() {
                 </table>
 
                 <table v-else class="jtable">
-                    <thead><tr><th>Статья</th><th>Тип</th></tr></thead>
+                    <thead><tr><th>Статья</th><th>Вид</th><th>Тип</th></tr></thead>
                     <tbody>
                         <tr v-for="x in list" :key="x.id" @click="!x.is_system && edit(x)">
                             <td>{{ x.name }}</td>
+                            <td><StatusPill :text="x.kind === 'income' ? 'Доход' : 'Расход'" :variant="x.kind === 'income' ? 'ok' : 'neutral'" /></td>
                             <td><StatusPill :text="x.is_system ? 'Системная' : 'Пользовательская'" :variant="x.is_system ? 'info' : 'neutral'" /></td>
                         </tr>
-                        <tr v-if="!list.length"><td colspan="2"><div class="j-empty">Пусто</div></td></tr>
+                        <tr v-if="!list.length"><td colspan="3"><div class="j-empty">Пусто</div></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -206,6 +207,9 @@ function destroy() {
             </template>
             <template v-else>
                 <div class="fld"><label>Название статьи</label><input v-model="form.name" /></div>
+                <div class="fld"><label>Вид</label>
+                    <select v-model="form.kind"><option value="expense">Расход</option><option value="income">Доход (кэшбэк, проценты и т.п.)</option></select>
+                </div>
             </template>
 
             <template #footer>
