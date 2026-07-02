@@ -237,6 +237,13 @@
 
 /* ── Дашборд: виджеты фиксированных размеров (как iOS) ── */
 .sec { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; max-width: 1240px; margin: 0 auto 16px; }
+/* Телефон: KPI — горизонтальная лента со снапом (как карточки поставок) */
+@media (max-width: 640px) {
+    .kpi-sec { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 8px; scrollbar-width: none; }
+    .kpi-sec::-webkit-scrollbar { display: none; }
+    .kpi-sec .wwrap { flex: 0 0 auto; scroll-snap-align: start; }
+    .kpi-sec .wgt-s { width: 168px; height: 168px; }
+}
 .wgt-s { width: 168px; height: 168px; }
 .wgt-m { width: 352px; height: 168px; }
 .wgt-l { width: 352px; height: 352px; }

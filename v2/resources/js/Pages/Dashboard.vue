@@ -103,8 +103,8 @@ onMounted(() => { refreshMail(); });
                 </button>
             </div>
 
-            <!-- Ряд 1: KPI (S) -->
-            <div class="sec">
+            <!-- Ряд 1: KPI (S) — на телефоне горизонтальная карусель, как поставки -->
+            <div class="sec kpi-sec">
                 <template v-for="k in kpis" :key="k.label">
                     <div v-if="isVis('kpi:' + k.label)" class="wwrap">
                         <button v-if="editMode" class="whide" @click.stop="hide('kpi:' + k.label)">×</button>
