@@ -1,1 +1,0 @@
-import{A as e,E as t,T as n,ot as r,q as i,ut as a,x as o}from"./app-BIgUChVV.js";t(),i();var s=n({__name:`StatusPill`,props:{text:{},variant:{}},setup(t){return(n,i)=>(e(),o(`span`,{class:r([`pill`,`pill--`+(t.variant||`neutral`)])},a(t.text),3))}});export{s as t};

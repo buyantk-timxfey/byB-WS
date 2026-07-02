@@ -27,7 +27,7 @@ class SaleController extends Controller
             ->get()->groupBy('target_id');
         $paidBySale = $matchesBySale->map(fn ($ms) => $ms->sum('amount'));
 
-        $rows = Sale::with(['counterparty:id,name', 'items'])
+        $rows = Sale::with(['counterparty:id,name', 'items.nomenclature:id,name'])
             ->orderByDesc('date')->orderByDesc('id')->get()
             ->map(function (Sale $s) use ($paidBySale, $matchesBySale) {
                 return [
@@ -46,7 +46,8 @@ class SaleController extends Controller
                     'paid' => (float) ($paidBySale[$s->id] ?? 0),
                     'posted' => $s->isPosted(),
                     'items' => $s->items->map(fn ($i) => [
-                        'nomenclature_id' => $i->nomenclature_id, 'qty' => (float) $i->qty,
+                        'nomenclature_id' => $i->nomenclature_id, 'name' => $i->nomenclature?->name,
+                        'qty' => (float) $i->qty,
                         'price' => (float) $i->price, 'cost' => (float) $i->cost,
                     ]),
                     'payments' => ($matchesBySale[$s->id] ?? collect())->map(fn (BankMatch $m) => [

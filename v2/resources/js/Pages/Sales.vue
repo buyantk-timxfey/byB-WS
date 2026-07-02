@@ -9,7 +9,7 @@ import SearchSelect from '@/Components/SearchSelect.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
 
-type Item = { nomenclature_id: number | null; qty: number | null; price: number | null; cost?: number };
+type Item = { nomenclature_id: number | null; name?: string | null; qty: number | null; price: number | null; cost?: number };
 type Payment = { match_id: number; bank_line_id: number; date: string | null; party: string; amount: number; auto: boolean };
 type Row = {
     id: number; number: string; date: string; buyer: string; counterparty_id: number | null;
@@ -50,6 +50,13 @@ const buyerLabel = (s: Row) => s.sale_type === 'Касса' ? 'Касса · ' +
 
 const rub2 = (n: number) => new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' ₽';
 const goodName = (id: number | null) => props.goods.find((g) => g.id === id)?.name ?? '';
+
+// ── Быстрый просмотр позиций (как на складе): товары продажи с маржой по каждому ──
+const expanded = ref<number | null>(null);
+const toggleExp = (id: number) => { expanded.value = expanded.value === id ? null : id; };
+const itemSum = (it: Item) => (Number(it.qty) || 0) * (Number(it.price) || 0);
+const itemProfit = (it: Item) => itemSum(it) - (Number(it.cost) || 0);
+const itemMargin = (it: Item) => itemSum(it) > 0 ? Math.round(itemProfit(it) / itemSum(it) * 100) : 0;
 
 // ── Состояние ──
 const chooser = ref(false);          // выбор типа продажи
@@ -177,36 +184,66 @@ function payNow() {
             <div class="jscroll">
                 <table class="jtable">
                     <thead>
-                        <tr><th>№</th><th>Дата</th><th>Покупатель</th><th class="num">Сумма</th><th class="pay-col"><Icon name="link" :size="14" /></th><th class="num">Прибыль</th><th>Статус</th></tr>
+                        <tr><th style="width:34px"></th><th>№</th><th>Дата</th><th>Покупатель</th><th class="num">Сумма</th><th class="pay-col"><Icon name="link" :size="14" /></th><th class="num">Прибыль</th><th>Статус</th></tr>
                     </thead>
                     <tbody>
-                        <tr v-for="s in filtered" :key="s.id" @click="openDoc(s)">
-                            <td>{{ s.number }}</td>
-                            <td class="text-ink-2">{{ fdate(s.date) }}</td>
-                            <td>
-                                <span v-if="s.sale_type === 'Касса'" class="type-chip"><Icon name="wallet" :size="12" /> Касса</span>
-                                {{ buyerLabel(s) }}
-                            </td>
-                            <td class="num">{{ money(s.sum) }}</td>
-                            <td class="pay-col" :title="payText(s)">
-                                <Icon v-if="payVariant(s) === 'ok'" name="check" :size="16" style="color:var(--income)" />
-                                <Icon v-else-if="payVariant(s) === 'warn'" name="minus" :size="16" style="color:var(--warn)" />
-                                <Icon v-else name="x" :size="16" style="color:var(--expense)" />
-                            </td>
-                            <td class="num">
-                                <template v-if="s.status === 'Оплачен'">
-                                    <span :style="{ color: 'var(--income)' }">{{ money(s.profit) }}</span>
-                                    <span class="text-ink-3" style="font-size:12px"> · {{ margin(s) }}%</span>
-                                </template>
-                                <span v-else class="text-ink-3">—</span>
-                            </td>
-                            <td><StatusPill :text="s.status" :variant="statusVariant(s.status)" /></td>
-                        </tr>
-                        <tr v-if="!filtered.length"><td colspan="7"><div class="j-empty">Продаж пока нет — создайте первую</div></td></tr>
+                        <template v-for="s in filtered" :key="s.id">
+                            <tr @click="openDoc(s)" :class="{ 'tr-open': expanded === s.id }">
+                                <td class="cell-chev" @click.stop="toggleExp(s.id)"><Icon name="chevron-right" :size="16" class="chev" :class="{ 'chev-open': expanded === s.id }" /></td>
+                                <td>{{ s.number }}</td>
+                                <td class="text-ink-2">{{ fdate(s.date) }}</td>
+                                <td>
+                                    <span v-if="s.sale_type === 'Касса'" class="type-chip"><Icon name="wallet" :size="12" /> Касса</span>
+                                    {{ buyerLabel(s) }}
+                                </td>
+                                <td class="num">{{ money(s.sum) }}</td>
+                                <td class="pay-col" :title="payText(s)">
+                                    <Icon v-if="payVariant(s) === 'ok'" name="check" :size="16" style="color:var(--income)" />
+                                    <Icon v-else-if="payVariant(s) === 'warn'" name="minus" :size="16" style="color:var(--warn)" />
+                                    <Icon v-else name="x" :size="16" style="color:var(--expense)" />
+                                </td>
+                                <td class="num">
+                                    <template v-if="s.status === 'Оплачен'">
+                                        <span :style="{ color: 'var(--income)' }">{{ money(s.profit) }}</span>
+                                        <span class="text-ink-3" style="font-size:12px"> · {{ margin(s) }}%</span>
+                                    </template>
+                                    <span v-else class="text-ink-3">—</span>
+                                </td>
+                                <td><StatusPill :text="s.status" :variant="statusVariant(s.status)" /></td>
+                            </tr>
+                            <tr v-if="expanded === s.id" class="batch-tr">
+                                <td></td>
+                                <td colspan="7">
+                                    <div v-if="s.items.length" class="batches">
+                                        <div class="sit-head">
+                                            <span>Товар</span><span class="num">Кол-во</span><span class="num">Цена</span>
+                                            <span class="num">Сумма</span><span class="num">Себест.</span><span class="num">Прибыль · маржа</span>
+                                        </div>
+                                        <div v-for="(it, i) in s.items" :key="i" class="sit-row">
+                                            <span class="sit-name" :title="it.name ?? goodName(it.nomenclature_id)">{{ it.name ?? goodName(it.nomenclature_id) }}</span>
+                                            <span class="num">{{ it.qty }}</span>
+                                            <span class="num">{{ money(Number(it.price) || 0) }}</span>
+                                            <span class="num">{{ money(itemSum(it)) }}</span>
+                                            <span class="num text-ink-2">{{ s.posted ? money(Number(it.cost) || 0) : '—' }}</span>
+                                            <span class="num">
+                                                <template v-if="s.posted">
+                                                    <span :style="{ color: itemProfit(it) >= 0 ? 'var(--income)' : 'var(--expense)' }">{{ money(itemProfit(it)) }}</span>
+                                                    <span class="text-ink-3" style="font-size:12px"> · {{ itemMargin(it) }}%</span>
+                                                </template>
+                                                <span v-else class="text-ink-3">—</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div v-else class="text-ink-3" style="padding:8px 0;font-size:13px">В продаже нет позиций.</div>
+                                    <div v-if="!s.posted && s.items.length" class="text-ink-3" style="font-size:12px;margin-top:6px">Себестоимость и маржа появятся после оплаты — товар списывается со склада по FIFO в момент статуса «Оплачен».</div>
+                                </td>
+                            </tr>
+                        </template>
+                        <tr v-if="!filtered.length"><td colspan="8"><div class="j-empty">Продаж пока нет — создайте первую</div></td></tr>
                     </tbody>
                     <tfoot v-if="filtered.length">
                         <tr>
-                            <td colspan="3">Выручка (оплачено): {{ paidSales.length }}</td>
+                            <td colspan="4">Выручка (оплачено): {{ paidSales.length }}</td>
                             <td class="num">{{ money(totalRevenue) }}</td>
                             <td>Ср. чек {{ money(avgCheck) }}</td>
                             <td class="num" :style="{ color: 'var(--income)' }">{{ money(totalProfit) }}</td>
@@ -354,6 +391,14 @@ function payNow() {
 
 <style scoped>
 .type-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 1px 7px; border-radius: 8px; background: var(--glass-fill); border: 1px solid var(--glass-border); color: var(--ink-2); margin-right: 6px; vertical-align: middle; }
+
+/* Быстрый просмотр позиций продажи (раскрытие как на складе) */
+.sit-head, .sit-row { display: grid; grid-template-columns: minmax(180px, 2fr) minmax(56px, auto) minmax(90px, auto) minmax(96px, auto) minmax(90px, auto) minmax(150px, auto); gap: 12px; align-items: center; }
+.sit-head { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-3); padding: 8px 0; }
+.sit-head span { white-space: nowrap; }
+.sit-row { padding: 9px 0; border-top: 1px solid var(--glass-border); font-size: 13px; }
+.sit-head .num, .sit-row .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sit-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Выбор типа */
 .type-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 4px 0 6px; }
