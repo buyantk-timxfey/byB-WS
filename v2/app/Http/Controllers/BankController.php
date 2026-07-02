@@ -165,6 +165,7 @@ class BankController extends Controller
             'matches.*.target_type' => 'required|in:sale,shipment,expense_article,income_article,acquiring,transfer,other',
             'matches.*.target_id' => 'nullable|integer',
             'matches.*.amount' => 'required|numeric',
+            'make_rule' => 'nullable|boolean',
         ]);
         $saleIds = $this->affectedSaleIds($line);
         DB::transaction(function () use ($line, $data) {
@@ -185,6 +186,15 @@ class BankController extends Controller
         }
         foreach (array_unique(array_filter($saleIds)) as $id) {
             \App\Services\SaleStatusSync::recalcById((int) $id);
+        }
+
+        // «Всегда относить операции этого контрагента на эту статью» — авто-правило по ИНН
+        $first = $data['matches'][0] ?? null;
+        if (($data['make_rule'] ?? false) && $line->inn && $first && $first['target_type'] === 'expense_article' && $first['target_id']) {
+            ReconRule::firstOrCreate(
+                ['match_field' => 'inn', 'match_value' => $line->inn, 'action_type' => 'expense_article'],
+                ['article_id' => $first['target_id'], 'priority' => 100],
+            );
         }
 
         return back();

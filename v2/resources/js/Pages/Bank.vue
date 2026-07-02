@@ -9,6 +9,7 @@ import SearchSelect from '@/Components/SearchSelect.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import Sparkline from '@/Components/Sparkline.vue';
 import { money, money0, signed, initials } from '@/lib/format';
+import { confirmDlg } from '@/lib/confirm';
 
 type MatchSel = { target_type: string; target_id: number | null; amount: number; label?: string | null };
 type Line = {
@@ -107,9 +108,14 @@ const remaining = computed(() => Math.round((lineAbs.value - selTotal.value) * 1
 const overAllocated = computed(() => remaining.value < -0.01);
 const isDocSel = (id: number) => sels.value.some((s) => (s.target_type === 'sale' || s.target_type === 'shipment') && s.target_id === id);
 
+const makeRule = ref(false);
+// Правило можно создать, когда выбрана статья расхода и у операции есть ИНН
+const canMakeRule = computed(() => !!cur.value?.inn && sels.value[0]?.target_type === 'expense_article');
+
 function reconcile(l: Line) {
     cur.value = l;
     showAllCand.value = false;
+    makeRule.value = false;
     // Показываем текущее разнесение операции — его можно дополнить или изменить.
     sels.value = l.matches.map((m) => ({ ...m }));
     open.value = true;
@@ -146,15 +152,15 @@ function applyReconcile() {
         .filter((s) => (Number(s.amount) || 0) > 0)
         .map((s) => ({ target_type: s.target_type, target_id: s.target_id, amount: s.amount }));
     if (!matches.length) return;
-    router.post(`/bank/lines/${cur.value.id}/reconcile`, { matches }, { onSuccess: () => { open.value = false; } });
+    router.post(`/bank/lines/${cur.value.id}/reconcile`, { matches, make_rule: makeRule.value && canMakeRule.value }, { onSuccess: () => { open.value = false; } });
 }
 function ignore() {
     if (!cur.value) return;
     router.post(`/bank/lines/${cur.value.id}/ignore`, {}, { onSuccess: () => { open.value = false; } });
 }
-function removeLine() {
+async function removeLine() {
     if (!cur.value) return;
-    if (confirm('Удалить операцию? Связанные проводки тоже снимутся.')) {
+    if (await confirmDlg('Удалить операцию? Связанные проводки тоже снимутся.')) {
         router.delete(`/bank/lines/${cur.value.id}`, { onSuccess: () => { open.value = false; } });
     }
 }
@@ -255,7 +261,12 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                     <div class="op-amt tnum" :style="o.amount > 0 ? { color: 'var(--income)' } : {}">{{ signed(o.amount) }}</div>
                 </div>
             </template>
-            <div v-if="!rows.length" class="j-empty">Операций нет — импортируйте выписку</div>
+            <div v-if="!rows.length" class="empty-big">
+                <span class="eb-ic"><Icon name="building-columns" :size="30" /></span>
+                <b>Операций пока нет</b>
+                <span>Импортируйте выписку из банк-клиента (формат 1С) — операции появятся здесь</span>
+                <button class="btn-primary pressable" @click="imp = true"><Icon name="plus" :size="16" /> Импортировать выписку</button>
+            </div>
             <div v-if="rows.length" class="op-foot">
                 <span>Приход: <b :style="{ color: 'var(--income)' }">{{ money(totalIn) }}</b></span>
                 <span>Расход: <b>{{ money(totalOut) }}</b></span>
@@ -302,6 +313,10 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                         placeholder="— выбрать статью —"
                         @update:modelValue="(id) => id && pickArticle(id)"
                     />
+                    <label v-if="canMakeRule" class="rule-check">
+                        <input v-model="makeRule" type="checkbox" />
+                        <span>Всегда относить операции этого контрагента (ИНН {{ cur.inn }}) на эту статью</span>
+                    </label>
                 </div>
                 <div class="fld" v-else>
                     <label>Или отнести на статью дохода</label>
@@ -342,6 +357,8 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
 </template>
 
 <style scoped>
+.rule-check { display: flex; align-items: flex-start; gap: 8px; margin-top: 9px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+.rule-check input { margin-top: 2px; accent-color: var(--info, #0a84ff); }
 /* Мультивыбор в сверке: список выбранных целей с редактируемыми суммами */
 .sel-list { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid rgba(10,132,255,.3); background: rgba(10,132,255,.08); border-radius: 12px; }
 .sel-row { display: flex; align-items: center; gap: 8px; }

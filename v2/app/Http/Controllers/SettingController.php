@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ExpenseArticle;
+use App\Services\DbBackup;
 use App\Models\ReconRule;
 use App\Models\Setting;
 use App\Models\VatRate;
@@ -33,9 +34,28 @@ class SettingController extends Controller
             'vatRates' => VatRate::orderBy('rate')->get(['id', 'rate']),
             'devices' => WebauthnCredential::where('user_id', auth()->id())->get(['id', 'name', 'last_used_at']),
             'lastPatch' => Setting::get('last_patch'),
+            'backups' => DbBackup::list(),
+            'lastBackupAt' => Setting::get('last_backup_at'),
             'currentLogin' => auth()->user()->email,
             'status' => session('status'),
         ]);
+    }
+
+    // Резервные копии БД
+    public function runBackup()
+    {
+        DbBackup::run();
+
+        return back()->with('status', 'Резервная копия создана');
+    }
+
+    public function downloadBackup(string $name)
+    {
+        abort_unless(preg_match('/^backup-[\d-]+\.sql\.gz$/', $name), 404);
+        $path = DbBackup::dir().'/'.$name;
+        abort_unless(is_file($path), 404);
+
+        return response()->download($path);
     }
 
     public function update(Request $r)

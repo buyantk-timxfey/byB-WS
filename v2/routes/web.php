@@ -43,8 +43,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // Склад — реальные данные (чтение из регистров)
-Route::get('/warehouse', [WarehouseController::class, 'index'])
-    ->middleware(['auth', 'verified'])->name('warehouse');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/warehouse', [WarehouseController::class, 'index'])->name('warehouse');
+    Route::post('/warehouse/receive', [WarehouseController::class, 'receive']);
+    Route::post('/warehouse/writeoff', [WarehouseController::class, 'writeoff']);
+    Route::post('/warehouse/adjust', [WarehouseController::class, 'adjust']);
+});
 
 // Банк — реальные данные (импорт выписки + сверка)
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -75,6 +79,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/settings/rules/{rule}', [SettingController::class, 'destroyRule']);
     Route::post('/settings/vat-rates', [SettingController::class, 'storeVatRate']);
     Route::delete('/settings/vat-rates/{vatRate}', [SettingController::class, 'destroyVatRate']);
+    Route::post('/settings/backup', [SettingController::class, 'runBackup']);
+    Route::get('/settings/backup/{name}', [SettingController::class, 'downloadBackup']);
     Route::put('/settings/credentials', [SettingController::class, 'changeCredentials']);
 });
 

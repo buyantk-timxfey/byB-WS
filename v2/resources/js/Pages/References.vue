@@ -7,6 +7,7 @@ import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
 import { money, num } from '@/lib/format';
+import { confirmDlg } from '@/lib/confirm';
 
 const props = defineProps<{
     counterparties: any[]; nomenclature: any[]; carriers: any[];
@@ -31,8 +32,8 @@ const debtText = (n: number) => n > 0 ? '+ ' + money(n) + ' (нам)' : n < 0 ? 
 const cpVariant = (t: string) => t === 'Поставщик' ? 'info' : t === 'Покупатель' ? 'ok' : 'neutral';
 const createLabel = computed(() => ({ counterparties: 'контрагента', nomenclature: 'товар', carriers: 'транспортную компанию', accounts: 'счёт', articles: 'статью' }[dir.value]));
 
-function cleanupGoods() {
-    if (!confirm('Удалить товары, которых нет ни в поставках, ни в продажах, ни на складе?')) return;
+async function cleanupGoods() {
+    if (!await confirmDlg('Удалить товары, которых нет ни в поставках, ни в продажах, ни на складе?')) return;
     router.post('/references/nomenclature/cleanup', {}, { preserveScroll: true });
 }
 
@@ -84,8 +85,8 @@ function submit() {
     if (editingId.value) form.put(`/references/${dir.value}/${editingId.value}`, opts);
     else form.post(`/references/${dir.value}`, opts);
 }
-function destroy() {
-    if (editingId.value && confirm('Удалить запись?')) {
+async function destroy() {
+    if (editingId.value && await confirmDlg('Удалить запись?')) {
         router.delete(`/references/${dir.value}/${editingId.value}`, { onSuccess: () => { open.value = false; } });
     }
 }

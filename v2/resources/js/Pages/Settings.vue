@@ -12,6 +12,8 @@ const props = defineProps<{
     vatRates: { id: number; rate: number }[];
     devices: any[];
     lastPatch: string | null;
+    backups: { name: string; size: number; date: string }[];
+    lastBackupAt: string | null;
     currentLogin: string;
     status?: string | null;
 }>();
@@ -91,6 +93,14 @@ function applyPatch() {
         onError: () => { deployResult.value = 'Ошибка: не удалось применить патч'; },
     });
 }
+
+// ── Резервные копии ──
+const backupBusy = ref(false);
+function runBackup() {
+    backupBusy.value = true;
+    router.post('/settings/backup', {}, { preserveScroll: true, onFinish: () => { backupBusy.value = false; } });
+}
+const fmtSize = (b: number) => b > 1048576 ? (b / 1048576).toFixed(1) + ' МБ' : Math.max(1, Math.round(b / 1024)) + ' КБ';
 </script>
 
 <template>
@@ -219,6 +229,24 @@ function applyPatch() {
 
             <!-- Обновление (ZIP-патч) -->
             <div class="set-card glass">
+                <div class="set-h"><Icon name="doc" :size="18" /> Резервные копии базы</div>
+                <div class="set-hint">Создаются автоматически раз в сутки при работе с системой, хранятся последние 14. Скачивайте копию время от времени — на случай проблем с хостингом.</div>
+                <div class="set-toggle">
+                    <div>
+                        <div class="st-t">Последняя копия</div>
+                        <div class="st-s">{{ lastBackupAt || 'ещё не создавалась' }}</div>
+                    </div>
+                    <button class="btn-primary pressable" style="border-radius:12px" :disabled="backupBusy" @click="runBackup">{{ backupBusy ? 'Создаю…' : 'Создать сейчас' }}</button>
+                </div>
+                <div v-for="b in backups.slice(0, 5)" :key="b.name" class="bk-row">
+                    <span class="bk-name">{{ b.date }}</span>
+                    <span class="bk-size">{{ fmtSize(b.size) }}</span>
+                    <a class="link-btn" :href="'/settings/backup/' + b.name">Скачать</a>
+                </div>
+                <div v-if="!backups.length" class="set-hint">Копий пока нет.</div>
+            </div>
+
+            <div class="set-card glass">
                 <div class="set-h"><Icon name="doc" :size="18" /> Обновление системы (ZIP-патч)</div>
                 <div class="set-hint">Загрузите ZIP-патч сборки — система распакует его поверх приложения, применит новые миграции и сбросит кэш. Файлы <code>.env</code> и данные не трогаются.</div>
                 <label class="drop" style="cursor:pointer;display:block">
@@ -242,6 +270,10 @@ function applyPatch() {
 </template>
 
 <style scoped>
+.bk-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--glass-border); font-size: 13px; }
+.bk-row:last-of-type { border-bottom: 0; }
+.bk-name { font-weight: 600; }
+.bk-size { color: var(--ink-3); margin-left: auto; }
 .rule-add { display: grid; grid-template-columns: 1fr 1.4fr 1fr 40px; gap: 8px; align-items: center; padding-top: 12px; margin-top: 8px; border-top: 1px solid var(--glass-border); }
 .rule-add select, .rule-add input { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 8px 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
 .rule-add .btn-ghost { padding: 8px 0; text-align: center; }

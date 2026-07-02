@@ -4,12 +4,14 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import Icon from '@/Components/Icon.vue';
 import SearchPalette from '@/Components/SearchPalette.vue';
 import NotificationsPanel from '@/Components/NotificationsPanel.vue';
+import ConfirmHost from '@/Components/ConfirmHost.vue';
 
 const search = ref<InstanceType<typeof SearchPalette> | null>(null);
 const notif = ref<InstanceType<typeof NotificationsPanel> | null>(null);
 const notifItems = ref<any[]>([]);
 const notifCount = computed(() => notifItems.value.length);
 const menuOpen = ref(false);
+const moreOpen = ref(false);
 
 const page = usePage();
 const url = computed(() => page.url);
@@ -25,7 +27,11 @@ const nav = [
     { label: 'Транспорт', icon: 'car', href: '/vehicle' },
     { label: 'Справочники', icon: 'book', href: '/references' },
 ];
+// Мобильный таб-бар: 4 главных раздела + «Ещё» с остальными
+const tabMain = nav.slice(0, 3).concat([nav[4]]);   // Главная, Поставки, Продажи, Банк
+const tabMore = [nav[3], nav[5], nav[6], nav[7], nav[8], { label: 'Настройки', icon: 'gear', href: '/settings' }];
 const isActive = (href: string) => url.value.startsWith(href);
+const moreActive = computed(() => tabMore.some((t) => isActive(t.href)));
 
 onMounted(async () => {
     try {
@@ -80,7 +86,7 @@ onUnmounted(() => {
                 </div>
             </div>
 
-            <nav class="glass-strong flex items-center gap-0.5 overflow-x-auto px-2.5 py-2" style="border-radius: 999px; scrollbar-width: none">
+            <nav class="glass-strong hidden items-center gap-0.5 overflow-x-auto px-2.5 py-2 sm:flex" style="border-radius: 999px; scrollbar-width: none">
                 <Link
                     v-for="item in nav"
                     :key="item.href"
@@ -107,12 +113,36 @@ onUnmounted(() => {
             </div>
         </header>
 
-        <main class="page-anim mx-auto max-w-[1400px] px-3 pb-12">
+        <main class="page-anim mx-auto max-w-[1400px] px-3 pb-28 sm:pb-12">
             <slot />
         </main>
 
+        <!-- Мобильный таб-бар (телефоны) -->
+        <Transition name="menu">
+            <div v-if="moreOpen" class="tabmore-ov sm:hidden" @click="moreOpen = false"></div>
+        </Transition>
+        <Transition name="sheetup">
+            <div v-if="moreOpen" class="tabmore glass-strong sm:hidden">
+                <Link v-for="t in tabMore" :key="t.href" :href="t.href" class="tabmore-item pressable" :class="{ 'tabmore-item--on': isActive(t.href) }" @click="moreOpen = false">
+                    <Icon :name="t.icon" :size="22" />
+                    <span>{{ t.label }}</span>
+                </Link>
+            </div>
+        </Transition>
+        <nav class="tabbar glass-strong sm:hidden">
+            <Link v-for="t in tabMain" :key="t.href" :href="t.href" class="tab-item pressable" :class="{ 'tab-item--on': isActive(t.href) }" @click="moreOpen = false">
+                <Icon :name="t.icon" :size="21" />
+                <span>{{ t.label }}</span>
+            </Link>
+            <button type="button" class="tab-item pressable" :class="{ 'tab-item--on': moreActive || moreOpen }" @click="moreOpen = !moreOpen">
+                <Icon name="grid" :size="21" />
+                <span>Ещё</span>
+            </button>
+        </nav>
+
         <SearchPalette ref="search" />
         <NotificationsPanel ref="notif" :items="notifItems" />
+        <ConfirmHost />
     </div>
 </template>
 
@@ -125,4 +155,31 @@ onUnmounted(() => {
 .um-item--bad { color: var(--expense); }
 .menu-enter-active, .menu-leave-active { transition: opacity .15s, transform .15s; }
 .menu-enter-from, .menu-leave-to { opacity: 0; transform: translateY(-6px); }
+
+/* Мобильный таб-бар */
+.tabbar {
+    position: fixed; left: 10px; right: 10px; bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 40; display: flex; border-radius: 24px; padding: 6px;
+}
+.tab-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 7px 0 5px; border-radius: 18px; border: 0; background: transparent;
+    color: var(--ink-2); font-size: 10.5px; font-weight: 600; cursor: pointer; text-decoration: none;
+}
+.tab-item--on { color: var(--info, #0a84ff); background: var(--glass-fill); }
+.tabmore-ov { position: fixed; inset: 0; z-index: 39; background: rgba(0,0,0,.3); }
+.tabmore {
+    position: fixed; left: 10px; right: 10px; bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    z-index: 40; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+    border-radius: 22px; padding: 10px;
+}
+.tabmore-item {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 14px 4px 12px; border-radius: 16px; color: var(--ink-2);
+    font-size: 11.5px; font-weight: 600; text-decoration: none;
+}
+.tabmore-item--on { color: var(--info, #0a84ff); background: var(--glass-fill); }
+.sheetup-enter-active, .sheetup-leave-active { transition: opacity .2s ease, transform .22s cubic-bezier(.22,1,.36,1); }
+.sheetup-enter-from, .sheetup-leave-to { opacity: 0; transform: translateY(14px); }
+@media (prefers-reduced-motion: reduce) { .sheetup-enter-active, .sheetup-leave-active { transition: none; } }
 </style>

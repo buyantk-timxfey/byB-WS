@@ -2,10 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Adjustment;
 use App\Models\Nomenclature;
 use App\Models\Setting;
 use App\Models\StockBatch;
 use App\Models\StockMove;
+use App\Models\Writeoff;
+use App\Services\DocNumber;
+use App\Services\Fifo;
+use App\Services\Posting\AdjustmentPosting;
+use App\Services\Posting\WriteoffPosting;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -71,6 +78,91 @@ class WarehouseController extends Controller
             'posCount' => $rows->where('qty', '>', 0)->count(),
             'negCount' => $rows->where('negative', true)->count(),
             'reservedCount' => $rows->where('reserved', '>', 0)->count(),
+            'goods' => Nomenclature::orderBy('name')->get(['id', 'name', 'unit'])
+                ->map(fn ($n) => ['id' => $n->id, 'name' => $n->name, 'unit' => $n->unit, 'qty' => (float) ($qtyByNom[$n->id] ?? 0)]),
         ]);
+    }
+
+    // ── Операции склада: оприходование / списание / инвентаризация ──
+
+    private function bookQty(int $nomenclatureId): float
+    {
+        return (float) StockMove::where('nomenclature_id', $nomenclatureId)->sum('qty');
+    }
+
+    // Ручное оприходование без поставки (излишек, ввод начальных остатков).
+    // Оформляется документом инвентаризации, партия — по указанной себестоимости.
+    public function receive(Request $r)
+    {
+        $d = $r->validate([
+            'nomenclature_id' => 'required|exists:nomenclature,id',
+            'qty' => 'required|numeric|min:0.001',
+            'unit_cost' => 'required|numeric|min:0',
+        ]);
+        DB::transaction(function () use ($d) {
+            $book = $this->bookQty((int) $d['nomenclature_id']);
+            $a = Adjustment::create([
+                'number' => DocNumber::next('adjustment', now()),
+                'date' => now()->toDateString(),
+                'comment' => 'Ручное оприходование со склада',
+            ]);
+            $a->items()->create([
+                'nomenclature_id' => $d['nomenclature_id'],
+                'qty_book' => $book, 'qty_fact' => $book + (float) $d['qty'], 'diff' => $d['qty'],
+            ]);
+            Fifo::receive((int) $d['nomenclature_id'], null, (float) $d['qty'], (float) $d['unit_cost'], now()->toDateString(), $a->id, 'adjustment');
+            $a->forceFill(['posted_at' => now()])->save();
+        });
+
+        return back();
+    }
+
+    // Списание брака/порчи: −остаток по FIFO, себестоимость — в расходы P&L
+    public function writeoff(Request $r)
+    {
+        $d = $r->validate([
+            'nomenclature_id' => 'required|exists:nomenclature,id',
+            'qty' => 'required|numeric|min:0.001',
+            'reason' => 'nullable|string|max:255',
+        ]);
+        $book = $this->bookQty((int) $d['nomenclature_id']);
+        if ((float) $d['qty'] > $book + 0.0005) {
+            return back()->withErrors(['warehouse' => 'На складе только '.rtrim(rtrim(number_format($book, 3, '.', ' '), '0'), '.').' — списать больше нельзя.']);
+        }
+        DB::transaction(function () use ($d) {
+            $w = Writeoff::create([
+                'number' => DocNumber::next('writeoff', now()),
+                'date' => now()->toDateString(),
+                'reason' => $d['reason'] ?? null,
+            ]);
+            $w->items()->create(['nomenclature_id' => $d['nomenclature_id'], 'qty' => $d['qty']]);
+            WriteoffPosting::post($w->fresh());
+        });
+
+        return back();
+    }
+
+    // Инвентаризация: выравнивание учётного остатка под фактический
+    public function adjust(Request $r)
+    {
+        $d = $r->validate([
+            'nomenclature_id' => 'required|exists:nomenclature,id',
+            'qty_fact' => 'required|numeric|min:0',
+        ]);
+        DB::transaction(function () use ($d) {
+            $book = $this->bookQty((int) $d['nomenclature_id']);
+            $a = Adjustment::create([
+                'number' => DocNumber::next('adjustment', now()),
+                'date' => now()->toDateString(),
+                'comment' => 'Инвентаризация со склада',
+            ]);
+            $a->items()->create([
+                'nomenclature_id' => $d['nomenclature_id'],
+                'qty_book' => $book, 'qty_fact' => $d['qty_fact'],
+            ]);
+            AdjustmentPosting::post($a->fresh());
+        });
+
+        return back();
     }
 }

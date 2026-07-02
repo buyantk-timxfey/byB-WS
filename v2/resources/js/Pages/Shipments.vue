@@ -9,6 +9,7 @@ import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
+import { confirmDlg } from '@/lib/confirm';
 
 type Item = { nomenclature_id: number | null; qty: number | null; price: number | null; vat_rate: number | null; vat_amount: number | null };
 type Payment = { match_id: number; bank_line_id: number; date: string | null; party: string; amount: number };
@@ -190,8 +191,8 @@ function submit() {
     if (editingId.value) form.put(`/shipments/${editingId.value}`, opts);
     else form.post('/shipments', opts);
 }
-function destroy() {
-    if (editingId.value && confirm('Удалить поставку?')) {
+async function destroy() {
+    if (editingId.value && await confirmDlg('Удалить поставку?')) {
         router.delete(`/shipments/${editingId.value}`, { onSuccess: () => { open.value = false; } });
     }
 }
@@ -242,7 +243,14 @@ function destroy() {
                             <td><StatusPill :text="s.status" :variant="statusVariant(s.status)" /></td>
                             <td class="text-ink-2">{{ fdate(s.eta) }}</td>
                         </tr>
-                        <tr v-if="!filtered.length"><td colspan="8"><div class="j-empty">Поставок пока нет — создайте первую</div></td></tr>
+                        <tr v-if="!filtered.length"><td colspan="8">
+                            <div class="empty-big">
+                                <span class="eb-ic"><Icon name="package" :size="30" /></span>
+                                <b>Поставок пока нет</b>
+                                <span>Создайте первую поставку — товар оприходуется на склад при статусе «В пути»</span>
+                                <button class="btn-primary pressable" @click="create"><Icon name="plus" :size="16" /> Новая поставка</button>
+                            </div>
+                        </td></tr>
                     </tbody>
                     <tfoot v-if="filtered.length">
                         <tr>

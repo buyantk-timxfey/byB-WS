@@ -8,6 +8,7 @@ import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
+import { confirmDlg } from '@/lib/confirm';
 
 type Item = { nomenclature_id: number | null; name?: string | null; qty: number | null; price: number | null; cost?: number };
 type Payment = { match_id: number; bank_line_id: number; date: string | null; party: string; amount: number };
@@ -156,8 +157,8 @@ function submit() {
     if (editingId.value) form.put(`/sales/${editingId.value}`, opts);
     else form.post('/sales', opts);
 }
-function destroy() {
-    if (editingId.value && confirm('Удалить продажу?')) router.delete(`/sales/${editingId.value}`, { onSuccess: () => { open.value = false; } });
+async function destroy() {
+    if (editingId.value && await confirmDlg('Удалить продажу? Привязанные оплаты освободятся.')) router.delete(`/sales/${editingId.value}`, { onSuccess: () => { open.value = false; } });
 }
 function payNow() {
     if (editingId.value) router.post(`/sales/${editingId.value}/pay`, {}, { onSuccess: () => { open.value = false; } });
@@ -182,7 +183,27 @@ function payNow() {
             <button class="btn-primary pressable" @click="create"><Icon name="plus" :size="17" /> Создать</button>
         </div>
 
-        <div class="jcard glass">
+        <!-- Телефон: карточный список вместо таблицы -->
+        <div class="sale-cards">
+            <div v-for="s in filtered" :key="'m' + s.id" class="glass sale-card pressable" @click="openDoc(s)">
+                <div class="sc-top">
+                    <span class="sc-num">{{ s.number }} <span class="text-ink-3">· {{ fdate(s.date) }}</span></span>
+                    <StatusPill :text="s.status" :variant="statusVariant(s.status)" />
+                </div>
+                <div class="sc-buyer">
+                    <Icon v-if="s.sale_type === 'Касса'" name="wallet" :size="13" class="text-ink-3" />
+                    {{ buyerLabel(s) }}
+                </div>
+                <div class="sc-bottom">
+                    <span class="sc-sum tnum">{{ money(s.sum) }}</span>
+                    <span v-if="s.status === 'Оплачен'" class="sc-profit tnum">+{{ money(s.profit) }} · {{ margin(s) }}%</span>
+                    <span class="sc-pay" :style="{ color: payVariant(s) === 'ok' ? 'var(--income)' : payVariant(s) === 'warn' ? 'var(--warn)' : 'var(--expense)' }">{{ payText(s) }}</span>
+                </div>
+            </div>
+            <div v-if="!filtered.length" class="j-empty glass" style="border-radius:18px;padding:24px">Продаж пока нет — создайте первую</div>
+        </div>
+
+        <div class="jcard glass sale-table">
             <div class="jscroll">
                 <table class="jtable">
                     <thead>
@@ -429,6 +450,21 @@ function payNow() {
 </template>
 
 <style scoped>
+/* Телефон: карточки вместо таблицы */
+.sale-cards { display: none; }
+@media (max-width: 640px) {
+    .sale-table { display: none; }
+    .sale-cards { display: flex; flex-direction: column; gap: 10px; }
+}
+.sale-card { padding: 13px 15px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; }
+.sc-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sc-num { font-size: 13px; font-weight: 700; }
+.sc-buyer { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-bottom { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.sc-sum { font-size: 16px; font-weight: 700; }
+.sc-profit { font-size: 12.5px; font-weight: 600; color: var(--income); }
+.sc-pay { font-size: 12px; font-weight: 600; margin-left: auto; }
+
 .type-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; padding: 1px 7px; border-radius: 8px; background: var(--glass-fill); border: 1px solid var(--glass-border); color: var(--ink-2); margin-right: 6px; vertical-align: middle; }
 
 /* Быстрый просмотр позиций продажи (раскрытие как на складе) */
