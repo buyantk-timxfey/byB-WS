@@ -23,8 +23,10 @@ class DashboardController extends Controller
     public function index()
     {
         $now = Carbon::now();
-        $from = $now->copy()->startOfMonth()->toDateString();
-        $to = $now->copy()->endOfMonth()->toDateString();
+        // Скользящие 30 дней, а не календарный месяц: в начале месяца календарный
+        // период почти пуст, и все KPI выглядели нулевыми, хотя данные есть.
+        $from = $now->copy()->subDays(29)->toDateString();
+        $to = $now->copy()->toDateString();
         $staleDays = (int) Setting::get('stale_days', 60);
 
         $sum = fn ($t) => (float) Turnover::where('type', $t)->whereBetween('date', [$from, $to])->sum('amount');
@@ -61,10 +63,9 @@ class DashboardController extends Controller
         $purchSpark = $spark(fn ($a, $b) => round((float) Shipment::whereNotNull('posted_at')
             ->whereBetween('date', [$a, $b])->get()->sum(fn ($s) => $s->total()) / 1000));
 
-        // Прошлый месяц — для динамики KPI
-        $pm = $now->copy()->subMonthNoOverflow();
-        $pa = $pm->copy()->startOfMonth()->toDateString();
-        $pb = $pm->copy()->endOfMonth()->toDateString();
+        // Предыдущие 30 дней — для динамики KPI
+        $pa = $now->copy()->subDays(59)->toDateString();
+        $pb = $now->copy()->subDays(30)->toDateString();
         $sumP = fn ($t) => (float) Turnover::where('type', $t)->whereBetween('date', [$pa, $pb])->sum('amount');
         $revP = $sumP('income');
         $grossP = $revP - $sumP('cogs') - $sumP('acquiring') - $sumP('expense');
@@ -93,11 +94,11 @@ class DashboardController extends Controller
         [$pD, $pDownRaw] = $dPct($purchases, $purchP);
 
         $kpis = [
-            ['label' => 'Выручка', 'value' => $this->m($revenue), 'delta' => $revD, 'down' => $revDown, 'sub' => 'пред. мес: '.$this->m($revP), 'spark' => $incSpark, 'color' => 'var(--income)'],
-            ['label' => 'Прибыль', 'value' => $this->m($gross), 'delta' => $grD, 'down' => $grDown, 'sub' => 'пред. мес: '.$this->m($grossP), 'spark' => $profSpark, 'color' => 'var(--income)'],
-            ['label' => 'Маржа', 'value' => round($margin, 1).'%', 'delta' => $mD, 'down' => $mDown, 'sub' => 'пред. мес: '.round($marginP, 1).'%', 'spark' => $marginSpark, 'color' => 'var(--income)'],
+            ['label' => 'Выручка', 'value' => $this->m($revenue), 'delta' => $revD, 'down' => $revDown, 'sub' => 'пред. 30 дн: '.$this->m($revP), 'spark' => $incSpark, 'color' => 'var(--income)'],
+            ['label' => 'Прибыль', 'value' => $this->m($gross), 'delta' => $grD, 'down' => $grDown, 'sub' => 'пред. 30 дн: '.$this->m($grossP), 'spark' => $profSpark, 'color' => 'var(--income)'],
+            ['label' => 'Маржа', 'value' => round($margin, 1).'%', 'delta' => $mD, 'down' => $mDown, 'sub' => 'пред. 30 дн: '.round($marginP, 1).'%', 'spark' => $marginSpark, 'color' => 'var(--income)'],
             ['label' => 'ROI', 'value' => (($cogs + $acq + $exp) > 0 ? round($gross / ($cogs + $acq + $exp) * 100) : 0).'%', 'delta' => '', 'down' => false, 'sub' => 'прибыль / затраты', 'spark' => $roiSpark, 'color' => 'var(--income)'],
-            ['label' => 'Закупки', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true, 'sub' => 'пред. мес: '.$this->m($purchP), 'spark' => $purchSpark, 'color' => 'var(--expense)'],
+            ['label' => 'Закупки', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true, 'sub' => 'пред. 30 дн: '.$this->m($purchP), 'spark' => $purchSpark, 'color' => 'var(--expense)'],
         ];
 
         $accounts = Account::orderBy('sort_order')->orderBy('name')->get()->map(fn ($a) => ['name' => $a->name, 'balance' => $a->balance()]);

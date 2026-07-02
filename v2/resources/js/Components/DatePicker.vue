@@ -165,7 +165,9 @@ onUnmounted(() => {
 .dpick-text { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; padding: 0 0 0 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
 .dpick-text::placeholder { color: var(--ink-3); }
 .dpick-ic-btn { flex-shrink: 0; width: 38px; height: 100%; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; cursor: pointer; color: var(--ink-3); }
-.dpick-pop { position: fixed; z-index: 100; width: 280px; border-radius: 16px; padding: 12px; }
+.dpick-pop { position: fixed; z-index: 100; width: 280px; border-radius: 16px; padding: 12px; transform-origin: top center; animation: pop-in .18s cubic-bezier(.22, 1, .36, 1); }
+@keyframes pop-in { from { opacity: 0; transform: scale(.97) translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dpick-pop { animation: none; } }
 .dpick-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 14px; font-weight: 600; }
 .dpick-nav { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; color: var(--ink-2); }
 .dpick-wd { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 11px; color: var(--ink-3); margin-bottom: 4px; }

@@ -128,7 +128,9 @@ onUnmounted(() => {
 .ssel input { width: 100%; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 12px; padding: 0 30px 0 12px; height: 42px; box-sizing: border-box; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
 .ssel.open input, .ssel input:focus { border-color: var(--ink-3); }
 .ssel-chev { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
-.ssel-drop { position: fixed; z-index: 100; max-height: 260px; overflow-y: auto; border-radius: 14px; padding: 6px; }
+.ssel-drop { position: fixed; z-index: 100; max-height: 260px; overflow-y: auto; border-radius: 14px; padding: 6px; transform-origin: top center; animation: drop-in .18s cubic-bezier(.22, 1, .36, 1); }
+@keyframes drop-in { from { opacity: 0; transform: scale(.97) translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ssel-drop { animation: none; } }
 .ssel-item { display: block; width: 100%; text-align: left; padding: 9px 10px; border-radius: 9px; font-size: 14px; background: transparent; border: 0; cursor: pointer; color: var(--ink); }
 .ssel-item.hi, .ssel-item:hover { background: var(--glass-fill); }
 .ssel-item.sel { font-weight: 600; }

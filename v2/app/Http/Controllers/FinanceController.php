@@ -17,10 +17,12 @@ class FinanceController extends Controller
     {
         $period = $r->query('period', 'month');
         $now = Carbon::now();
+        // «Месяц» = скользящие 30 дней: календарный месяц в первых числах почти пуст,
+        // и отчёт выглядел нулевым, хотя обороты есть.
         [$from, $to] = match ($period) {
             'quarter' => [$now->copy()->firstOfQuarter(), $now->copy()->lastOfQuarter()],
             'year' => [$now->copy()->startOfYear(), $now->copy()->endOfYear()],
-            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
+            default => [$now->copy()->subDays(29), $now->copy()],
         };
 
         $taxRate = (float) Setting::get('tax_rate', 16) / 100;
@@ -56,7 +58,9 @@ class FinanceController extends Controller
 
         return Inertia::render('Finances', [
             'period' => $period,
-            'periodLabel' => $from->locale('ru')->isoFormat('MMMM YYYY'),
+            'periodLabel' => $period === 'month'
+                ? 'последние 30 дней'
+                : $from->locale('ru')->isoFormat('MMMM YYYY').' — '.$to->locale('ru')->isoFormat('MMMM YYYY'),
             'taxRate' => (float) Setting::get('tax_rate', 16),
             'salaryRate' => (float) Setting::get('salary_rate', 20),
             'pnl' => compact('revenue', 'cogs', 'acquiring', 'expenses', 'gross', 'tax', 'net', 'salary')

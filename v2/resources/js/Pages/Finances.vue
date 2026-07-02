@@ -35,7 +35,7 @@ function drill(key: string) {
         <div class="toolbar">
             <h1>Финансы</h1>
             <div class="seg" style="margin-left:auto">
-                <button :class="{ on: period === 'month' }" @click="setPeriod('month')">Месяц</button>
+                <button :class="{ on: period === 'month' }" @click="setPeriod('month')">30 дней</button>
                 <button :class="{ on: period === 'quarter' }" @click="setPeriod('quarter')">Квартал</button>
                 <button :class="{ on: period === 'year' }" @click="setPeriod('year')">Год</button>
             </div>

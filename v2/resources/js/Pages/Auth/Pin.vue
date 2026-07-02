@@ -8,9 +8,9 @@ const form = useForm({ pin: '' });
 const dots = ref('');
 const inputEl = ref<HTMLInputElement | null>(null);
 
-// Только физическая клавиатура — inputmode="none" не даёт мобильным браузерам
-// показать экранную клавиатуру над этим полем, но набор с настоящей клавиатуры
-// (в т.ч. Bluetooth) работает как обычно.
+// Скрытое поле: на компе PIN набирается с физической клавиатуры, на айфоне/айпаде
+// inputmode="numeric" выдвигает системную цифровую панель iOS (inputmode="none"
+// было ошибкой — на сенсорных устройствах без клавиатуры вводить было нечем).
 function onInput(e: Event) {
     const el = e.target as HTMLInputElement;
     const digits = el.value.replace(/\D/g, '').slice(0, 8);
@@ -46,13 +46,14 @@ function focusInput() { inputEl.value?.focus(); }
                 <span v-for="i in 8" :key="i" class="pin-dot" :class="{ filled: i <= dots.length }" v-show="i <= Math.max(4, dots.length)"></span>
             </div>
             <div v-if="form.errors.pin" class="pin-err">{{ form.errors.pin }}</div>
-            <div class="pin-hint">Введите PIN с клавиатуры</div>
+            <div class="pin-hint">Нажмите сюда и введите PIN</div>
 
             <input
                 ref="inputEl"
                 class="pin-input"
                 type="password"
-                inputmode="none"
+                inputmode="numeric"
+                pattern="[0-9]*"
                 autocomplete="off"
                 maxlength="8"
                 @input="onInput"

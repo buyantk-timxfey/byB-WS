@@ -218,9 +218,20 @@
     .orbs { display: none; }
 }
 
+/* ── Анимации (Apple-style): мягкое появление страницы и раскрытий, плавные ховеры ── */
+@keyframes page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.page-anim { animation: page-in .35s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes reveal-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.batches { animation: reveal-in .25s cubic-bezier(.22, 1, .36, 1); }
+.jtable tbody tr td { transition: background .15s ease; }
+.op-row, .seg button, .ssel-item, .um-item, .link-btn, .btn-ghost { transition: background .15s ease, color .15s ease; }
+
 @media (prefers-reduced-motion: reduce) {
     .pressable {
         transition: none;
+    }
+    .page-anim, .batches {
+        animation: none;
     }
 }
 
@@ -402,6 +413,14 @@
 @media (max-width: 820px) {
     .bank-top-row { flex-direction: column; }
     .bank-cards { padding: 10px 0; }
+    .bank-analytics { width: 100%; min-width: 0; }
+}
+/* Телефон: веер не влезает — карты аккуратной вертикальной стопкой на всю ширину */
+@media (max-width: 640px) {
+    .bank-cards { flex-direction: column; align-items: center; gap: 12px; padding: 4px 0; }
+    .bank-card { width: 100%; max-width: 340px; transform: none; }
+    .bank-card + .bank-card { margin-left: 0; }
+    .bank-card:hover { transform: none; box-shadow: 0 14px 40px rgba(0,0,0,.28); }
 }
 .bc-top { display: flex; align-items: center; justify-content: space-between; }
 .bc-bank { font-size: 12px; font-weight: 600; letter-spacing: .01em; opacity: .95; }
@@ -417,7 +436,6 @@
 .bc-num { font-size: 11px; letter-spacing: .04em; opacity: .9; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bc-badge { font-size: 10px; font-weight: 600; background: rgba(0,0,0,.28); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .bc-ok { font-size: 10px; font-weight: 600; opacity: .85; white-space: nowrap; }
-@media (max-width: 820px) { .bank-cards { grid-template-columns: 1fr; justify-content: normal; justify-items: center; } }
 
 /* Лента операций */
 .sec-h { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }

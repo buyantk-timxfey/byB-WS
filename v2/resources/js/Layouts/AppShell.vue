@@ -107,7 +107,7 @@ onUnmounted(() => {
             </div>
         </header>
 
-        <main class="mx-auto max-w-[1400px] px-3 pb-12">
+        <main class="page-anim mx-auto max-w-[1400px] px-3 pb-12">
             <slot />
         </main>
 

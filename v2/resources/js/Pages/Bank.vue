@@ -273,4 +273,10 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
 .bank-period { display: flex; align-items: center; gap: 8px; }
 .bank-period .dpick { width: 132px; }
 .bank-period :deep(.dpick-input) { height: 38px; }
+@media (max-width: 640px) {
+    .bank-period { width: 100%; }
+    .bank-period .dpick { flex: 1; width: auto; min-width: 0; }
+    .recon-banner { flex-wrap: wrap; }
+    .rb-btn { margin-left: 0; width: 100%; justify-content: center; }
+}
 </style>
