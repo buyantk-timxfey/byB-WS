@@ -95,15 +95,14 @@ const toggle = (id: number) => { expanded.value = expanded.value === id ? null :
                                         <div class="batch-head">
                                             <span>Поступление</span><span>Дата прихода</span>
                                             <span class="num">Кол-во</span><span class="num">Себест. ед.</span>
-                                            <span class="num">Дней</span><span></span>
+                                            <span class="num">Дней</span>
                                         </div>
                                         <div v-for="(b, i) in p.batches" :key="i" class="batch-row" :class="{ stale: b.days >= staleDays }">
-                                            <span class="bship">{{ b.ship }}</span>
+                                            <span class="bship" :title="b.ship">{{ b.ship }}</span>
                                             <span class="text-ink-2">{{ fdate(b.date) }}</span>
                                             <span class="num">{{ num(b.qty) }}</span>
                                             <span class="num">{{ money(b.cost) }}</span>
                                             <span class="num text-ink-2">{{ b.days }}</span>
-                                            <span></span>
                                         </div>
                                     </div>
                                     <div v-else class="text-ink-3" style="padding:8px 0;font-size:13px">

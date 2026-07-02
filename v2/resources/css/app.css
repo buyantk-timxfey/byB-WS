@@ -361,11 +361,15 @@
 .batch-tr td { padding: 0 16px 12px !important; border-top: 0 !important; }
 .batch-tr:hover td { background: transparent !important; }
 .batches { background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 14px; padding: 6px 14px; }
-.batch-head, .batch-row { display: grid; grid-template-columns: 1fr 1.2fr 80px 110px 70px 90px; gap: 10px; align-items: center; }
+/* Числовые колонки — minmax(..., auto), а не жёсткие px: строки таблицы наследуют
+   white-space: nowrap, и длинное число в фиксированной колонке не переносилось,
+   а ложилось поверх соседней. Теперь колонка растёт под содержимое. */
+.batch-head, .batch-row { display: grid; grid-template-columns: minmax(160px, 2fr) minmax(96px, 1fr) minmax(64px, auto) minmax(96px, auto) minmax(48px, auto); gap: 12px; align-items: center; }
+.batch-head span, .batch-row span { min-width: 0; }
 .batch-head { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-3); padding: 8px 0; }
 .batch-row { padding: 9px 0; border-top: 1px solid var(--glass-border); font-size: 13px; }
 .batch-row.stale .bship { color: var(--warn); }
-.batch-row .bship { font-weight: 600; }
+.batch-row .bship { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .batch-row .num { font-variant-numeric: tabular-nums; }
 /* ── Банк: премиальные карточки счетов ── */
 .bank-top-row { display: flex; align-items: flex-start; gap: 28px; flex-wrap: wrap; }

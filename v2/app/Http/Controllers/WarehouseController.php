@@ -26,7 +26,7 @@ class WarehouseController extends Controller
             ->select('sale_items.nomenclature_id', DB::raw('SUM(sale_items.qty) as q'))
             ->groupBy('sale_items.nomenclature_id')->pluck('q', 'sale_items.nomenclature_id');
 
-        $batchesByNom = StockBatch::with('shipmentItem.shipment:id,number')
+        $batchesByNom = StockBatch::with('shipmentItem.shipment:id,number,name,counterparty_id', 'shipmentItem.shipment.counterparty:id,name')
             ->where('qty_left', '>', 0)->orderBy('received_date')->orderBy('id')
             ->get()->groupBy('nomenclature_id');
 
@@ -38,13 +38,19 @@ class WarehouseController extends Controller
         $rows = $noms->map(function (Nomenclature $n) use ($qtyByNom, $reservedByNom, $batchesByNom, $staleDays) {
             $qty = (float) ($qtyByNom[$n->id] ?? 0);
             $reserved = (float) ($reservedByNom[$n->id] ?? 0);
-            $batches = ($batchesByNom[$n->id] ?? collect())->map(fn (StockBatch $b) => [
-                'ship' => $b->shipmentItem?->shipment?->number ?? '—',
-                'date' => optional($b->received_date)->toDateString(),
-                'qty' => (float) $b->qty_left,
-                'cost' => (float) $b->unit_cost,
-                'days' => $b->daysOnStock(),
-            ])->values();
+            $batches = ($batchesByNom[$n->id] ?? collect())->map(function (StockBatch $b) {
+                $ship = $b->shipmentItem?->shipment;
+                $extra = $ship ? ($ship->name ?: $ship->counterparty?->name) : null;
+
+                return [
+                    // Номер + название поставки/поставщик — просто «№» ни о чём не говорил
+                    'ship' => $ship ? $ship->number.($extra ? ' · '.$extra : '') : 'Приход без поставки',
+                    'date' => optional($b->received_date)->toDateString(),
+                    'qty' => (float) $b->qty_left,
+                    'cost' => (float) $b->unit_cost,
+                    'days' => $b->daysOnStock(),
+                ];
+            })->values();
             $value = $batches->sum(fn ($b) => $b['qty'] * $b['cost']);
             $oldest = $batches->max('days') ?? 0;
 
