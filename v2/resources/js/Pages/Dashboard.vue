@@ -100,7 +100,7 @@ onMounted(() => { refreshMail(); });
                 <template v-for="k in kpis" :key="k.label">
                     <div v-if="isVis('kpi:' + k.label)" class="wwrap">
                         <button v-if="editMode" class="whide" @click.stop="hide('kpi:' + k.label)">×</button>
-                        <div class="glass w-pad wgt-s pressable kpi-card" @click="go('/finances')">
+                        <div class="glass w-pad wgt-s pressable kpi-card" @click="go(k.href ?? '/finances')">
                             <div class="flex items-center justify-between">
                                 <span class="h2">{{ k.label }}</span>
                                 <span v-if="k.delta" class="pill" :class="{ 'pill-down': k.down }" :style="k.down ? '' : 'background:rgba(52,199,89,.16);color:var(--income)'">{{ k.delta }}</span>

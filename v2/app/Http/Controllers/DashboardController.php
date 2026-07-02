@@ -23,9 +23,10 @@ class DashboardController extends Controller
     public function index()
     {
         $now = Carbon::now();
-        // Скользящие 30 дней, а не календарный месяц: в начале месяца календарный
-        // период почти пуст, и все KPI выглядели нулевыми, хотя данные есть.
-        $from = $now->copy()->subDays(29)->toDateString();
+        // Текущий календарный месяц. Дельты — против того же отрезка прошлого
+        // месяца (1–2 июля сравниваются с 1–2 июня), иначе в начале месяца все
+        // стрелки красные просто потому, что месяц только начался.
+        $from = $now->copy()->startOfMonth()->toDateString();
         $to = $now->copy()->toDateString();
         $staleDays = (int) Setting::get('stale_days', 60);
 
@@ -63,9 +64,11 @@ class DashboardController extends Controller
         $purchSpark = $spark(fn ($a, $b) => round((float) Shipment::whereNotNull('posted_at')
             ->whereBetween('date', [$a, $b])->get()->sum(fn ($s) => $s->total()) / 1000));
 
-        // Предыдущие 30 дней — для динамики KPI
-        $pa = $now->copy()->subDays(59)->toDateString();
-        $pb = $now->copy()->subDays(30)->toDateString();
+        // Тот же отрезок прошлого месяца — для динамики KPI
+        $prev = $now->copy()->subMonthNoOverflow();
+        $pa = $prev->copy()->startOfMonth()->toDateString();
+        $pb = $prev->toDateString();
+        $prevName = $prev->locale('ru')->monthName;
         $sumP = fn ($t) => (float) Turnover::where('type', $t)->whereBetween('date', [$pa, $pb])->sum('amount');
         $revP = $sumP('income');
         $grossP = $revP - $sumP('cogs') - $sumP('acquiring') - $sumP('expense') + $sumP('income_other');
@@ -73,7 +76,7 @@ class DashboardController extends Controller
         $marginP = $revP > 0 ? $grossP / $revP * 100 : 0;
         $margin = $revenue > 0 ? $gross / $revenue * 100 : 0;
 
-        // дельта в % (для сумм) и в пп (для процентных метрик)
+        // Все дельты — в процентах к прошлому значению («пп» не используем)
         $dPct = function (float $cur, float $prev): array {
             if ($prev <= 0) {
                 return ['', false];
@@ -81,24 +84,32 @@ class DashboardController extends Controller
             $d = round(($cur - $prev) / $prev * 100);
             return [($d >= 0 ? '+' : '−').abs($d).'%', $d < 0];
         };
-        $dPp = function (float $cur, float $prev): array {
-            $d = round($cur - $prev, 1);
-            if (abs($d) < 0.05) {
-                return ['', false];
-            }
-            return [($d >= 0 ? '+' : '−').number_format(abs($d), 1, ',', '').' пп', $d < 0];
-        };
         [$revD, $revDown] = $dPct($revenue, $revP);
         [$grD, $grDown] = $dPct($gross, $grossP);
-        [$mD, $mDown] = $dPp($margin, $marginP);
+        [$mD, $mDown] = $dPct($margin, $marginP);
         [$pD, $pDownRaw] = $dPct($purchases, $purchP);
 
+        // Долг покупателей: выставленные и недоплаченные продажи (живые деньги в пути)
+        $paidSale = DB::table('bank_matches')->where('target_type', 'sale')->select('target_id', DB::raw('SUM(amount) p'))->groupBy('target_id')->pluck('p', 'target_id');
+        $debtSales = [];
+        $debtTotal = 0.0;
+        foreach (Sale::with('counterparty')->whereIn('status', ['Выставлен', 'Оплачен'])->get() as $s) {
+            $d = $s->total() - (float) ($paidSale[$s->id] ?? 0) - (float) $s->fee_writeoff;
+            if ($d > 0.01) {
+                $debtSales[] = [$s, $d];
+                $debtTotal += $d;
+            }
+        }
+
+        // Подпись «июнь 1–2: …» — честно показывает, что сравниваем тот же отрезок
+        $prevSub = $prevName.($prev->day > 1 ? ' 1–'.$prev->day : ' 1');
         $kpis = [
-            ['label' => 'Выручка', 'value' => $this->m($revenue), 'delta' => $revD, 'down' => $revDown, 'sub' => 'пред. 30 дн: '.$this->m($revP), 'spark' => $incSpark, 'color' => 'var(--income)'],
-            ['label' => 'Прибыль', 'value' => $this->m($gross), 'delta' => $grD, 'down' => $grDown, 'sub' => 'пред. 30 дн: '.$this->m($grossP), 'spark' => $profSpark, 'color' => 'var(--income)'],
-            ['label' => 'Маржа', 'value' => round($margin, 1).'%', 'delta' => $mD, 'down' => $mDown, 'sub' => 'пред. 30 дн: '.round($marginP, 1).'%', 'spark' => $marginSpark, 'color' => 'var(--income)'],
+            ['label' => 'Выручка', 'value' => $this->m($revenue), 'delta' => $revD, 'down' => $revDown, 'sub' => $prevSub.': '.$this->m($revP), 'spark' => $incSpark, 'color' => 'var(--income)'],
+            ['label' => 'Прибыль', 'value' => $this->m($gross), 'delta' => $grD, 'down' => $grDown, 'sub' => $prevSub.': '.$this->m($grossP), 'spark' => $profSpark, 'color' => 'var(--income)'],
+            ['label' => 'Маржа', 'value' => round($margin, 1).'%', 'delta' => $mD, 'down' => $mDown, 'sub' => $prevSub.': '.round($marginP, 1).'%', 'spark' => $marginSpark, 'color' => 'var(--income)'],
             ['label' => 'ROI', 'value' => (($cogs + $acq + $exp) > 0 ? round($gross / ($cogs + $acq + $exp) * 100) : 0).'%', 'delta' => '', 'down' => false, 'sub' => 'прибыль / затраты', 'spark' => $roiSpark, 'color' => 'var(--income)'],
-            ['label' => 'Закупки', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true, 'sub' => 'пред. 30 дн: '.$this->m($purchP), 'spark' => $purchSpark, 'color' => 'var(--expense)'],
+            ['label' => 'Закупки', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true, 'sub' => $prevSub.': '.$this->m($purchP), 'spark' => $purchSpark, 'color' => 'var(--expense)'],
+            ['label' => 'Долг покупателей', 'value' => $this->m($debtTotal), 'delta' => '', 'down' => false, 'sub' => $this->salesWord(count($debtSales)).' с долгом', 'spark' => [], 'color' => 'var(--warn)', 'href' => '/sales'],
         ];
 
         $accounts = Account::orderBy('sort_order')->orderBy('name')->get()->map(fn ($a) => ['name' => $a->name, 'balance' => $a->balance()]);
@@ -140,12 +151,10 @@ class DashboardController extends Controller
                 'cost' => $g->sum(fn ($b) => $b->qty_left * $b->unit_cost), 'warn' => true,
             ])->sortByDesc('cost')->take(3)->values();
 
-        // Авто-напоминания
+        // Авто-напоминания (долги уже посчитаны для KPI «Долг покупателей»)
         $reminders = [];
-        $paidSale = DB::table('bank_matches')->where('target_type', 'sale')->select('target_id', DB::raw('SUM(amount) p'))->groupBy('target_id')->pluck('p', 'target_id');
-        foreach (Sale::with('counterparty')->whereIn('status', ['Выставлен', 'Оплачен'])->get() as $s) {
-            $debt = $s->total() - (float) ($paidSale[$s->id] ?? 0) - (float) $s->fee_writeoff;
-            if ($debt > 0.01 && $s->date && Carbon::parse($s->date)->diffInDays($now) > 7) {
+        foreach ($debtSales as [$s, $debt]) {
+            if ($s->date && Carbon::parse($s->date)->diffInDays($now) > 7) {
                 $reminders[] = ['kind' => 'auto', 'dot' => 'var(--expense)', 'title' => ($s->counterparty?->name ?? $s->number).' · долг', 'sub' => Carbon::parse($s->date)->diffInDays($now).' дн · '.$this->m($debt)];
             }
         }
@@ -203,5 +212,16 @@ class DashboardController extends Controller
     private function m(float $n): string
     {
         return number_format(round($n), 0, '.', ' ').' ₽';
+    }
+
+    // «1 продажа / 2 продажи / 5 продаж»
+    private function salesWord(int $n): string
+    {
+        $m10 = $n % 10;
+        $m100 = $n % 100;
+        $word = ($m10 === 1 && $m100 !== 11) ? 'продажа'
+            : (($m10 >= 2 && $m10 <= 4 && ($m100 < 12 || $m100 > 14)) ? 'продажи' : 'продаж');
+
+        return $n.' '.$word;
     }
 }
