@@ -133,6 +133,9 @@ const goShipments = () => router.visit('/shipments');
     display: flex;
     flex-direction: column;
     gap: 2px;
+    /* Плотная подложка вместо стекла: на iOS backdrop-filter внутри другого
+       стеклянного слоя не работает, и поповер просвечивал до нечитаемости. */
+    background: var(--glass-solid);
 }
 .cal-pop-row {
     display: flex;
