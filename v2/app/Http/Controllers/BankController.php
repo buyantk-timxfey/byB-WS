@@ -148,6 +148,13 @@ class BankController extends Controller
         }
     }
 
+    // Продажи, привязки которых меняются, — статус пересчитывается после изменения
+    // (Оплачен ↔ Выставлен вслед за фактической оплатой).
+    private function affectedSaleIds(BankLine $line): array
+    {
+        return $line->matches()->where('target_type', 'sale')->pluck('target_id')->filter()->unique()->all();
+    }
+
     public function reconcile(Request $r, BankLine $line)
     {
         $data = $r->validate([
@@ -156,6 +163,7 @@ class BankController extends Controller
             'matches.*.target_id' => 'nullable|integer',
             'matches.*.amount' => 'required|numeric',
         ]);
+        $saleIds = $this->affectedSaleIds($line);
         DB::transaction(function () use ($line, $data) {
             $line->matches()->delete();
             foreach ($data['matches'] ?? [] as $m) {
@@ -167,15 +175,27 @@ class BankController extends Controller
             $line->status = 'unmatched';
             BankReconcile::apply($line->fresh());
         });
+        foreach ($data['matches'] ?? [] as $m) {
+            if ($m['target_type'] === 'sale') {
+                $saleIds[] = $m['target_id'];
+            }
+        }
+        foreach (array_unique(array_filter($saleIds)) as $id) {
+            \App\Services\SaleStatusSync::recalcById((int) $id);
+        }
 
         return back();
     }
 
     public function ignore(BankLine $line)
     {
+        $saleIds = $this->affectedSaleIds($line);
         $line->matches()->delete();
         $line->update(['status' => 'ignore']);
         BankReconcile::apply($line->fresh());
+        foreach ($saleIds as $id) {
+            \App\Services\SaleStatusSync::recalcById((int) $id);
+        }
 
         return back();
     }
@@ -183,12 +203,16 @@ class BankController extends Controller
     // Удалить операцию выписки вместе с её проводками (взаиморасчёты/обороты)
     public function destroyLine(BankLine $line)
     {
+        $saleIds = $this->affectedSaleIds($line);
         DB::transaction(function () use ($line) {
             \App\Models\Settlement::where('doc_type', 'bank_line')->where('doc_id', $line->id)->delete();
             \App\Models\Turnover::where('doc_type', 'bank_line')->where('doc_id', $line->id)->delete();
             $line->matches()->delete();
             $line->delete();
         });
+        foreach ($saleIds as $id) {
+            \App\Services\SaleStatusSync::recalcById((int) $id);
+        }
 
         return back();
     }

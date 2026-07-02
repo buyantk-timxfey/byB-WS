@@ -162,13 +162,29 @@ class ShipmentController extends Controller
             'bank_line_id' => 'required|exists:bank_lines,id',
             'amount' => 'required|numeric|min:0.01',
         ]);
-        $line = BankLine::findOrFail($data['bank_line_id']);
-        BankMatch::create([
-            'bank_line_id' => $line->id,
-            'target_type' => 'shipment',
-            'target_id' => $shipment->id,
-            'amount' => abs($data['amount']),
-        ]);
+        $line = BankLine::with('matches')->findOrFail($data['bank_line_id']);
+        $amount = abs($data['amount']);
+
+        // Нельзя разнести больше, чем осталось у операции — иначе «оплачено»
+        // задваивается, а строка числится разнесённой на сумму больше себя самой.
+        $remaining = round(abs((float) $line->amount) - $line->matchedSum(), 2);
+        if ($amount > $remaining + 0.01) {
+            return back()->withErrors(['amount' => 'У операции осталось только '.number_format($remaining, 2, ',', ' ').' ₽']);
+        }
+
+        // Повторная привязка той же операции к той же поставке — дополняем сумму,
+        // а не создаём вторую строку-дубль.
+        $existing = $line->matches->first(fn ($m) => $m->target_type === 'shipment' && $m->target_id === $shipment->id);
+        if ($existing) {
+            $existing->update(['amount' => $existing->amount + $amount]);
+        } else {
+            BankMatch::create([
+                'bank_line_id' => $line->id,
+                'target_type' => 'shipment',
+                'target_id' => $shipment->id,
+                'amount' => $amount,
+            ]);
+        }
         BankReconcile::apply($line->fresh());
 
         return back();

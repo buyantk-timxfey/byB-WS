@@ -38,6 +38,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/sales/{sale}', [SaleController::class, 'update']);
     Route::delete('/sales/{sale}', [SaleController::class, 'destroy']);
     Route::post('/sales/{sale}/pay', [SaleController::class, 'pay']);
+    Route::post('/sales/{sale}/match', [SaleController::class, 'matchPayment']);
+    Route::delete('/sales/{sale}/match/{match}', [SaleController::class, 'unmatchPayment']);
 });
 
 // Склад — реальные данные (чтение из регистров)

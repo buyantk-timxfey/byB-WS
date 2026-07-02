@@ -10,11 +10,14 @@ import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
 
 type Item = { nomenclature_id: number | null; qty: number | null; price: number | null; cost?: number };
+type Payment = { match_id: number; bank_line_id: number; date: string | null; party: string; amount: number; auto: boolean };
 type Row = {
     id: number; number: string; date: string; buyer: string; counterparty_id: number | null;
     account_id: number | null; sale_type: string; payment_method: string | null; status: string;
     sum: number; cost: number; profit: number; paid: number; posted: boolean; items: Item[];
+    payments: Payment[];
 };
+type BankCandidate = { id: number; date: string | null; party: string; purpose: string | null; remaining: number };
 
 const props = defineProps<{
     rows: Row[];
@@ -23,6 +26,7 @@ const props = defineProps<{
     accounts: { id: number; name: string }[];
     defaultAccountId: number | null;
     rates: { card: number; sbp: number };
+    bankCandidates: BankCandidate[];
 }>();
 
 const seg = ref<'all' | 'Выставлен' | 'Оплачен' | 'Отменён'>('all');
@@ -86,6 +90,7 @@ function pickType(t: 'Касса' | 'Безналичная') {
         form.status = 'Выставлен';
         form.account_id = props.defaultAccountId;
     }
+    resetPayPick();
     open.value = true;
 }
 
@@ -100,11 +105,42 @@ function openDoc(s: Row) {
     form.status = s.status;
     form.comment = '';
     form.items = s.items.map((i) => ({ nomenclature_id: i.nomenclature_id, qty: i.qty, price: i.price }));
+    resetPayPick();
     open.value = true;
 }
 
 function addItem() { form.items.push({ nomenclature_id: null, qty: null, price: null }); }
 function removeItem(i: number) { form.items.splice(i, 1); }
+
+// ── Оплата — привязка приходов из выписки прямо здесь (то же, что разнесение в Банке) ──
+const currentRow = computed(() => props.rows.find((r) => r.id === editingId.value) ?? null);
+const currentDebt = computed(() => currentRow.value ? Math.max(currentRow.value.sum - currentRow.value.paid, 0) : 0);
+// Ближайшие по сумме к долгу продажи — сверху
+const bankCandOptions = computed(() => [...props.bankCandidates]
+    .sort((a, b) => Math.abs(a.remaining - currentDebt.value) - Math.abs(b.remaining - currentDebt.value))
+    .map((c) => ({ id: c.id, name: `${fdate(c.date)} · ${c.party} · ${money(c.remaining)}` })));
+
+const showPayPick = ref(false);
+const payLineId = ref<number | null>(null);
+const payAmount = ref<number | null>(null);
+const editPayAmount = ref(false);
+function resetPayPick() { showPayPick.value = false; payLineId.value = null; payAmount.value = null; editPayAmount.value = false; }
+function pickPayLine(id: number | null) {
+    payLineId.value = id;
+    editPayAmount.value = false;
+    const cand = props.bankCandidates.find((c) => c.id === id);
+    if (cand) payAmount.value = Math.round(Math.min(currentDebt.value, cand.remaining) * 100) / 100;
+}
+function attachPayment() {
+    if (!editingId.value || !payLineId.value || !payAmount.value) return;
+    router.post(`/sales/${editingId.value}/match`, { bank_line_id: payLineId.value, amount: payAmount.value }, {
+        onSuccess: () => resetPayPick(),
+    });
+}
+function detachPayment(p: Payment) {
+    if (!editingId.value || p.auto) return;
+    router.delete(`/sales/${editingId.value}/match/${p.match_id}`);
+}
 
 function submit() {
     if (saleType.value === 'Касса') { form.status = 'Оплачен'; form.counterparty_id = null; }
@@ -275,6 +311,32 @@ function payNow() {
                 <div class="st-note">«Выставлен» резервирует товар. Деньги/выручка — при сопоставлении прихода из выписки.</div>
             </div>
 
+            <!-- Оплата -->
+            <div v-if="editingId" class="sale-pay">
+                <div class="items-h"><span class="h2">Оплата</span></div>
+                <div v-for="p in currentRow?.payments ?? []" :key="p.match_id" class="pay-row">
+                    <div class="pay-row-info">
+                        <span class="text-ink-2" style="font-size:13px">{{ fdate(p.date) }} · {{ p.party }}</span>
+                    </div>
+                    <span class="tnum" style="font-weight:600">{{ money(p.amount) }}</span>
+                    <button v-if="!p.auto" type="button" class="pay-row-remove pressable" @click="detachPayment(p)" title="Отвязать">✕</button>
+                </div>
+                <div v-if="!(currentRow?.payments ?? []).length" class="text-ink-3" style="font-size:13px;padding:4px 0">Оплат пока нет</div>
+
+                <div v-if="showPayPick" class="pay-pick">
+                    <div style="flex:1;min-width:220px">
+                        <SearchSelect :modelValue="payLineId" :options="bankCandOptions" placeholder="— выбрать приход из выписки —" @update:modelValue="pickPayLine" />
+                    </div>
+                    <template v-if="payLineId">
+                        <input v-if="editPayAmount" v-model.number="payAmount" type="number" step="0.01" placeholder="Сумма" style="max-width:120px" />
+                        <span v-else class="tnum" style="font-weight:600;white-space:nowrap">{{ money(payAmount ?? 0) }} <button type="button" class="link-btn" style="font-size:12px;padding:0" @click="editPayAmount = true">изменить</button></span>
+                        <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="!payAmount" @click="attachPayment">Привязать</button>
+                    </template>
+                </div>
+                <button v-else type="button" class="btn-ghost pressable" style="margin-top:8px" @click="showPayPick = true"><Icon name="plus" :size="14" /> Привязать оплату</button>
+                <div v-if="!bankCandidates.length && !(currentRow?.payments ?? []).length" class="text-ink-3" style="font-size:12px;margin-top:6px">Нет неразнесённых приходов в выписке — сначала загрузите её на странице Банк.</div>
+            </div>
+
             <template #footer>
                 <button class="btn-primary pressable" style="flex:1;justify-content:center" :disabled="form.processing" @click="submit">
                     {{ form.status === 'Выставлен' ? 'Выставить счёт' : 'Сохранить' }}
@@ -299,6 +361,12 @@ function payNow() {
 .sale-item { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--glass-border); }
 .sale-item select, .sale-item input { border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 8px 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
 .sale-totals { padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 4px; }
+.sale-pay { padding-top: 10px; margin-top: 6px; border-top: 1px solid var(--glass-border); }
+.pay-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill); margin-bottom: 8px; }
+.pay-row-info { flex: 1; min-width: 0; }
+.pay-row-remove { flex-shrink: 0; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--glass-border); background: transparent; color: var(--expense); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.pay-pick { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 12px; margin-top: 8px; background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 12px; }
+.pay-pick input { border: 1px solid var(--glass-border); background: var(--bg); border-radius: 10px; height: 40px; padding: 0 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
 .sale-totals .st-line { display: flex; align-items: center; justify-content: space-between; }
 .sale-totals .st-note { font-size: 11px; color: var(--ink-3); line-height: 1.35; padding-top: 2px; }
 
