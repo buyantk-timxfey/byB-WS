@@ -35,10 +35,12 @@ class BankController extends Controller
                 'amount' => (float) $l->amount, 'status' => $l->status,
                 'inn' => $l->inn,
                 'link' => $this->matchLabel($l),
-                'match' => $l->matches->first() ? [
-                    'target_type' => $l->matches->first()->target_type,
-                    'target_id'   => $l->matches->first()->target_id,
-                ] : null,
+                'matches' => $l->matches->map(fn (BankMatch $m) => [
+                    'target_type' => $m->target_type,
+                    'target_id' => $m->target_id,
+                    'amount' => (float) $m->amount,
+                    'label' => $this->targetLabel($m),
+                ])->values(),
             ]);
 
         return Inertia::render('Bank', [
@@ -217,12 +219,8 @@ class BankController extends Controller
         return back();
     }
 
-    private function matchLabel(BankLine $l): ?string
+    private function targetLabel(BankMatch $m): ?string
     {
-        $m = $l->matches->first();
-        if (! $m) {
-            return null;
-        }
         return match ($m->target_type) {
             'sale' => 'Продажа '.optional(Sale::find($m->target_id))->number,
             'shipment' => 'Поставка '.optional(Shipment::find($m->target_id))->number,
@@ -231,6 +229,21 @@ class BankController extends Controller
             'transfer' => 'Перевод',
             default => null,
         };
+    }
+
+    // Подпись в ленте операций: один документ — его номер, несколько — счётчик.
+    private function matchLabel(BankLine $l): ?string
+    {
+        $labels = $l->matches->map(fn (BankMatch $m) => $this->targetLabel($m))->filter()->values();
+        if ($labels->isEmpty()) {
+            return null;
+        }
+        if ($labels->count() === 1) {
+            return $labels[0];
+        }
+        $n = $labels->count();
+
+        return $n.' '.($n >= 2 && $n <= 4 ? 'документа' : 'документов');
     }
 
     private function openSales(): array

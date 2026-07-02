@@ -10,10 +10,11 @@ import DatePicker from '@/Components/DatePicker.vue';
 import Sparkline from '@/Components/Sparkline.vue';
 import { money, signed, initials } from '@/lib/format';
 
+type MatchSel = { target_type: string; target_id: number | null; amount: number; label?: string | null };
 type Line = {
     id: number; date: string; party: string; purpose: string | null; account: string; amount: number;
     status: string; inn: string | null; link: string | null;
-    match: { target_type: string; target_id: number | null } | null;
+    matches: MatchSel[];
 };
 type Doc = { id: number; number: string; party: string; sum: number; debt: number; inn: string | null };
 
@@ -59,10 +60,10 @@ const unmatchedCount = computed(() => props.lines.filter((o) => o.status === 'un
 const unmatchedSum = computed(() => props.lines.filter((o) => o.status === 'unmatched' || o.status === 'partial').reduce((a, o) => a + Math.abs(o.amount), 0));
 const statusPill = (s: string) => ({ matched: { t: 'Разнесено', v: 'ok' }, partial: { t: 'Частично', v: 'warn' }, unmatched: { t: 'Не разнесено', v: 'bad' }, ignore: { t: 'Игнор', v: 'neutral' } } as any)[s];
 
-// ── Сверка ──
+// ── Сверка: одна операция может закрывать несколько документов (мультивыбор) ──
 const open = ref(false);
 const cur = ref<Line | null>(null);
-const sel = ref<{ target_type: string; target_id: number | null; amount: number } | null>(null);
+const sels = ref<MatchSel[]>([]);
 const showAllCand = ref(false);
 // Ближайшие по сумме к операции — сверху, чтобы не листать весь список долгов.
 const candidates = computed<Doc[]>(() => {
@@ -73,29 +74,48 @@ const candidates = computed<Doc[]>(() => {
 });
 const candidatesShown = computed(() => showAllCand.value ? candidates.value : candidates.value.slice(0, 5));
 
+const lineAbs = computed(() => cur.value ? Math.abs(cur.value.amount) : 0);
+const selTotal = computed(() => sels.value.reduce((a, s) => a + (Number(s.amount) || 0), 0));
+const remaining = computed(() => Math.round((lineAbs.value - selTotal.value) * 100) / 100);
+const overAllocated = computed(() => remaining.value < -0.01);
+const isDocSel = (id: number) => sels.value.some((s) => (s.target_type === 'sale' || s.target_type === 'shipment') && s.target_id === id);
+
 function reconcile(l: Line) {
     cur.value = l;
     showAllCand.value = false;
-    // Если операция уже разнесена (полностью или частично) — подставляем текущий выбор,
-    // чтобы модалка при повторном открытии показывала, куда операция отнесена сейчас.
-    sel.value = l.match ? { target_type: l.match.target_type, target_id: l.match.target_id, amount: Math.abs(l.amount) } : null;
+    // Показываем текущее разнесение операции — его можно дополнить или изменить.
+    sels.value = l.matches.map((m) => ({ ...m }));
     open.value = true;
 }
 function pickDoc(d: Doc) {
     if (!cur.value) return;
-    sel.value = { target_type: cur.value.amount > 0 ? 'sale' : 'shipment', target_id: d.id, amount: Math.min(Math.abs(cur.value.amount), d.debt) };
+    const type = cur.value.amount > 0 ? 'sale' : 'shipment';
+    const i = sels.value.findIndex((s) => s.target_type === type && s.target_id === d.id);
+    if (i >= 0) {
+        sels.value.splice(i, 1);   // повторный клик — убрать из выбора
+        return;
+    }
+    // Документы и статья/перевод взаимоисключающие: выбор документа снимает статью.
+    sels.value = sels.value.filter((s) => s.target_type === 'sale' || s.target_type === 'shipment');
+    const amount = Math.round(Math.max(0, Math.min(remaining.value, d.debt)) * 100) / 100;
+    sels.value.push({ target_type: type, target_id: d.id, amount, label: `${d.number} · ${d.party ?? ''}` });
 }
 function pickArticle(id: number) {
     if (!cur.value) return;
-    sel.value = { target_type: 'expense_article', target_id: id, amount: Math.abs(cur.value.amount) };
+    sels.value = [{ target_type: 'expense_article', target_id: id, amount: lineAbs.value }];
 }
 function pickTransfer() {
     if (!cur.value) return;
-    sel.value = { target_type: 'transfer', target_id: null, amount: Math.abs(cur.value.amount) };
+    sels.value = [{ target_type: 'transfer', target_id: null, amount: lineAbs.value }];
 }
+function removeSel(i: number) { sels.value.splice(i, 1); }
 function applyReconcile() {
-    if (!cur.value || !sel.value) return;
-    router.post(`/bank/lines/${cur.value.id}/reconcile`, { matches: [sel.value] }, { onSuccess: () => { open.value = false; } });
+    if (!cur.value || overAllocated.value) return;
+    const matches = sels.value
+        .filter((s) => (Number(s.amount) || 0) > 0)
+        .map((s) => ({ target_type: s.target_type, target_id: s.target_id, amount: s.amount }));
+    if (!matches.length) return;
+    router.post(`/bank/lines/${cur.value.id}/reconcile`, { matches }, { onSuccess: () => { open.value = false; } });
 }
 function ignore() {
     if (!cur.value) return;
@@ -206,15 +226,24 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                     <div class="rec-l">Назначение</div><div class="rec-v">{{ cur.purpose }}</div>
                     <div class="rec-l">Счёт</div><div class="rec-v">{{ cur.account }}</div>
                 </div>
-                <div v-if="cur.link" class="rec-note" style="background:rgba(10,132,255,.12);border-color:rgba(10,132,255,.3);color:var(--info,#0a84ff)">
-                    Уже сопоставлено: {{ cur.link }}
-                    <span v-if="(sel?.target_type === 'sale' || sel?.target_type === 'shipment') && !candidates.some((c) => c.id === sel?.target_id)"> · документ полностью закрыт, поэтому его нет в списке ниже</span>
+                <!-- Выбранные цели: одна операция может закрывать несколько документов -->
+                <div v-if="sels.length" class="sel-list">
+                    <div v-for="(s, i) in sels" :key="i" class="sel-row">
+                        <span class="sel-label">{{ s.label ?? (s.target_type === 'transfer' ? 'Перевод' : s.target_type === 'acquiring' ? 'Эквайринг' : 'Документ') }}</span>
+                        <input v-model.number="s.amount" type="number" step="0.01" class="sel-amt tnum" />
+                        <button type="button" class="sel-del pressable" @click="removeSel(i)" title="Убрать">✕</button>
+                    </div>
+                    <div class="sel-total" :class="{ 'sel-total--over': overAllocated }">
+                        <span>Разнесено {{ money(selTotal) }} из {{ money(lineAbs) }}</span>
+                        <span v-if="overAllocated">— больше суммы операции!</span>
+                        <span v-else-if="remaining > 0.01" class="text-ink-3">· останется {{ money(remaining) }}</span>
+                    </div>
                 </div>
                 <div>
                     <span class="h2">{{ cur.amount > 0 ? 'Продажи с долгом' : 'Поставки с долгом' }}</span>
-                    <div v-for="d in candidatesShown" :key="d.id" class="cand" :class="{ 'cand--best': sel?.target_id === d.id && (sel?.target_type==='sale'||sel?.target_type==='shipment') }" @click="pickDoc(d)" style="cursor:pointer">
+                    <div v-for="d in candidatesShown" :key="d.id" class="cand" :class="{ 'cand--best': isDocSel(d.id) }" @click="pickDoc(d)" style="cursor:pointer">
                         <div class="cand-r">
-                            <div class="cand-tick" :class="{ 'cand-tick--off': !(sel?.target_id === d.id) }">{{ sel?.target_id === d.id ? '✓' : '' }}</div>
+                            <div class="cand-tick" :class="{ 'cand-tick--off': !isDocSel(d.id) }">{{ isDocSel(d.id) ? '✓' : '' }}</div>
                             <div><div class="cand-doc">{{ d.number }} · {{ d.party }}</div><div class="cand-sub">долг {{ money(d.debt) }}<span v-if="d.inn && cur.inn === d.inn"> · совпадение по ИНН</span></div></div>
                             <span class="tnum">{{ money(d.debt) }}</span>
                         </div>
@@ -225,19 +254,16 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                 <div class="fld" v-if="cur.amount < 0">
                     <label>Или отнести на статью</label>
                     <SearchSelect
-                        :modelValue="sel?.target_type === 'expense_article' ? sel.target_id : null"
+                        :modelValue="sels[0]?.target_type === 'expense_article' ? sels[0].target_id : null"
                         :options="articles"
                         placeholder="— выбрать статью —"
                         @update:modelValue="(id) => id && pickArticle(id)"
                     />
                 </div>
                 <button class="link-btn" @click="pickTransfer">Это перевод между своими счетами</button>
-                <div v-if="sel" class="rec-note" style="background:rgba(52,199,89,.12);border-color:rgba(52,199,89,.3);color:var(--income)">
-                    Выбрано: разнести {{ money(sel.amount) }}
-                </div>
             </template>
             <template #footer>
-                <button class="btn-primary pressable" style="flex:1;justify-content:center" :disabled="!sel" @click="applyReconcile">Разнести</button>
+                <button class="btn-primary pressable" style="flex:1;justify-content:center" :disabled="!sels.length || overAllocated" @click="applyReconcile">Разнести</button>
                 <button class="btn-ghost pressable" @click="ignore">Игнорировать</button>
                 <button class="btn-ghost pressable" style="color:var(--expense)" @click="removeLine">Удалить</button>
             </template>
@@ -270,6 +296,14 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
 .rb-t { font-size: 15px; font-weight: 600; }
 .rb-s { font-size: 13px; color: var(--ink-2); margin-top: 1px; }
 .rb-btn { margin-left: auto; border-radius: 12px; padding: 9px 18px; }
+/* Мультивыбор в сверке: список выбранных целей с редактируемыми суммами */
+.sel-list { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid rgba(10,132,255,.3); background: rgba(10,132,255,.08); border-radius: 12px; }
+.sel-row { display: flex; align-items: center; gap: 8px; }
+.sel-label { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sel-amt { width: 120px; height: 34px; border: 1px solid var(--glass-border); background: var(--bg); border-radius: 9px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; text-align: right; }
+.sel-del { flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--glass-border); background: transparent; color: var(--expense); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.sel-total { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; font-weight: 600; color: var(--ink-2); padding-top: 4px; border-top: 1px solid rgba(10,132,255,.2); }
+.sel-total--over { color: var(--expense); }
 .bank-period { display: flex; align-items: center; gap: 8px; }
 .bank-period .dpick { width: 132px; }
 .bank-period :deep(.dpick-input) { height: 38px; }
