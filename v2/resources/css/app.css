@@ -332,7 +332,10 @@
 /* Журнал-таблица */
 .jcard { max-width: 1240px; margin: 0 auto; padding: 0; overflow: hidden; }
 .jscroll { overflow-x: auto; }
-.jtable { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 760px; }
+/* border-collapse: separate, а не collapse — у Safari (iPad) с collapse + sticky-шапкой
+   динамически вставляемые строки (раскрытие товара на складе) рисуются поверх соседних.
+   Визуально то же самое: границы и так только border-top у ячеек. */
+.jtable { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; min-width: 760px; }
 .jtable thead th { position: sticky; top: 0; z-index: 1; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); padding: 12px 16px; background: var(--glass-fill-strong); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); white-space: nowrap; }
 .jtable tbody td { padding: 13px 16px; border-top: 1px solid var(--glass-border); white-space: nowrap; }
 .jtable tbody tr { cursor: pointer; }
@@ -358,7 +361,7 @@
 .chev { transition: transform .2s ease; display: inline-block; }
 .chev-open { transform: rotate(90deg); }
 .jtable--exp tbody tr.tr-open td { background: var(--glass-fill); }
-.batch-tr td { padding: 0 16px 12px !important; border-top: 0 !important; }
+.batch-tr td { padding: 6px 16px 14px !important; border-top: 0 !important; }
 .batch-tr:hover td { background: transparent !important; }
 .batches { background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 14px; padding: 6px 14px; }
 /* Числовые колонки — minmax(..., auto), а не жёсткие px: строки таблицы наследуют
