@@ -337,7 +337,11 @@
    Визуально то же самое: границы и так только border-top у ячеек. */
 .jtable { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; min-width: 760px; }
 .jtable thead th { position: sticky; top: 0; z-index: 1; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); padding: 12px 16px; background: var(--glass-fill-strong); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); white-space: nowrap; }
-.jtable tbody td { padding: 13px 16px; border-top: 1px solid var(--glass-border); white-space: nowrap; }
+/* Текстовые ячейки переносятся — таблица ужимается в экран, когда место позволяет.
+   Числа, даты-итоги и шапка остаются одной строкой; если даже с переносами не
+   влезает (узкий экран) — работает горизонтальный скролл через min-width + .jscroll. */
+.jtable tbody td { padding: 13px 16px; border-top: 1px solid var(--glass-border); }
+.jtable tbody td.num, .jtable tfoot td { white-space: nowrap; }
 .jtable tbody tr { cursor: pointer; }
 .jtable tbody tr:hover td { background: var(--glass-fill); }
 .jtable .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -370,10 +374,11 @@
 .batch-head, .batch-row { display: grid; grid-template-columns: minmax(160px, 2fr) minmax(96px, 1fr) minmax(64px, auto) minmax(96px, auto) minmax(48px, auto); gap: 12px; align-items: center; }
 .batch-head span, .batch-row span { min-width: 0; }
 .batch-head { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-3); padding: 8px 0; }
+.batch-head span { white-space: nowrap; }
 .batch-row { padding: 9px 0; border-top: 1px solid var(--glass-border); font-size: 13px; }
 .batch-row.stale .bship { color: var(--warn); }
-.batch-row .bship { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
-.batch-row .num { font-variant-numeric: tabular-nums; }
+.batch-row .bship { font-weight: 600; }
+.batch-row .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* ── Банк: премиальные карточки счетов ── */
 .bank-top-row { display: flex; align-items: flex-start; gap: 28px; flex-wrap: wrap; }
 /* Веер — карточки внахлёст с разворотом (--fan-r/--fan-y/--fan-z из шаблона),
