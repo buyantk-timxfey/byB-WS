@@ -51,6 +51,26 @@ class SaleStatusSync
             $sale->fee_writeoff = $writeoff;
             $sale->save();
         }
+        self::syncFeeTurnovers($sale->fresh());
+    }
+
+    // Выручка кассы в финансах — полная сумма чека: приход из выписки даёт только
+    // net-часть, а комиссия карты доводится парой проводок (doc_type = sale_fee):
+    // доход на сумму комиссии + расход по статье «Эквайринг». Итоговая прибыль
+    // не меняется, но выручка и расход эквайринга видны честно. Идемпотентно.
+    private static function syncFeeTurnovers(Sale $sale): void
+    {
+        \App\Models\Turnover::where('doc_type', 'sale_fee')->where('doc_id', $sale->id)->delete();
+        $fee = (float) $sale->fee_writeoff;
+        if ($fee <= 0) {
+            return;
+        }
+        $articleId = \App\Models\ExpenseArticle::firstOrCreate(
+            ['name' => 'Эквайринг'],
+            ['kind' => 'expense', 'is_system' => true],
+        )->id;
+        \App\Models\Turnover::create(['date' => $sale->date, 'type' => 'income', 'amount' => $fee, 'doc_type' => 'sale_fee', 'doc_id' => $sale->id]);
+        \App\Models\Turnover::create(['date' => $sale->date, 'type' => 'expense', 'article_id' => $articleId, 'amount' => $fee, 'doc_type' => 'sale_fee', 'doc_id' => $sale->id]);
     }
 
     public static function recalcById(?int $saleId): void

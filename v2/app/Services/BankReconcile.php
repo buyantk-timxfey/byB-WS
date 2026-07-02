@@ -76,8 +76,14 @@ class BankReconcile
                         break;
 
                     case 'acquiring':
+                        // Отдельного типа «эквайринг» в финансах больше нет —
+                        // реальные комиссии из выписки идут расходом по статье «Эквайринг»
                         Turnover::create([
-                            'date' => $line->date, 'type' => 'acquiring', 'article_id' => $m->target_id,
+                            'date' => $line->date, 'type' => 'expense',
+                            'article_id' => $m->target_id ?? \App\Models\ExpenseArticle::firstOrCreate(
+                                ['name' => 'Эквайринг'],
+                                ['kind' => 'expense', 'is_system' => true],
+                            )->id,
                             'amount' => $amt, 'doc_type' => 'bank_line', 'doc_id' => $line->id,
                         ]);
                         break;

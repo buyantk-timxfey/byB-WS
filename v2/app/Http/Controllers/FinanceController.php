@@ -35,14 +35,13 @@ class FinanceController extends Controller
             $sum = fn (string $type) => (float) Turnover::where('type', $type)->whereBetween('date', [$a, $b])->sum('amount');
             $revenue = $sum('income');
             $cogs = $sum('cogs');
-            $acquiring = $sum('acquiring');
             $expenses = $sum('expense');
             $otherIncome = $sum('income_other');
-            $gross = $revenue - $cogs - $acquiring - $expenses + $otherIncome;
+            $gross = $revenue - $cogs - $expenses + $otherIncome;
             $tax = round($gross * $taxRate, 2);
             $net = $gross - $tax;
 
-            return compact('revenue', 'cogs', 'acquiring', 'expenses', 'otherIncome', 'gross', 'tax', 'net');
+            return compact('revenue', 'cogs', 'expenses', 'otherIncome', 'gross', 'tax', 'net');
         };
 
         $pnl = $pnlFor($from->toDateString(), $to->toDateString());
@@ -50,7 +49,7 @@ class FinanceController extends Controller
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])->count();
 
         $margin = $pnl['revenue'] > 0 ? round($pnl['gross'] / $pnl['revenue'] * 100, 1) : 0;
-        $costsAll = $pnl['cogs'] + $pnl['acquiring'] + $pnl['expenses'];
+        $costsAll = $pnl['cogs'] + $pnl['expenses'];
         $roi = $costsAll > 0 ? round($pnl['gross'] / $costsAll * 100, 1) : 0;
 
         // Сравнение: закрытый период — с прошлым периодом целиком; текущий
@@ -62,7 +61,7 @@ class FinanceController extends Controller
         };
         $pnlP = $pnlFor($pa->toDateString(), $pb->toDateString());
         $marginP = $pnlP['revenue'] > 0 ? $pnlP['gross'] / $pnlP['revenue'] * 100 : 0;
-        $costsP = $pnlP['cogs'] + $pnlP['acquiring'] + $pnlP['expenses'];
+        $costsP = $pnlP['cogs'] + $pnlP['expenses'];
         $roiP = $costsP > 0 ? $pnlP['gross'] / $costsP * 100 : 0;
 
         $dPct = function (float $cur, float $prev): array {
@@ -83,11 +82,7 @@ class FinanceController extends Controller
                 'article_id' => $row->article_id,
                 'name' => $articleNames[$row->article_id] ?? 'Без статьи',
                 'sum' => (float) $row->s,
-                'acquiring' => false,
             ]);
-        if ($pnl['acquiring'] > 0) {
-            $byArticle->push(['article_id' => null, 'name' => 'Эквайринг', 'sum' => $pnl['acquiring'], 'acquiring' => true]);
-        }
         $byArticle = $byArticle->sortByDesc('sum')->values();
 
         // Помесячная таблица и график: последние 12 месяцев, но не раньше
@@ -108,7 +103,7 @@ class FinanceController extends Controller
                 'label' => mb_convert_case($m->locale('ru')->monthName, MB_CASE_TITLE, 'UTF-8').' '.$m->year,
                 'revenue' => $row['revenue'],
                 'other' => $row['otherIncome'],
-                'costs' => $row['cogs'] + $row['acquiring'] + $row['expenses'],
+                'costs' => $row['cogs'] + $row['expenses'],
                 'gross' => $row['gross'],
                 'tax' => $row['tax'],
                 'net' => $row['net'],
@@ -181,10 +176,11 @@ class FinanceController extends Controller
         $lineIds = $rows->where('doc_type', 'bank_line')->pluck('doc_id')->unique();
         $lines = BankLine::whereIn('id', $lineIds)->get(['id', 'counterparty_name', 'purpose'])->keyBy('id');
 
-        $out = ['income' => [], 'income_other' => [], 'cogs' => [], 'acquiring' => [], 'expense' => []];
+        $out = ['income' => [], 'income_other' => [], 'cogs' => [], 'expense' => []];
         foreach ($rows as $t) {
             $label = match ($t->doc_type) {
                 'sale' => 'Продажа '.($saleNums[$t->doc_id] ?? $t->doc_id),
+                'sale_fee' => 'Комиссия эквайринга · '.($saleNums[$t->doc_id] ?? $t->doc_id),
                 'shipment' => 'Поставка '.($shipNums[$t->doc_id] ?? $t->doc_id),
                 'bank_line' => $lines[$t->doc_id]?->counterparty_name ?? $lines[$t->doc_id]?->purpose ?? 'Платёж',
                 'writeoff' => 'Списание',

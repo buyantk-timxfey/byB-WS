@@ -12,10 +12,10 @@ type Delta = [string, boolean];
 const props = defineProps<{
     period: string; anchor: string; isCurrent: boolean; periodLabel: string; cmpLabel: string;
     taxRate: number;
-    pnl: { revenue: number; cogs: number; acquiring: number; expenses: number; otherIncome: number; gross: number; tax: number; net: number; salesCount: number };
+    pnl: { revenue: number; cogs: number; expenses: number; otherIncome: number; gross: number; tax: number; net: number; salesCount: number };
     metrics: { margin: number; roi: number; avgCheck: number };
     deltas: { revenue: Delta; gross: Delta; margin: Delta; roi: Delta };
-    byArticle: { article_id: number | null; name: string; sum: number; acquiring: boolean }[];
+    byArticle: { article_id: number | null; name: string; sum: number }[];
     monthRows: { label: string; revenue: number; other: number; costs: number; gross: number; tax: number; net: number }[];
     taxYtd: number;
     chart: { months: string[]; profit: number[] };
@@ -44,15 +44,14 @@ const open = ref(false);
 const drillTitle = ref('');
 const drillRows = ref<DrillRow[]>([]);
 const drillTotal = computed(() => drillRows.value.reduce((a, r) => a + r.sum, 0));
-const titles: Record<string, string> = { income: 'Выручка', income_other: 'Прочие доходы', cogs: 'Себестоимость проданного', acquiring: 'Эквайринг', expense: 'Прочие расходы ИП' };
+const titles: Record<string, string> = { income: 'Выручка', income_other: 'Прочие доходы', cogs: 'Себестоимость проданного', expense: 'Расходы ИП' };
 function drill(key: string) {
     drillRows.value = props.drill[key] ?? [];
     drillTitle.value = titles[key] ?? key;
     open.value = true;
 }
 // Клик по статье — расшифровка только её платежей
-function drillArticle(a: { article_id: number | null; name: string; acquiring: boolean }) {
-    if (a.acquiring) return drill('acquiring');
+function drillArticle(a: { article_id: number | null; name: string }) {
     drillRows.value = (props.drill.expense ?? []).filter((r) => r.article_id === a.article_id);
     drillTitle.value = a.name;
     open.value = true;
@@ -116,12 +115,8 @@ function drillArticle(a: { article_id: number | null; name: string; acquiring: b
                     <span>− Себестоимость проданного <span class="pnl-hint">COGS, FIFO</span></span>
                     <span class="tnum">{{ money(pnl.cogs) }}</span>
                 </div>
-                <div class="pnl-row pnl-row--out" @click="drill('acquiring')">
-                    <span>− Эквайринг <span class="pnl-hint">комиссии карт и СБП</span></span>
-                    <span class="tnum">{{ money(pnl.acquiring) }}</span>
-                </div>
                 <div class="pnl-row pnl-row--out" @click="drill('expense')">
-                    <span>− Прочие расходы ИП <span class="pnl-hint">по статьям</span></span>
+                    <span>− Расходы ИП <span class="pnl-hint">по статьям, включая эквайринг</span></span>
                     <span class="tnum">{{ money(pnl.expenses) }}</span>
                 </div>
                 <div class="pnl-row pnl-row--in" @click="drill('income_other')">

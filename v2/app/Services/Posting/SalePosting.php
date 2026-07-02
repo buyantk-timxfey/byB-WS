@@ -73,6 +73,7 @@ class SalePosting
             Fifo::release('sale', $sale->id);
             Settlement::where('doc_type', 'sale')->where('doc_id', $sale->id)->delete();
             Turnover::where('doc_type', 'sale')->where('doc_id', $sale->id)->delete();
+            Turnover::where('doc_type', 'sale_fee')->where('doc_id', $sale->id)->delete();
             $sale->items()->update(['cost' => 0]);
             $sale->forceFill(['posted_at' => null])->save();
         });
