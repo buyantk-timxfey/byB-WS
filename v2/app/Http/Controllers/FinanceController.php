@@ -30,9 +30,8 @@ class FinanceController extends Controller
         $isCurrent = $now->betweenIncluded($from, $to);
 
         $taxRate = (float) Setting::get('tax_rate', 16) / 100;
-        $salaryRate = (float) Setting::get('salary_rate', 20) / 100;
 
-        $pnlFor = function (string $a, string $b) use ($taxRate, $salaryRate): array {
+        $pnlFor = function (string $a, string $b) use ($taxRate): array {
             $sum = fn (string $type) => (float) Turnover::where('type', $type)->whereBetween('date', [$a, $b])->sum('amount');
             $revenue = $sum('income');
             $cogs = $sum('cogs');
@@ -42,10 +41,8 @@ class FinanceController extends Controller
             $gross = $revenue - $cogs - $acquiring - $expenses + $otherIncome;
             $tax = round($gross * $taxRate, 2);
             $net = $gross - $tax;
-            $salary = round(max(0, $net) * $salaryRate, 2);
 
-            return compact('revenue', 'cogs', 'acquiring', 'expenses', 'otherIncome', 'gross', 'tax', 'net', 'salary')
-                + ['retained' => $net - $salary];
+            return compact('revenue', 'cogs', 'acquiring', 'expenses', 'otherIncome', 'gross', 'tax', 'net');
         };
 
         $pnl = $pnlFor($from->toDateString(), $to->toDateString());
@@ -93,12 +90,17 @@ class FinanceController extends Controller
         }
         $byArticle = $byArticle->sortByDesc('sum')->values();
 
-        // Помесячная таблица за 12 месяцев + данные графика прибыли
+        // Помесячная таблица и график: последние 12 месяцев, но не раньше
+        // старта бизнеса — до апреля 2026 показывать нечего.
+        $businessStart = Carbon::parse('2026-04-01');
         $months = [];
         $profit12 = [];
         $monthRows = [];
         for ($i = 11; $i >= 0; $i--) {
             $m = $now->copy()->subMonths($i);
+            if ($m->copy()->endOfMonth()->lt($businessStart)) {
+                continue;
+            }
             $row = $pnlFor($m->copy()->startOfMonth()->toDateString(), $m->copy()->endOfMonth()->toDateString());
             $months[] = mb_substr($m->locale('ru')->monthName, 0, 3);
             $profit12[] = round($row['gross'] / 1000, 1);
@@ -110,7 +112,6 @@ class FinanceController extends Controller
                 'gross' => $row['gross'],
                 'tax' => $row['tax'],
                 'net' => $row['net'],
-                'salary' => $row['salary'],
             ];
         }
 
@@ -124,7 +125,6 @@ class FinanceController extends Controller
             'periodLabel' => $this->periodLabel($period, $from),
             'cmpLabel' => $this->cmpLabel($period, $pa, $pb, $isCurrent),
             'taxRate' => (float) Setting::get('tax_rate', 16),
-            'salaryRate' => (float) Setting::get('salary_rate', 20),
             'pnl' => $pnl,
             'metrics' => [
                 'margin' => $margin,

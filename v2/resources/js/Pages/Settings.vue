@@ -18,7 +18,6 @@ const props = defineProps<{
 
 const form = useForm({
     tax_rate: props.settings.tax_rate ?? 16,
-    salary_rate: props.settings.salary_rate ?? 20,
     acquiring_card_rate: props.settings.acquiring_card_rate ?? 1.22,
     acquiring_sbp_rate: props.settings.acquiring_sbp_rate ?? 0.7,
     recon_tolerance: props.settings.recon_tolerance ?? 1.5,
@@ -109,7 +108,6 @@ function applyPatch() {
                 <div class="set-h"><Icon name="chart" :size="18" /> Ставки и расчёты</div>
                 <div class="set-grid">
                     <div class="fld"><label>Налог, %</label><input v-model="form.tax_rate" type="number" /></div>
-                    <div class="fld"><label>Зарплата (от чистой), %</label><input v-model="form.salary_rate" type="number" /></div>
                     <div class="fld"><label>Эквайринг карты, %</label><input v-model="form.acquiring_card_rate" type="number" step="0.01" /></div>
                     <div class="fld"><label>Эквайринг СБП, %</label><input v-model="form.acquiring_sbp_rate" type="number" step="0.01" /></div>
                     <div class="fld"><label>Допуск сопоставления, %</label><input v-model="form.recon_tolerance" type="number" step="0.1" /></div>

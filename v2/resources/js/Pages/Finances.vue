@@ -11,12 +11,12 @@ type Delta = [string, boolean];
 
 const props = defineProps<{
     period: string; anchor: string; isCurrent: boolean; periodLabel: string; cmpLabel: string;
-    taxRate: number; salaryRate: number;
-    pnl: { revenue: number; cogs: number; acquiring: number; expenses: number; otherIncome: number; gross: number; tax: number; net: number; salary: number; retained: number; salesCount: number };
+    taxRate: number;
+    pnl: { revenue: number; cogs: number; acquiring: number; expenses: number; otherIncome: number; gross: number; tax: number; net: number; salesCount: number };
     metrics: { margin: number; roi: number; avgCheck: number };
     deltas: { revenue: Delta; gross: Delta; margin: Delta; roi: Delta };
     byArticle: { article_id: number | null; name: string; sum: number; acquiring: boolean }[];
-    monthRows: { label: string; revenue: number; other: number; costs: number; gross: number; tax: number; net: number; salary: number }[];
+    monthRows: { label: string; revenue: number; other: number; costs: number; gross: number; tax: number; net: number }[];
     taxYtd: number;
     chart: { months: string[]; profit: number[] };
     drill: Record<string, DrillRow[]>;
@@ -134,16 +134,14 @@ function drillArticle(a: { article_id: number | null; name: string; acquiring: b
                 </div>
                 <div class="pnl-sep"></div>
                 <div class="pnl-row pnl-row--minor"><span>Налог <span class="pnl-hint">{{ taxRate }} % от валовой</span></span><span class="tnum">− {{ money(pnl.tax) }}</span></div>
-                <div class="pnl-row pnl-row--total"><span>= Чистая прибыль</span><span class="tnum">{{ money(pnl.net) }}</span></div>
-                <div class="pnl-row pnl-row--minor"><span>Зарплата <span class="pnl-hint">{{ salaryRate }} % от чистой</span></span><span class="tnum">− {{ money(pnl.salary) }}</span></div>
-                <div class="pnl-row pnl-row--final"><span>Остаётся в бизнесе</span><span class="tnum">{{ money(pnl.retained) }}</span></div>
+                <div class="pnl-row pnl-row--final"><span>= Чистая прибыль</span><span class="tnum">{{ money(pnl.net) }}</span></div>
                 <div class="pnl-row pnl-row--minor"><span>Налог с начала года <span class="pnl-hint">отложить к уплате</span></span><span class="tnum">{{ money(taxYtd) }}</span></div>
                 <div class="pnl-foot">Клик по строке — расшифровка до документов</div>
             </div>
 
             <div class="fin-right">
                 <div class="chart-card glass">
-                    <div class="pnl-h">Прибыль, 12 месяцев <span class="pnl-hint">тыс. ₽</span></div>
+                    <div class="pnl-h">Прибыль по месяцам <span class="pnl-hint">тыс. ₽</span></div>
                     <div class="chart-bars">
                         <div v-for="(v, i) in chart.profit" :key="i" class="cb">
                             <div class="cb-bar" :class="{ 'cb-bar--last': i === chart.profit.length - 1 }" :style="{ height: Math.max(2, (Math.abs(v) / maxP) * 100) + '%' }">
@@ -173,7 +171,7 @@ function drillArticle(a: { article_id: number | null; name: string; acquiring: b
         <div v-else class="jcard glass">
             <div class="jscroll">
                 <table class="jtable">
-                    <thead><tr><th>Месяц</th><th class="num">Выручка</th><th class="num">Прочие доходы</th><th class="num">Затраты</th><th class="num">Валовая</th><th class="num">Налог</th><th class="num">Чистая</th><th class="num">Зарплата</th></tr></thead>
+                    <thead><tr><th>Месяц</th><th class="num">Выручка</th><th class="num">Прочие доходы</th><th class="num">Затраты</th><th class="num">Валовая</th><th class="num">Налог</th><th class="num">Чистая</th></tr></thead>
                     <tbody>
                         <tr v-for="m in [...monthRows].reverse()" :key="m.label">
                             <td style="font-weight:600">{{ m.label }}</td>
@@ -183,7 +181,6 @@ function drillArticle(a: { article_id: number | null; name: string; acquiring: b
                             <td class="num" :style="{ color: m.gross >= 0 ? 'var(--income)' : 'var(--expense)', fontWeight: 600 }">{{ money(m.gross) }}</td>
                             <td class="num">{{ money(m.tax) }}</td>
                             <td class="num">{{ money(m.net) }}</td>
-                            <td class="num">{{ money(m.salary) }}</td>
                         </tr>
                     </tbody>
                 </table>

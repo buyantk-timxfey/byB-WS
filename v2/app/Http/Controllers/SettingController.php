@@ -14,7 +14,7 @@ use Inertia\Inertia;
 class SettingController extends Controller
 {
     private const KEYS = [
-        'tax_rate', 'salary_rate', 'acquiring_card_rate', 'acquiring_sbp_rate',
+        'tax_rate', 'acquiring_card_rate', 'acquiring_sbp_rate',
         'recon_tolerance', 'acquiring_auto', 'stale_days', 'idle_lock_minutes', 'theme_mode',
         'company_name', 'company_inn', 'company_ogrnip', 'company_account',
     ];
@@ -41,7 +41,7 @@ class SettingController extends Controller
     public function update(Request $r)
     {
         $data = $r->validate([
-            'tax_rate' => 'nullable|numeric', 'salary_rate' => 'nullable|numeric',
+            'tax_rate' => 'nullable|numeric',
             'acquiring_card_rate' => 'nullable|numeric', 'acquiring_sbp_rate' => 'nullable|numeric',
             'recon_tolerance' => 'nullable|numeric', 'acquiring_auto' => 'boolean', 'stale_days' => 'nullable|integer',
             'idle_lock_minutes' => 'nullable|integer|min:1|max:480',
