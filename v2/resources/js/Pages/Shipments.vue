@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
@@ -55,6 +55,9 @@ const blankForm = {
     date: '', counterparty_id: null as number | null, name: '', status: 'Ожидает отправки', eta: '',
     carrier_id: null as number | null, tracking: '', delivery: 0, problem: false, items: [] as Item[],
 };
+// Ошибки сервера (например, «товар уже продан — нельзя указать меньше»)
+const srvError = computed(() => ((usePage().props as any).errors ?? {}).shipment ?? null);
+
 const form = useForm<{
     date: string; counterparty_id: number | null; name: string; status: string; eta: string;
     carrier_id: number | null; tracking: string; delivery: number; problem: boolean; items: Item[];
@@ -365,6 +368,7 @@ function destroy() {
                     <span class="text-ink-2 text-[14px]">Итого (товары + доставка)</span>
                     <span class="tnum text-[18px] font-bold">{{ money(formTotal) }}</span>
                 </div>
+                <div v-if="srvError" class="ship-err">{{ srvError }}</div>
             </div>
 
             <template #footer>
@@ -379,6 +383,7 @@ function destroy() {
 </template>
 
 <style scoped>
+.ship-err { margin-top: 10px; padding: 10px 14px; border-radius: 12px; background: rgba(255,69,58,.12); border: 1px solid rgba(255,69,58,.35); color: var(--expense); font-size: 13px; font-weight: 600; }
 /* Секции модалки — сгруппированные поля с заголовком, разделены тонкой линией */
 .modal-sec { padding: 18px 0; border-top: 1px solid var(--glass-border); }
 .modal-sec:first-child { padding-top: 0; border-top: 0; }

@@ -120,36 +120,55 @@ class ShipmentController extends Controller
     public function update(Request $r, Shipment $shipment)
     {
         $data = $this->validateData($r);
-        DB::transaction(function () use ($shipment, $data) {
-            if ($shipment->isPosted()) {
-                ShipmentPosting::unpost($shipment);   // перепроводим
-            }
-            $shipment->update([
-                'date' => $data['date'],
-                'counterparty_id' => $data['counterparty_id'] ?? null,
-                'name' => $data['name'] ?? null,
-                'status' => $data['status'],
-                'eta' => $data['eta'] ?? null,
-                'carrier_id' => $data['carrier_id'] ?? null,
-                'tracking' => $data['tracking'] ?? null,
-                'delivery_cost' => $data['delivery'] ?? 0,
-                'problem' => $data['problem'] ?? false,
-            ]);
-            $this->syncItems($shipment, $data['items'] ?? []);
-            if ($data['status'] !== 'Ожидает отправки') {
-                ShipmentPosting::post($shipment->fresh()->load('items'));
-            }
-        });
+        try {
+            DB::transaction(function () use ($shipment, $data) {
+                // Перепроводим щадяще: уже проданный товар не блокирует правку —
+                // потребление запоминается и списывается из новых партий заново.
+                $consumed = $shipment->isPosted() ? ShipmentPosting::unpostPreservingSales($shipment) : [];
+                $shipment->update([
+                    'date' => $data['date'],
+                    'counterparty_id' => $data['counterparty_id'] ?? null,
+                    'name' => $data['name'] ?? null,
+                    'status' => $data['status'],
+                    'eta' => $data['eta'] ?? null,
+                    'carrier_id' => $data['carrier_id'] ?? null,
+                    'tracking' => $data['tracking'] ?? null,
+                    'delivery_cost' => $data['delivery'] ?? 0,
+                    'problem' => $data['problem'] ?? false,
+                ]);
+                $this->syncItems($shipment, $data['items'] ?? []);
+                if ($data['status'] !== 'Ожидает отправки') {
+                    $fresh = $shipment->fresh()->load('items');
+                    ShipmentPosting::post($fresh);
+                    ShipmentPosting::reapplyConsumption($fresh, $consumed);
+                } elseif ($consumed) {
+                    throw new \RuntimeException('Товар из поставки уже продан — нельзя вернуть её в «Ожидает отправки».');
+                }
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['shipment' => $e->getMessage()]);
+        }
 
         return back();
     }
 
     public function destroy(Shipment $shipment)
     {
-        if ($shipment->isPosted()) {
-            ShipmentPosting::unpost($shipment);
+        try {
+            if ($shipment->isPosted()) {
+                ShipmentPosting::unpost($shipment);
+            }
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['shipment' => $e->getMessage()]);
         }
+        // Освободить привязанные оплаты, иначе операции выписки остаются
+        // «разнесёнными» на несуществующий документ.
+        $lineIds = BankMatch::where('target_type', 'shipment')->where('target_id', $shipment->id)->pluck('bank_line_id')->unique();
+        BankMatch::where('target_type', 'shipment')->where('target_id', $shipment->id)->delete();
         $shipment->delete();
+        foreach (BankLine::whereIn('id', $lineIds)->get() as $line) {
+            BankReconcile::apply($line);
+        }
 
         return back();
     }
