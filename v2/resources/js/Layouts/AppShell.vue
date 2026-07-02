@@ -67,10 +67,8 @@ onUnmounted(() => {
                 <!-- Логотип + выпадающее меню -->
                 <div class="relative">
                     <button class="pressable glass-strong flex h-[42px] w-[42px] items-center justify-center rounded-full" @click="menuOpen = !menuOpen">
-                        <picture>
-                            <source srcset="/images/logo-white.png" media="(prefers-color-scheme: dark)" />
-                            <img src="/images/logo-black.png" alt="byBuka" style="width:20px;height:20px;object-fit:contain" />
-                        </picture>
+                        <img src="/images/logo-black.png" alt="byBuka" class="brand-logo-light" style="width:20px;height:20px;object-fit:contain" />
+                        <img src="/images/logo-white.png" alt="byBuka" class="brand-logo-dark" style="width:20px;height:20px;object-fit:contain" />
                     </button>
                     <Transition name="menu">
                         <div v-if="menuOpen" class="user-menu glass-strong" @click="menuOpen = false">

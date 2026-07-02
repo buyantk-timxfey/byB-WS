@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
+import { applyTheme } from '@/lib/theme';
 
 const props = defineProps<{
     settings: Record<string, any>;
@@ -57,6 +58,12 @@ const delRule = (id: number) => router.delete(`/settings/rules/${id}`);
 const vatRateForm = useForm({ rate: null as number | null });
 const addVatRate = () => { if (vatRateForm.rate !== null) vatRateForm.post('/settings/vat-rates', { onSuccess: () => vatRateForm.reset() }); };
 const delVatRate = (id: number) => router.delete(`/settings/vat-rates/${id}`);
+
+// Меняем сразу, не дожидаясь «Сохранить» — тема должна быть видна мгновенно по клику.
+function setTheme(mode: string) {
+    form.theme_mode = mode;
+    applyTheme(mode);
+}
 
 function changePin() {
     const pin = window.prompt('Новый PIN (4–8 цифр):');
@@ -160,12 +167,12 @@ function applyPatch() {
             <div class="set-card glass">
                 <div class="set-h"><Icon name="gear" :size="18" /> Тема</div>
                 <div class="seg" style="width:100%">
-                    <button type="button" :class="{ on: form.theme_mode === 'system' }" @click="form.theme_mode = 'system'">Системная</button>
-                    <button type="button" :class="{ on: form.theme_mode === 'light' }" @click="form.theme_mode = 'light'">Светлая</button>
-                    <button type="button" :class="{ on: form.theme_mode === 'dark' }" @click="form.theme_mode = 'dark'">Тёмная</button>
-                    <button type="button" :class="{ on: form.theme_mode === 'auto_time' }" @click="form.theme_mode = 'auto_time'">По времени</button>
+                    <button type="button" :class="{ on: form.theme_mode === 'system' }" @click="setTheme('system')">Системная</button>
+                    <button type="button" :class="{ on: form.theme_mode === 'light' }" @click="setTheme('light')">Светлая</button>
+                    <button type="button" :class="{ on: form.theme_mode === 'dark' }" @click="setTheme('dark')">Тёмная</button>
+                    <button type="button" :class="{ on: form.theme_mode === 'auto_time' }" @click="setTheme('auto_time')">По времени</button>
                 </div>
-                <div class="set-hint">«По времени» — тёмная с 20:00 до 8:00 по времени Сургута (UTC+5), не зависит от настроек компьютера или телефона. Применяется после «Сохранить».</div>
+                <div class="set-hint">«По времени» — тёмная с 20:00 до 8:00 по времени Сургута (UTC+5), не зависит от настроек компьютера или телефона. Применяется сразу, «Сохранить» — чтобы осталось и после перезахода.</div>
             </div>
 
             <!-- Реквизиты -->

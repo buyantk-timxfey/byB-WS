@@ -181,6 +181,21 @@
     .orb-d { width: 34vw; height: 34vw; right: 14vw; bottom: 6vh; background: radial-gradient(circle, var(--orb-d), transparent 70%); }
 }
 
+/* Логотип byBuka — чёрный/белый вариант. <picture>+media раньше слушал только
+   prefers-color-scheme, а не принудительную тему из Настроек (html.theme-light/dark),
+   поэтому лого не совпадало с реальной темой страницы, если она задана вручную. */
+@layer components {
+    .brand-logo-dark { display: none; }
+    @media (prefers-color-scheme: dark) {
+        .brand-logo-light { display: none; }
+        .brand-logo-dark { display: block; }
+    }
+    html.theme-dark .brand-logo-light { display: none; }
+    html.theme-dark .brand-logo-dark { display: block; }
+    html.theme-light .brand-logo-light { display: block; }
+    html.theme-light .brand-logo-dark { display: none; }
+}
+
 /* ── Стеклянные материалы ───────────────────────────────────────────────── */
 @layer components {
     .glass {

@@ -14,10 +14,8 @@ const submit = () => form.post(route('login'), { onFinish: () => form.reset('pas
 
         <form class="login-card glass-strong" @submit.prevent="submit">
             <div class="login-logo">
-                <picture>
-                    <source srcset="/images/logo-white.png" media="(prefers-color-scheme: dark)" />
-                    <img src="/images/logo-black.png" alt="byBuka" />
-                </picture>
+                <img src="/images/logo-black.png" alt="byBuka" class="brand-logo-light" />
+                <img src="/images/logo-white.png" alt="byBuka" class="brand-logo-dark" />
             </div>
             <div class="login-title">byBuka</div>
             <div class="login-sub">Вход в систему</div>

@@ -36,10 +36,8 @@ function focusInput() { inputEl.value?.focus(); }
         <div class="orbs" aria-hidden="true"><i class="orb-a"></i><i class="orb-b"></i><i class="orb-c"></i><i class="orb-d"></i></div>
         <div class="pin-card glass-strong" @click="focusInput">
             <div class="pin-logo">
-                <picture>
-                    <source srcset="/images/logo-white.png" media="(prefers-color-scheme: dark)" />
-                    <img src="/images/logo-black.png" alt="byBuka" />
-                </picture>
+                <img src="/images/logo-black.png" alt="byBuka" class="brand-logo-light" />
+                <img src="/images/logo-white.png" alt="byBuka" class="brand-logo-dark" />
             </div>
             <div class="pin-title">byBuka</div>
             <div class="pin-sub">{{ locked ? 'Сессия заблокирована из-за бездействия' : 'Введите PIN' }}</div>
