@@ -123,11 +123,10 @@ const bankCandOptions = computed(() => [...props.bankCandidates]
 const showPayPick = ref(false);
 const payLineId = ref<number | null>(null);
 const payAmount = ref<number | null>(null);
-const editPayAmount = ref(false);
-function resetPayPick() { showPayPick.value = false; payLineId.value = null; payAmount.value = null; editPayAmount.value = false; }
+const payLineRemaining = computed(() => props.bankCandidates.find((c) => c.id === payLineId.value)?.remaining ?? 0);
+function resetPayPick() { showPayPick.value = false; payLineId.value = null; payAmount.value = null; }
 function pickPayLine(id: number | null) {
     payLineId.value = id;
-    editPayAmount.value = false;
     const cand = props.bankCandidates.find((c) => c.id === id);
     if (cand) payAmount.value = Math.round(Math.min(currentDebt.value, cand.remaining) * 100) / 100;
 }
@@ -323,18 +322,23 @@ function payNow() {
                 </div>
                 <div v-if="!(currentRow?.payments ?? []).length" class="text-ink-3" style="font-size:13px;padding:4px 0">Оплат пока нет</div>
 
-                <div v-if="showPayPick" class="pay-pick">
-                    <div style="flex:1;min-width:220px">
-                        <SearchSelect :modelValue="payLineId" :options="bankCandOptions" placeholder="— выбрать приход из выписки —" @update:modelValue="pickPayLine" />
+                <template v-if="showPayPick">
+                    <div class="pay-pick">
+                        <div style="flex:1;min-width:220px">
+                            <SearchSelect :modelValue="payLineId" :options="bankCandOptions" placeholder="— выбрать приход из выписки —" @update:modelValue="pickPayLine" />
+                        </div>
+                        <template v-if="payLineId">
+                            <input v-model.number="payAmount" type="number" step="0.01" placeholder="Сумма" style="max-width:120px" />
+                            <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="!payAmount || (payAmount ?? 0) > payLineRemaining + 0.01" @click="attachPayment">Привязать</button>
+                        </template>
                     </div>
-                    <template v-if="payLineId">
-                        <input v-if="editPayAmount" v-model.number="payAmount" type="number" step="0.01" placeholder="Сумма" style="max-width:120px" />
-                        <span v-else class="tnum" style="font-weight:600;white-space:nowrap">{{ money(payAmount ?? 0) }} <button type="button" class="link-btn" style="font-size:12px;padding:0" @click="editPayAmount = true">изменить</button></span>
-                        <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="!payAmount" @click="attachPayment">Привязать</button>
-                    </template>
-                </div>
+                    <div v-if="payLineId" class="text-ink-3" style="font-size:12px;margin-top:6px">
+                        У прихода не разнесено {{ money(payLineRemaining) }} — можно привязать сюда часть, а остаток к другой продаже.
+                        <span v-if="(payAmount ?? 0) > payLineRemaining + 0.01" style="color:var(--expense);font-weight:600">Сумма больше остатка прихода.</span>
+                    </div>
+                </template>
                 <button v-else type="button" class="btn-ghost pressable" style="margin-top:8px" @click="showPayPick = true"><Icon name="plus" :size="14" /> Привязать оплату</button>
-                <div v-if="!bankCandidates.length && !(currentRow?.payments ?? []).length" class="text-ink-3" style="font-size:12px;margin-top:6px">Нет неразнесённых приходов в выписке — сначала загрузите её на странице Банк.</div>
+                <div v-if="showPayPick && !bankCandidates.length" class="text-ink-3" style="font-size:12px;margin-top:6px">Нет приходов с неразнесённым остатком. Если платёж уже привязан к другой продаже целиком — отвяжите его там (✕) или уменьшите сумму привязки, и он снова появится здесь.</div>
             </div>
 
             <template #footer>
