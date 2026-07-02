@@ -50,7 +50,6 @@ const payVariant = (s: Row) => settled(s) >= s.sum - 0.01 && s.sum > 0 ? 'ok' : 
 const margin = (s: Row) => s.sum ? Math.round((s.profit / s.sum) * 100) : 0;
 const buyerLabel = (s: Row) => s.sale_type === 'Касса' ? 'Касса · ' + (s.payment_method ?? '') : s.buyer;
 
-const rub2 = (n: number) => new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' ₽';
 const goodName = (id: number | null) => props.goods.find((g) => g.id === id)?.name ?? '';
 
 // ── Быстрый просмотр позиций (как на складе): товары продажи с маржой по каждому ──
@@ -297,8 +296,8 @@ function payNow() {
 
                 <div class="rc-totals">
                     <div class="rc-tline"><span>Итого</span><span class="tnum">{{ money(formSum) }}</span></div>
-                    <div class="rc-tline rc-fee"><span>Комиссия · {{ form.payment_method }} ({{ feeRate }}%){{ form.payment_method === 'СБП' ? ' — отдельной операцией' : '' }}</span><span class="tnum">−{{ rub2(feeAmount) }}</span></div>
-                    <div class="rc-tline rc-net"><span>Ожидается зачисление</span><span class="tnum">{{ rub2(netAmount) }}</span></div>
+                    <div class="rc-tline rc-fee"><span>Комиссия · {{ form.payment_method }} ({{ feeRate }}%){{ form.payment_method === 'СБП' ? ' — отдельной операцией' : '' }}</span><span class="tnum">−{{ money(feeAmount) }}</span></div>
+                    <div class="rc-tline rc-net"><span>Ожидается зачисление</span><span class="tnum">{{ money(netAmount) }}</span></div>
                 </div>
                 <div class="rc-note">Деньги придут зачислением от эквайринга в выписке — привяжите его в блоке «Оплата». Карта приходит за вычетом комиссии, остаток по чеку спишется автоматически.</div>
             </div>

@@ -8,7 +8,7 @@ import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import Sparkline from '@/Components/Sparkline.vue';
-import { money, signed, initials } from '@/lib/format';
+import { money, money0, signed, initials } from '@/lib/format';
 
 type MatchSel = { target_type: string; target_id: number | null; amount: number; label?: string | null };
 type Line = {
@@ -180,7 +180,7 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                     :style="{ background: a.color || 'linear-gradient(135deg,#2b2b30,#4b4b52)', '--fan-r': fanRotate(i) + 'deg', '--fan-y': fanY(i) + 'px', '--fan-z': i }"
                 >
                     <div class="bc-top"><span class="bc-bank">{{ a.bank || a.name }}</span><span class="bc-chip"></span></div>
-                    <div class="bc-bal tnum">{{ money(a.balance) }}</div>
+                    <div class="bc-bal tnum">{{ money0(a.balance) }}</div>
                     <div class="bc-bottom">
                         <span class="bc-num">{{ a.last4 ? '•••• •••• •••• ' + a.last4 : a.type }}</span>
                         <span v-if="a.unmatched" class="bc-badge">{{ a.unmatched }} не разнесено</span>
@@ -193,9 +193,9 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
             <div v-if="accounts.length" class="bank-right">
                 <div class="bank-analytics glass">
                     <div class="ba-label">Общий баланс</div>
-                    <div class="ba-sum tnum">{{ money(totalBalance) }}</div>
+                    <div class="ba-sum tnum">{{ money0(totalBalance) }}</div>
                     <div class="ba-delta" :style="{ color: balanceDelta >= 0 ? 'var(--income)' : 'var(--expense)' }">
-                        {{ balanceDelta >= 0 ? '+' : '' }}{{ money(balanceDelta) }} за 30 дней
+                        {{ balanceDelta >= 0 ? '+' : '' }}{{ money0(balanceDelta) }} за 30 дней
                     </div>
                     <Sparkline :data="balanceSeries" :color="balanceDelta >= 0 ? 'var(--income)' : 'var(--expense)'" class="ba-spark" />
                 </div>

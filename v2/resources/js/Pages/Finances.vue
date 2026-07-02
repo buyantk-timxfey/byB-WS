@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import AppModal from '@/Components/AppModal.vue';
-import { money, pct } from '@/lib/format';
+import { money, money0, pct } from '@/lib/format';
 
 const props = defineProps<{
     period: string; periodLabel: string; taxRate: number; salaryRate: number;
@@ -42,8 +42,8 @@ function drill(key: string) {
         </div>
 
         <div class="fin-kpi">
-            <div class="fk glass"><div class="fk-l">Выручка</div><div class="fk-v tnum">{{ money(pnl.revenue) }}</div><div class="fk-s">{{ pnl.salesCount }} продаж · ср. чек {{ money(metrics.avgCheck) }}</div></div>
-            <div class="fk glass"><div class="fk-l">Валовая прибыль</div><div class="fk-v tnum" :style="{ color: 'var(--income)' }">{{ money(pnl.gross) }}</div><div class="fk-s">чистая {{ money(pnl.net) }}</div></div>
+            <div class="fk glass"><div class="fk-l">Выручка</div><div class="fk-v tnum">{{ money0(pnl.revenue) }}</div><div class="fk-s">{{ pnl.salesCount }} продаж · ср. чек {{ money0(metrics.avgCheck) }}</div></div>
+            <div class="fk glass"><div class="fk-l">Валовая прибыль</div><div class="fk-v tnum" :style="{ color: 'var(--income)' }">{{ money0(pnl.gross) }}</div><div class="fk-s">чистая {{ money0(pnl.net) }}</div></div>
             <div class="fk glass"><div class="fk-l">Маржа</div><div class="fk-v tnum">{{ pct(metrics.margin) }}</div><div class="fk-s">валовая / выручка</div></div>
             <div class="fk glass"><div class="fk-l">ROI</div><div class="fk-v tnum">{{ pct(metrics.roi) }}</div><div class="fk-s">прибыль / затраты</div></div>
         </div>

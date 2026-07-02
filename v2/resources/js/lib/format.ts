@@ -1,11 +1,18 @@
 // Единые форматтеры. Использовать везде, не плодить локальные аналоги.
 
+const fmt2 = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Суммы в списках, операциях и документах — всегда с копейками
 export const money = (n: number | string): string =>
+    fmt2.format(Number(n) || 0) + ' ₽';
+
+// Крупные цифры (общий баланс, KPI, суммы на картах счетов) — без копеек
+export const money0 = (n: number | string): string =>
     new Intl.NumberFormat('ru-RU').format(Math.round(Number(n) || 0)) + ' ₽';
 
 export const signed = (n: number | string): string => {
     const v = Number(n) || 0;
-    return (v > 0 ? '+ ' : '− ') + new Intl.NumberFormat('ru-RU').format(Math.abs(Math.round(v))) + ' ₽';
+    return (v > 0 ? '+ ' : '− ') + fmt2.format(Math.abs(v)) + ' ₽';
 };
 
 export const num = (n: number | string): string =>

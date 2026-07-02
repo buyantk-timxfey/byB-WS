@@ -4,7 +4,7 @@ import { Head } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
-import { money, num, date as fdate } from '@/lib/format';
+import { money, money0, num, date as fdate } from '@/lib/format';
 
 type Batch = { ship: string; date: string; qty: number; cost: number; days: number };
 type Row = { id: number; name: string; group: string; unit: string; qty: number; reserved: number; available: number; value: number; days: number; stale: boolean; negative: boolean; batches: Batch[] };
@@ -47,12 +47,12 @@ const toggle = (id: number) => { expanded.value = expanded.value === id ? null :
         <div class="wh-stats">
             <div class="wh-stat glass">
                 <div class="wh-label">Замороженные деньги</div>
-                <div class="wh-val tnum">{{ money(frozen) }}</div>
+                <div class="wh-val tnum">{{ money0(frozen) }}</div>
                 <div class="wh-sub">стоимость остатков по себестоимости</div>
             </div>
             <div class="wh-stat glass" :class="{ 'wh-stat--warn': staleMoney > 0 }">
                 <div class="wh-label">Зависло (старше {{ staleDays }} дн.)</div>
-                <div class="wh-val tnum" :style="staleMoney > 0 ? { color: 'var(--warn)' } : {}">{{ money(staleMoney) }}</div>
+                <div class="wh-val tnum" :style="staleMoney > 0 ? { color: 'var(--warn)' } : {}">{{ money0(staleMoney) }}</div>
                 <div class="wh-sub">залежалый товар</div>
             </div>
             <div class="wh-stat glass">

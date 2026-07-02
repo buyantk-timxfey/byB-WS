@@ -5,7 +5,7 @@ import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import AppModal from '@/Components/AppModal.vue';
 import DatePicker from '@/Components/DatePicker.vue';
-import { money, num, date as fdate } from '@/lib/format';
+import { money, money0, num, date as fdate } from '@/lib/format';
 
 const props = defineProps<{
     settings: any; fuelUps: any[]; trips: any[]; washes: any[]; topups: any[];
@@ -53,8 +53,8 @@ const addLabel = computed(() => ({ fuel: 'Заправка', trips: 'Маршр�
                 <div class="vh-s">{{ settings.fuel_pct }}% · хватит на ~{{ settings.range_km }} км</div>
             </div>
             <div class="vh glass"><div class="vh-l">Одометр</div><div class="vh-v tnum">{{ num(settings.odometer) }} км</div><div class="vh-s">расход {{ settings.consumption }} л/100км</div></div>
-            <div class="vh glass"><div class="vh-l">Топливная карта</div><div class="vh-v tnum">{{ money(settings.card_balance) }}</div><div class="vh-s">с неё списываются АЗС и мойки</div></div>
-            <div class="vh glass"><div class="vh-l">За месяц</div><div class="vh-v tnum">{{ money(monthSpend) }}</div><div class="vh-s">{{ num(monthKm) }} км пробега</div></div>
+            <div class="vh glass"><div class="vh-l">Топливная карта</div><div class="vh-v tnum">{{ money0(settings.card_balance) }}</div><div class="vh-s">с неё списываются АЗС и мойки</div></div>
+            <div class="vh glass"><div class="vh-l">За месяц</div><div class="vh-v tnum">{{ money0(monthSpend) }}</div><div class="vh-s">{{ num(monthKm) }} км пробега</div></div>
         </div>
 
         <div class="seg veh-tabs">
@@ -94,7 +94,7 @@ const addLabel = computed(() => ({ fuel: 'Заправка', trips: 'Маршр�
                     <thead><tr><th>Дата</th><th class="num">Пополнение</th><th>Источник</th></tr></thead>
                     <tbody>
                         <tr v-for="x in topups" :key="x.id"><td class="text-ink-2">{{ fdate(x.date) }}</td><td class="num" :style="{ color: 'var(--income)' }">+ {{ money(x.sum) }}</td><td class="text-ink-2">{{ x.source }}</td></tr>
-                        <tr><td>Текущий баланс</td><td class="num" style="font-weight:700">{{ money(settings.card_balance) }}</td><td></td></tr>
+                        <tr><td>Текущий баланс</td><td class="num" style="font-weight:700">{{ money0(settings.card_balance) }}</td><td></td></tr>
                     </tbody>
                 </table>
             </div>
