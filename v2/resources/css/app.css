@@ -392,6 +392,9 @@ html.is-windows .jtable thead th {
 .jtable tbody tr { cursor: pointer; }
 .jtable tbody tr:hover td { background: var(--glass-fill); }
 .jtable .num { text-align: right; font-variant-numeric: tabular-nums; }
+/* Колонка привязки оплаты (Поставки/Продажи): иконка-цепочка в шапке, галочка/минус/крестик в строках */
+.jtable .pay-col { text-align: center; }
+.jtable .pay-col svg { display: block; margin: 0 auto; }
 .jtable tfoot td { padding: 13px 16px; border-top: 1px solid var(--glass-border); font-weight: 700; font-variant-numeric: tabular-nums; background: var(--glass-fill); }
 .j-empty { padding: 48px; text-align: center; color: var(--ink-3); }
 .link-btn { border: 0; background: transparent; color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; padding: 2px 4px; }

@@ -142,7 +142,7 @@ function payNow() {
             <div class="jscroll">
                 <table class="jtable">
                     <thead>
-                        <tr><th>№</th><th>Дата</th><th>Покупатель</th><th class="num">Сумма</th><th>Оплата</th><th class="num">Прибыль</th><th>Статус</th></tr>
+                        <tr><th>№</th><th>Дата</th><th>Покупатель</th><th class="num">Сумма</th><th class="pay-col"><Icon name="link" :size="14" /></th><th class="num">Прибыль</th><th>Статус</th></tr>
                     </thead>
                     <tbody>
                         <tr v-for="s in filtered" :key="s.id" @click="openDoc(s)">
@@ -153,7 +153,11 @@ function payNow() {
                                 {{ buyerLabel(s) }}
                             </td>
                             <td class="num">{{ money(s.sum) }}</td>
-                            <td><StatusPill :text="payText(s)" :variant="payVariant(s)" /></td>
+                            <td class="pay-col" :title="payText(s)">
+                                <Icon v-if="payVariant(s) === 'ok'" name="check" :size="16" style="color:var(--income)" />
+                                <Icon v-else-if="payVariant(s) === 'warn'" name="minus" :size="16" style="color:var(--warn)" />
+                                <Icon v-else name="x" :size="16" style="color:var(--expense)" />
+                            </td>
                             <td class="num">
                                 <template v-if="s.status === 'Оплачен'">
                                     <span :style="{ color: 'var(--income)' }">{{ money(s.profit) }}</span>
@@ -184,12 +188,10 @@ function payNow() {
                 <button class="type-card pressable" @click="pickType('Касса')">
                     <Icon name="wallet" :size="30" />
                     <div class="tc-t">Касса</div>
-                    <div class="tc-s">Чек на месте · СБП или карта<br>с комиссией эквайринга</div>
                 </button>
                 <button class="type-card pressable" @click="pickType('Безналичная')">
                     <Icon name="building" :size="30" />
                     <div class="tc-t">Безналичная</div>
-                    <div class="tc-s">Счёт покупателю из списка<br>без комиссии</div>
                 </button>
             </div>
         </AppModal>
@@ -292,7 +294,6 @@ function payNow() {
 .type-card { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 24px 16px; border-radius: 18px; border: 1px solid var(--glass-border); background: var(--glass-fill); color: var(--ink); cursor: pointer; transition: transform .12s, border-color .12s; }
 .type-card:hover { border-color: var(--accent, #0a84ff); transform: translateY(-2px); }
 .type-card .tc-t { font-size: 17px; font-weight: 700; }
-.type-card .tc-s { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
 
 /* Безнал-позиции */
 .sale-item { display: grid; grid-template-columns: 1fr 80px 100px 28px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--glass-border); }

@@ -387,8 +387,6 @@ function destroy() {
 .good-card-remove { flex-shrink: 0; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--glass-border); background: transparent; color: var(--expense); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .pay-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--glass-border); border-radius: 12px; background: var(--glass-fill); margin-bottom: 8px; }
 .pay-row-info { flex: 1; min-width: 0; }
-.pay-col { text-align: center; }
-.pay-col svg { display: block; margin: 0 auto; }
 .good-card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
 .good-card-grid label { font-size: 11px; }
 .good-card-grid input, .good-card-grid select { height: 38px; box-sizing: border-box; border: 1px solid var(--glass-border); background: var(--bg); border-radius: 9px; padding: 0 10px; color: var(--ink); font-size: 13px; font-family: inherit; outline: none; }
