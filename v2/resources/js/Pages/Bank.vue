@@ -54,6 +54,32 @@ const rows = computed(() => props.lines.filter((o) => {
     if (q.value && !(`${o.party} ${o.purpose ?? ''}`.toLowerCase().includes(q.value.toLowerCase()))) return false;
     return true;
 }));
+// Лента группируется по дням, как в Apple Wallet: «Сегодня», «Вчера», «30 июня 2026»
+const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayIso = isoDay(new Date());
+const yesterdayIso = isoDay(new Date(Date.now() - 864e5));
+const dayFmt = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+function dayLabel(d: string): string {
+    if (d === todayIso) return 'Сегодня';
+    if (d === yesterdayIso) return 'Вчера';
+    return dayFmt.format(new Date(d + 'T00:00:00')).replace(' г.', '');
+}
+const dayGroups = computed(() => {
+    const groups: { label: string; items: Line[] }[] = [];
+    for (const o of rows.value) {
+        const label = dayLabel(o.date);
+        if (!groups.length || groups[groups.length - 1].label !== label) groups.push({ label, items: [] });
+        groups[groups.length - 1].items.push(o);
+    }
+    return groups;
+});
+const opsWord = (n: number) => {
+    const m10 = n % 10; const m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return 'операция';
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'операции';
+    return 'операций';
+};
+
 const totalIn = computed(() => rows.value.filter((o) => o.amount > 0).reduce((a, o) => a + o.amount, 0));
 const totalOut = computed(() => rows.value.filter((o) => o.amount < 0).reduce((a, o) => a + Math.abs(o.amount), 0));
 const unmatchedCount = computed(() => props.lines.filter((o) => o.status === 'unmatched' || o.status === 'partial').length);
@@ -164,24 +190,33 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
                 <div v-if="!accounts.length" class="text-ink-3" style="padding:20px">Добавьте счёт в Справочниках.</div>
             </div>
 
-            <div v-if="accounts.length" class="bank-analytics glass">
-                <div class="ba-label">Общий баланс</div>
-                <div class="ba-sum tnum">{{ money(totalBalance) }}</div>
-                <div class="ba-delta" :style="{ color: balanceDelta >= 0 ? 'var(--income)' : 'var(--expense)' }">
-                    {{ balanceDelta >= 0 ? '+' : '' }}{{ money(balanceDelta) }} за 30 дней
+            <div v-if="accounts.length" class="bank-right">
+                <div class="bank-analytics glass">
+                    <div class="ba-label">Общий баланс</div>
+                    <div class="ba-sum tnum">{{ money(totalBalance) }}</div>
+                    <div class="ba-delta" :style="{ color: balanceDelta >= 0 ? 'var(--income)' : 'var(--expense)' }">
+                        {{ balanceDelta >= 0 ? '+' : '' }}{{ money(balanceDelta) }} за 30 дней
+                    </div>
+                    <Sparkline :data="balanceSeries" :color="balanceDelta >= 0 ? 'var(--income)' : 'var(--expense)'" class="ba-spark" />
                 </div>
-                <Sparkline :data="balanceSeries" :color="balanceDelta >= 0 ? 'var(--income)' : 'var(--expense)'" class="ba-spark" />
-            </div>
-        </div>
 
-        <!-- Неразнесённые строки выписки -->
-        <div v-if="unmatchedCount" class="recon-banner glass">
-            <span class="rb-ic"><Icon name="alert" :size="18" /></span>
-            <div class="rb-text">
-                <div class="rb-t">Неразнесённые строки выписки</div>
-                <div class="rb-s">{{ unmatchedCount }} операций · {{ money(unmatchedSum) }} ждут сверки</div>
+                <!-- Инфо о неразнесённых: клик включает фильтр «Не разнесено» в ленте -->
+                <component :is="unmatchedCount ? 'button' : 'div'" :type="unmatchedCount ? 'button' : undefined"
+                    class="unrec-card glass" :class="{ 'unrec-card--ok': !unmatchedCount, pressable: unmatchedCount }"
+                    @click="unmatchedCount && (seg = 'unmatched')">
+                    <span class="unrec-ic"><Icon :name="unmatchedCount ? 'alert' : 'check'" :size="18" /></span>
+                    <span class="unrec-text">
+                        <template v-if="unmatchedCount">
+                            <b>Не разнесено</b>
+                            <i>{{ unmatchedCount }} {{ opsWord(unmatchedCount) }} · {{ money(unmatchedSum) }}</i>
+                        </template>
+                        <template v-else>
+                            <b>Все операции разнесены</b>
+                            <i>выписка сверена полностью</i>
+                        </template>
+                    </span>
+                </component>
             </div>
-            <button class="btn-primary pressable rb-btn" @click="seg = 'unmatched'">Свести</button>
         </div>
 
         <div class="toolbar" style="margin-top:18px">
@@ -200,18 +235,21 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
         </div>
 
         <div class="op-list glass">
-            <div v-for="o in rows" :key="o.id" class="op-row" @click="reconcile(o)">
-                <div class="op-av" :class="o.amount > 0 ? 'op-av--in' : 'op-av--out'">{{ initials(o.party) }}</div>
-                <div class="op-main">
-                    <div class="op-party">{{ o.party }}</div>
-                    <div class="op-purpose">{{ o.purpose }} · {{ o.account }}</div>
+            <template v-for="g in dayGroups" :key="g.label">
+                <div class="op-day-head">{{ g.label }}</div>
+                <div v-for="o in g.items" :key="o.id" class="op-row" @click="reconcile(o)">
+                    <div class="op-av" :class="o.amount > 0 ? 'op-av--in' : 'op-av--out'">{{ initials(o.party) }}</div>
+                    <div class="op-main">
+                        <div class="op-party">{{ o.party }}</div>
+                        <div class="op-purpose">{{ o.purpose }} · {{ o.account }}</div>
+                    </div>
+                    <div class="op-meta">
+                        <StatusPill :text="statusPill(o.status).t" :variant="statusPill(o.status).v" />
+                        <span v-if="o.link" class="op-link">{{ o.link }}</span>
+                    </div>
+                    <div class="op-amt tnum" :style="o.amount > 0 ? { color: 'var(--income)' } : {}">{{ signed(o.amount) }}</div>
                 </div>
-                <div class="op-meta">
-                    <StatusPill :text="statusPill(o.status).t" :variant="statusPill(o.status).v" />
-                    <span v-if="o.link" class="op-link">{{ o.link }}</span>
-                </div>
-                <div class="op-amt tnum" :style="o.amount > 0 ? { color: 'var(--income)' } : {}">{{ signed(o.amount) }}</div>
-            </div>
+            </template>
             <div v-if="!rows.length" class="j-empty">Операций нет — импортируйте выписку</div>
             <div v-if="rows.length" class="op-foot">
                 <span>Приход: <b :style="{ color: 'var(--income)' }">{{ money(totalIn) }}</b></span>
@@ -290,12 +328,6 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
 </template>
 
 <style scoped>
-.recon-banner { display: flex; align-items: center; gap: 14px; padding: 14px 18px; margin-top: 14px; border: 1px solid rgba(255,159,10,.35); }
-.rb-ic { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,159,10,.14); color: var(--warn); flex-shrink: 0; }
-.rb-text { min-width: 0; }
-.rb-t { font-size: 15px; font-weight: 600; }
-.rb-s { font-size: 13px; color: var(--ink-2); margin-top: 1px; }
-.rb-btn { margin-left: auto; border-radius: 12px; padding: 9px 18px; }
 /* Мультивыбор в сверке: список выбранных целей с редактируемыми суммами */
 .sel-list { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid rgba(10,132,255,.3); background: rgba(10,132,255,.08); border-radius: 12px; }
 .sel-row { display: flex; align-items: center; gap: 8px; }
@@ -310,7 +342,5 @@ function doImport() { importForm.post('/bank/import', { forceFormData: true, onS
 @media (max-width: 640px) {
     .bank-period { width: 100%; }
     .bank-period .dpick { flex: 1; width: auto; min-width: 0; }
-    .recon-banner { flex-wrap: wrap; }
-    .rb-btn { margin-left: 0; width: 100%; justify-content: center; }
 }
 </style>
