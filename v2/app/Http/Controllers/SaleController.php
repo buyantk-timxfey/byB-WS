@@ -6,7 +6,6 @@ use App\Models\Account;
 use App\Models\BankLine;
 use App\Models\BankMatch;
 use App\Models\Counterparty;
-use App\Models\ExpenseArticle;
 use App\Models\Nomenclature;
 use App\Models\Sale;
 use App\Models\Setting;
@@ -23,7 +22,7 @@ class SaleController extends Controller
     public function index()
     {
         $matchesBySale = BankMatch::where('target_type', 'sale')
-            ->with('line:id,date,counterparty_name,purpose,auto_sale_id')
+            ->with('line:id,date,counterparty_name,purpose')
             ->get()->groupBy('target_id');
         $paidBySale = $matchesBySale->map(fn ($ms) => $ms->sum('amount'));
 
@@ -44,6 +43,7 @@ class SaleController extends Controller
                     'cost' => $s->cost(),
                     'profit' => $s->profit(),
                     'paid' => (float) ($paidBySale[$s->id] ?? 0),
+                    'fee_writeoff' => (float) $s->fee_writeoff,
                     'posted' => $s->isPosted(),
                     'items' => $s->items->map(fn ($i) => [
                         'nomenclature_id' => $i->nomenclature_id, 'name' => $i->nomenclature?->name,
@@ -55,7 +55,6 @@ class SaleController extends Controller
                         'date' => optional($m->line?->date)->toDateString(),
                         'party' => $m->line?->counterparty_name ?? $m->line?->purpose ?? '—',
                         'amount' => (float) $m->amount,
-                        'auto' => (bool) $m->line?->auto_sale_id,   // кассовый авто-приход не отвязывается вручную
                     ])->values(),
                 ];
             });
@@ -132,7 +131,6 @@ class SaleController extends Controller
     {
         abort_unless($match->target_type === 'sale' && $match->target_id === $sale->id, 404);
         $line = $match->line;
-        abort_if($line && $line->auto_sale_id, 422);   // кассовый авто-приход правится только через сам чек
         $match->delete();
         if ($line) {
             BankReconcile::apply($line->fresh());
@@ -149,7 +147,6 @@ class SaleController extends Controller
             $sale = Sale::create($this->attrs($data, DocNumber::next('sale', $data['date'])));
             $this->syncItems($sale, $data['items'] ?? []);
             SalePosting::sync($sale->fresh()->load('items'));
-            $this->syncKassaPayment($sale->fresh());
         });
 
         return back();
@@ -162,19 +159,30 @@ class SaleController extends Controller
             $sale->update($this->attrs($data));
             $this->syncItems($sale, $data['items'] ?? []);
             SalePosting::sync($sale->fresh()->load('items'));
-            $this->syncKassaPayment($sale->fresh());
         });
+        // Сумма чека могла измениться — пересчитать закрытие «хвоста» комиссии.
+        // Только для кассы: безналу статус вручную выставляют в форме, recalc бы его перебил.
+        $fresh = $sale->fresh();
+        if ($fresh->sale_type === 'Касса') {
+            SaleStatusSync::recalc($fresh);
+        }
 
         return back();
     }
 
     public function destroy(Sale $sale)
     {
+        // Освободить привязанные оплаты: иначе операции выписки остаются «разнесёнными»
+        // на несуществующий документ и их нельзя привязать заново.
+        $lineIds = BankMatch::where('target_type', 'sale')->where('target_id', $sale->id)->pluck('bank_line_id')->unique();
         DB::transaction(function () use ($sale) {
-            BankLine::where('auto_sale_id', $sale->id)->delete();   // кассовый авто-приход
+            BankMatch::where('target_type', 'sale')->where('target_id', $sale->id)->delete();
             SalePosting::unpost($sale);
             $sale->delete();
         });
+        foreach (BankLine::whereIn('id', $lineIds)->get() as $line) {
+            BankReconcile::apply($line);
+        }
 
         return back();
     }
@@ -183,7 +191,7 @@ class SaleController extends Controller
     public function pay(Sale $sale)
     {
         $paid = (float) BankMatch::where('target_type', 'sale')->where('target_id', $sale->id)->sum('amount');
-        $debt = $sale->total() - $paid;
+        $debt = $sale->total() - $paid - (float) $sale->fee_writeoff;
         if ($debt <= 0) {
             return back();
         }
@@ -208,62 +216,6 @@ class SaleController extends Controller
         SaleStatusSync::recalc($sale->fresh());
 
         return back();
-    }
-
-    // Касса оплачивается на месте: авто-приход на счёт (выручка по сумме чека) и отдельной
-    // строкой — комиссия эквайринга/СБП на статью «Эквайринг». Сопоставление остаётся.
-    private function syncKassaPayment(Sale $sale): void
-    {
-        // Снять прежний авто-приход (идемпотентно при правках чека)
-        BankLine::where('auto_sale_id', $sale->id)->delete();
-
-        if ($sale->sale_type !== 'Касса' || $sale->status !== 'Оплачен') {
-            return;
-        }
-        $gross = $sale->total();
-        if ($gross <= 0) {
-            return;
-        }
-        $account = $sale->account_id ? Account::find($sale->account_id) : null;
-        $account ??= Account::where('name', 'Альфа-Банк')->first() ?? Account::first();
-        if (! $account) {
-            return;
-        }
-        $rate = $sale->payment_method === 'СБП'
-            ? (float) Setting::get('acquiring_sbp_rate', 0.7)
-            : (float) Setting::get('acquiring_card_rate', 1.22);
-        $fee = round($gross * $rate / 100, 2);
-
-        DB::transaction(function () use ($sale, $account, $gross, $fee) {
-            // Приход = сумма чека (выручка)
-            $income = BankLine::create([
-                'account_id' => $account->id,
-                'auto_sale_id' => $sale->id,
-                'date' => $sale->date,
-                'amount' => $gross,
-                'counterparty_name' => 'Касса · '.($sale->payment_method ?? ''),
-                'purpose' => 'Касса '.$sale->number,
-                'status' => 'matched',
-            ]);
-            BankMatch::create(['bank_line_id' => $income->id, 'target_type' => 'sale', 'target_id' => $sale->id, 'amount' => $gross]);
-            BankReconcile::apply($income->fresh());
-
-            // Комиссия эквайринга — расход на статью «Эквайринг»
-            if ($fee > 0) {
-                $articleId = ExpenseArticle::where('name', 'Эквайринг')->value('id');
-                $feeLine = BankLine::create([
-                    'account_id' => $account->id,
-                    'auto_sale_id' => $sale->id,
-                    'date' => $sale->date,
-                    'amount' => -$fee,
-                    'counterparty_name' => 'Касса · комиссия',
-                    'purpose' => 'Комиссия '.($sale->payment_method ?? '').' по '.$sale->number,
-                    'status' => 'matched',
-                ]);
-                BankMatch::create(['bank_line_id' => $feeLine->id, 'target_type' => 'acquiring', 'target_id' => $articleId, 'amount' => $fee]);
-                BankReconcile::apply($feeLine->fresh());
-            }
-        });
     }
 
     // Нормализация атрибутов: касса — без покупателя, всегда «Оплачен»; безнал — без способа оплаты.

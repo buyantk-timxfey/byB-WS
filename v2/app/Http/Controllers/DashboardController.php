@@ -144,7 +144,7 @@ class DashboardController extends Controller
         $reminders = [];
         $paidSale = DB::table('bank_matches')->where('target_type', 'sale')->select('target_id', DB::raw('SUM(amount) p'))->groupBy('target_id')->pluck('p', 'target_id');
         foreach (Sale::with('counterparty')->whereIn('status', ['Выставлен', 'Оплачен'])->get() as $s) {
-            $debt = $s->total() - (float) ($paidSale[$s->id] ?? 0);
+            $debt = $s->total() - (float) ($paidSale[$s->id] ?? 0) - (float) $s->fee_writeoff;
             if ($debt > 0.01 && $s->date && Carbon::parse($s->date)->diffInDays($now) > 7) {
                 $reminders[] = ['kind' => 'auto', 'dot' => 'var(--expense)', 'title' => ($s->counterparty?->name ?? $s->number).' · долг', 'sub' => Carbon::parse($s->date)->diffInDays($now).' дн · '.$this->m($debt)];
             }

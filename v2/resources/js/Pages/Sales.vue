@@ -10,11 +10,11 @@ import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
 
 type Item = { nomenclature_id: number | null; name?: string | null; qty: number | null; price: number | null; cost?: number };
-type Payment = { match_id: number; bank_line_id: number; date: string | null; party: string; amount: number; auto: boolean };
+type Payment = { match_id: number; bank_line_id: number; date: string | null; party: string; amount: number };
 type Row = {
     id: number; number: string; date: string; buyer: string; counterparty_id: number | null;
     account_id: number | null; sale_type: string; payment_method: string | null; status: string;
-    sum: number; cost: number; profit: number; paid: number; posted: boolean; items: Item[];
+    sum: number; cost: number; profit: number; paid: number; fee_writeoff: number; posted: boolean; items: Item[];
     payments: Payment[];
 };
 type BankCandidate = { id: number; date: string | null; party: string; purpose: string | null; remaining: number };
@@ -40,11 +40,13 @@ const paidSales = computed(() => filtered.value.filter((s) => s.status === 'Оп
 const totalRevenue = computed(() => paidSales.value.reduce((a, s) => a + s.sum, 0));
 const totalProfit = computed(() => paidSales.value.reduce((a, s) => a + s.profit, 0));
 const avgCheck = computed(() => paidSales.value.length ? Math.round(totalRevenue.value / paidSales.value.length) : 0);
-const totalDebt = computed(() => filtered.value.reduce((a, s) => a + Math.max(0, s.sum - s.paid), 0));
+// Списанный «хвост» комиссии эквайринга (fee_writeoff) считается погашенным
+const settled = (s: Row) => s.paid + s.fee_writeoff;
+const totalDebt = computed(() => filtered.value.reduce((a, s) => a + Math.max(0, s.sum - settled(s)), 0));
 
 const statusVariant = (s: string) => s === 'Оплачен' ? 'ok' : s === 'Выставлен' ? 'info' : 'neutral';
-const payText = (s: Row) => s.paid >= s.sum && s.sum > 0 ? 'Оплачено' : s.paid > 0 ? 'Частично' : 'Не оплачено';
-const payVariant = (s: Row) => s.paid >= s.sum && s.sum > 0 ? 'ok' : s.paid > 0 ? 'warn' : 'bad';
+const payText = (s: Row) => settled(s) >= s.sum - 0.01 && s.sum > 0 ? 'Оплачено' : s.paid > 0 ? 'Частично' : 'Не оплачено';
+const payVariant = (s: Row) => settled(s) >= s.sum - 0.01 && s.sum > 0 ? 'ok' : s.paid > 0 ? 'warn' : 'bad';
 const margin = (s: Row) => s.sum ? Math.round((s.profit / s.sum) * 100) : 0;
 const buyerLabel = (s: Row) => s.sale_type === 'Касса' ? 'Касса · ' + (s.payment_method ?? '') : s.buyer;
 
@@ -75,7 +77,8 @@ const form = useForm<{
 const formSum = computed(() => form.items.reduce((a, i) => a + (Number(i.qty) || 0) * (Number(i.price) || 0), 0));
 const feeRate = computed(() => form.payment_method === 'СБП' ? props.rates.sbp : props.rates.card);
 const feeAmount = computed(() => Math.round(formSum.value * feeRate.value) / 100);
-const netAmount = computed(() => formSum.value - feeAmount.value);
+// Карта зачисляется за вычетом комиссии; СБП — полной суммой (комиссия отдельной операцией)
+const netAmount = computed(() => form.payment_method === 'СБП' ? formSum.value : formSum.value - feeAmount.value);
 
 function create() { chooser.value = true; }
 
@@ -121,7 +124,7 @@ function removeItem(i: number) { form.items.splice(i, 1); }
 
 // ── Оплата — привязка приходов из выписки прямо здесь (то же, что разнесение в Банке) ──
 const currentRow = computed(() => props.rows.find((r) => r.id === editingId.value) ?? null);
-const currentDebt = computed(() => currentRow.value ? Math.max(currentRow.value.sum - currentRow.value.paid, 0) : 0);
+const currentDebt = computed(() => currentRow.value ? Math.max(currentRow.value.sum - settled(currentRow.value), 0) : 0);
 // Ближайшие по сумме к долгу продажи — сверху
 const bankCandOptions = computed(() => [...props.bankCandidates]
     .sort((a, b) => Math.abs(a.remaining - currentDebt.value) - Math.abs(b.remaining - currentDebt.value))
@@ -144,7 +147,7 @@ function attachPayment() {
     });
 }
 function detachPayment(p: Payment) {
-    if (!editingId.value || p.auto) return;
+    if (!editingId.value) return;
     router.delete(`/sales/${editingId.value}/match/${p.match_id}`);
 }
 
@@ -294,10 +297,47 @@ function payNow() {
 
                 <div class="rc-totals">
                     <div class="rc-tline"><span>Итого</span><span class="tnum">{{ money(formSum) }}</span></div>
-                    <div class="rc-tline rc-fee"><span>Комиссия · {{ form.payment_method }} ({{ feeRate }}%)</span><span class="tnum">−{{ rub2(feeAmount) }}</span></div>
-                    <div class="rc-tline rc-net"><span>К зачислению</span><span class="tnum">{{ rub2(netAmount) }}</span></div>
+                    <div class="rc-tline rc-fee"><span>Комиссия · {{ form.payment_method }} ({{ feeRate }}%){{ form.payment_method === 'СБП' ? ' — отдельной операцией' : '' }}</span><span class="tnum">−{{ rub2(feeAmount) }}</span></div>
+                    <div class="rc-tline rc-net"><span>Ожидается зачисление</span><span class="tnum">{{ rub2(netAmount) }}</span></div>
                 </div>
-                <div class="rc-note">Приход на «{{ accounts.find((a) => a.id === form.account_id)?.name ?? 'счёт' }}» создаётся автоматически. Комиссия — на статью «Эквайринг».</div>
+                <div class="rc-note">Деньги придут зачислением от эквайринга в выписке — привяжите его в блоке «Оплата». Карта приходит за вычетом комиссии, остаток по чеку спишется автоматически.</div>
+            </div>
+
+            <!-- Оплата: реальные зачисления из выписки, как у безнала -->
+            <div v-if="editingId" class="sale-pay">
+                <div class="items-h"><span class="h2">Оплата</span></div>
+                <div v-for="p in currentRow?.payments ?? []" :key="p.match_id" class="pay-row">
+                    <div class="pay-row-info">
+                        <span class="text-ink-2" style="font-size:13px">{{ fdate(p.date) }} · {{ p.party }}</span>
+                    </div>
+                    <span class="tnum" style="font-weight:600">{{ money(p.amount) }}</span>
+                    <button type="button" class="pay-row-remove pressable" @click="detachPayment(p)" title="Отвязать">✕</button>
+                </div>
+                <div v-if="(currentRow?.fee_writeoff ?? 0) > 0" class="pay-row">
+                    <div class="pay-row-info">
+                        <span class="text-ink-2" style="font-size:13px">Комиссия эквайринга — списана автоматически</span>
+                    </div>
+                    <span class="tnum" style="font-weight:600">{{ money(currentRow?.fee_writeoff ?? 0) }}</span>
+                </div>
+                <div v-if="!(currentRow?.payments ?? []).length" class="text-ink-3" style="font-size:13px;padding:4px 0">Оплат пока нет</div>
+
+                <template v-if="showPayPick">
+                    <div class="pay-pick">
+                        <div style="flex:1;min-width:220px">
+                            <SearchSelect :modelValue="payLineId" :options="bankCandOptions" placeholder="— выбрать приход из выписки —" @update:modelValue="pickPayLine" />
+                        </div>
+                        <template v-if="payLineId">
+                            <input v-model.number="payAmount" type="number" step="0.01" placeholder="Сумма" style="max-width:120px" />
+                            <button type="button" class="btn-primary pressable" style="padding:8px 14px" :disabled="!payAmount || (payAmount ?? 0) > payLineRemaining + 0.01" @click="attachPayment">Привязать</button>
+                        </template>
+                    </div>
+                    <div v-if="payLineId" class="text-ink-3" style="font-size:12px;margin-top:6px">
+                        У прихода не разнесено {{ money(payLineRemaining) }} — можно привязать сюда часть, а остаток к другой продаже.
+                        <span v-if="(payAmount ?? 0) > payLineRemaining + 0.01" style="color:var(--expense);font-weight:600">Сумма больше остатка прихода.</span>
+                    </div>
+                </template>
+                <button v-else type="button" class="btn-ghost pressable" style="margin-top:8px" @click="showPayPick = true"><Icon name="plus" :size="14" /> Привязать оплату</button>
+                <div v-if="showPayPick && !bankCandidates.length" class="text-ink-3" style="font-size:12px;margin-top:6px">Нет приходов с неразнесённым остатком. Если платёж уже привязан к другой продаже целиком — отвяжите его там (✕) или уменьшите сумму привязки, и он снова появится здесь.</div>
             </div>
 
             <template #footer>
@@ -355,7 +395,7 @@ function payNow() {
                         <span class="text-ink-2" style="font-size:13px">{{ fdate(p.date) }} · {{ p.party }}</span>
                     </div>
                     <span class="tnum" style="font-weight:600">{{ money(p.amount) }}</span>
-                    <button v-if="!p.auto" type="button" class="pay-row-remove pressable" @click="detachPayment(p)" title="Отвязать">✕</button>
+                    <button type="button" class="pay-row-remove pressable" @click="detachPayment(p)" title="Отвязать">✕</button>
                 </div>
                 <div v-if="!(currentRow?.payments ?? []).length" class="text-ink-3" style="font-size:13px;padding:4px 0">Оплат пока нет</div>
 
