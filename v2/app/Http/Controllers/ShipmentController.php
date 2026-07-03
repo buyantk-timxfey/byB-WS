@@ -24,7 +24,7 @@ class ShipmentController extends Controller
         $matchesByShipment = BankMatch::where('target_type', 'shipment')->with('line:id,date,counterparty_name,purpose')->get()->groupBy('target_id');
         $paidByShipment = $matchesByShipment->map(fn ($ms) => $ms->sum('amount'));
 
-        $rows = Shipment::with(['counterparty:id,name', 'carrier:id,name', 'items', 'etaChanges'])
+        $rows = Shipment::with(['counterparty:id,name', 'carrier:id,name', 'items.nomenclature:id,name', 'etaChanges', 'receipts.nomenclature:id,name'])
             ->orderByDesc('date')->orderByDesc('id')->get()
             ->map(function (Shipment $s) use ($paidByShipment, $matchesByShipment) {
                 $total = $s->total();
@@ -32,6 +32,8 @@ class ShipmentController extends Controller
                 // Задержка: от первого обещанного ETA до текущего (в днях)
                 $firstEta = optional($s->etaChanges->sortBy('id')->first())->old_eta ?? $s->eta;
                 $etaShift = ($firstEta && $s->eta) ? (int) $firstEta->copy()->startOfDay()->diffInDays($s->eta->copy()->startOfDay(), false) : 0;
+                $totalQty = (float) $s->items->sum('qty');
+                $receivedQty = (float) $s->items->sum('qty_received');
 
                 return [
                     'id' => $s->id,
@@ -57,9 +59,17 @@ class ShipmentController extends Controller
                     'sum' => $total,
                     'paid' => $paid,
                     'posted' => $s->isPosted(),
+                    'total_qty' => $totalQty,
+                    'received_qty' => $receivedQty,
+                    'receipts' => $s->receipts->sortByDesc('id')->values()->map(fn ($r) => [
+                        'date' => optional($r->date)->toDateString(),
+                        'qty' => (float) $r->qty,
+                        'name' => $r->nomenclature?->name ?? '—',
+                    ]),
                     'items' => $s->items->map(fn ($i) => [
                         'id' => $i->id, 'nomenclature_id' => $i->nomenclature_id,
-                        'name' => $i->nomenclature?->name, 'qty' => (float) $i->qty, 'price' => (float) $i->price,
+                        'name' => $i->nomenclature?->name, 'qty' => (float) $i->qty,
+                        'qty_received' => (float) $i->qty_received, 'price' => (float) $i->price,
                         'vat_rate' => $i->vat_rate !== null ? (float) $i->vat_rate : null,
                         'vat_amount' => $i->vat_amount !== null ? (float) $i->vat_amount : null,
                     ]),
@@ -238,6 +248,92 @@ class ShipmentController extends Controller
         return back();
     }
 
+    // Частичная приёмка: сколько приехало сейчас по каждой позиции.
+    // Принято всё — поставка сама закрывается («Завершено»).
+    public function receive(Request $r, Shipment $shipment)
+    {
+        $data = $r->validate([
+            'items' => 'required|array',
+            'items.*.item_id' => 'required|integer',
+            'items.*.qty' => 'required|numeric|min:0',
+        ]);
+        $shipment->load('items');
+        try {
+            DB::transaction(function () use ($shipment, $data) {
+                foreach ($data['items'] as $row) {
+                    $qty = (float) $row['qty'];
+                    if ($qty <= 0) {
+                        continue;
+                    }
+                    $item = $shipment->items->firstWhere('id', (int) $row['item_id']);
+                    if (! $item) {
+                        continue;
+                    }
+                    $left = (float) $item->qty - (float) $item->qty_received;
+                    if ($qty > $left + 0.0005) {
+                        throw new \RuntimeException('По позиции «'.($item->nomenclature?->name ?? '').'» осталось принять только '.rtrim(rtrim(number_format($left, 3, '.', ' '), '0'), '.').'.');
+                    }
+                    $item->qty_received = (float) $item->qty_received + $qty;
+                    $item->save();
+                    $shipment->receipts()->create([
+                        'nomenclature_id' => $item->nomenclature_id,
+                        'qty' => $qty,
+                        'date' => now()->toDateString(),
+                    ]);
+                }
+                // Всё принято — закрываем поставку
+                $shipment->refresh()->load('items');
+                $allIn = $shipment->items->every(fn ($i) => (float) $i->qty_received >= (float) $i->qty - 0.0005);
+                if ($allIn && $shipment->status === 'В пути') {
+                    $shipment->update(['status' => 'Завершено']);
+                }
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['shipment' => $e->getMessage()]);
+        }
+
+        return back();
+    }
+
+    // Быстрая смена статуса из таблицы или виджета на дашборде
+    public function setStatus(Request $r, Shipment $shipment)
+    {
+        $data = $r->validate(['status' => 'required|in:Ожидает отправки,В пути,Завершено']);
+        $new = $data['status'];
+        try {
+            DB::transaction(function () use ($shipment, $new) {
+                if ($new === 'Ожидает отправки' && $shipment->isPosted()) {
+                    ShipmentPosting::unpost($shipment);   // бросит понятную ошибку, если товар уже продан
+                    $shipment->items()->update(['qty_received' => 0]);
+                    $shipment->receipts()->delete();
+                }
+                $shipment->update(['status' => $new]);
+                if ($new !== 'Ожидает отправки' && ! $shipment->isPosted()) {
+                    ShipmentPosting::post($shipment->fresh()->load('items'));
+                }
+                // «Завершено» = приехало всё: допринимаем остаток одной записью
+                if ($new === 'Завершено') {
+                    $shipment->load('items');
+                    foreach ($shipment->items as $item) {
+                        $left = (float) $item->qty - (float) $item->qty_received;
+                        if ($left > 0.0005) {
+                            $item->update(['qty_received' => $item->qty]);
+                            $shipment->receipts()->create([
+                                'nomenclature_id' => $item->nomenclature_id,
+                                'qty' => $left,
+                                'date' => now()->toDateString(),
+                            ]);
+                        }
+                    }
+                }
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['shipment' => $e->getMessage()]);
+        }
+
+        return back();
+    }
+
     private function validateData(Request $r): array
     {
         return $r->validate([
@@ -263,6 +359,9 @@ class ShipmentController extends Controller
     // тексту, иначе разные написания одного и того же товара плодят дубли в справочнике.
     private function syncItems(Shipment $shipment, array $items): void
     {
+        // Позиции пересоздаются — принятое количество переносим по номенклатуре,
+        // иначе правка поставки обнуляла бы приёмку.
+        $received = $shipment->items()->pluck('qty_received', 'nomenclature_id');
         $shipment->items()->delete();
         foreach ($items as $i) {
             if (empty($i['nomenclature_id'])) {
@@ -271,6 +370,7 @@ class ShipmentController extends Controller
             $shipment->items()->create([
                 'nomenclature_id' => $i['nomenclature_id'],
                 'qty' => $i['qty'],
+                'qty_received' => min((float) $i['qty'], (float) ($received[$i['nomenclature_id']] ?? 0)),
                 'price' => $i['price'],
                 'vat_rate' => $i['vat_rate'] ?? null,
                 'vat_amount' => $i['vat_amount'] ?? null,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import AppShell from '@/Layouts/AppShell.vue';
@@ -8,17 +8,18 @@ import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
 import DatePicker from '@/Components/DatePicker.vue';
-import { money, date as fdate } from '@/lib/format';
+import { money, num, date as fdate } from '@/lib/format';
 import { confirmDlg } from '@/lib/confirm';
 
-type Item = { nomenclature_id: number | null; qty: number | null; price: number | null; vat_rate: number | null; vat_amount: number | null };
+type Item = { id?: number; nomenclature_id: number | null; name?: string | null; qty: number | null; qty_received?: number; price: number | null; vat_rate: number | null; vat_amount: number | null };
 type Payment = { match_id: number; bank_line_id: number; date: string | null; party: string; amount: number };
 type Row = {
     id: number; number: string; date: string; supplier: string; counterparty_id: number | null;
     name: string | null; status: string; eta: string | null; carrier_id: number | null;
     eta_first: string | null; eta_shift: number; eta_changes: { old: string | null; new: string | null; at: string }[];
     tracking: string | null; delivery: number; problem: boolean; sum: number; paid: number;
-    posted: boolean; items: Item[]; payments: Payment[];
+    posted: boolean; total_qty: number; received_qty: number; receipts: { date: string; qty: number; name: string }[];
+    items: Item[]; payments: Payment[];
 };
 type BankCandidate = { id: number; date: string | null; party: string; purpose: string | null; remaining: number };
 
@@ -46,7 +47,46 @@ const filtered = computed(() => props.rows.filter((s) => {
 const totalSum = computed(() => filtered.value.reduce((a, s) => a + s.sum, 0));
 const totalDebt = computed(() => filtered.value.reduce((a, s) => a + (s.sum - s.paid), 0));
 
+const goodName = (id: number | null) => props.goods.find((g) => g.id === id)?.name ?? '';
 const statusVariant = (s: string) => s === 'Завершено' ? 'ok' : s === 'В пути' ? 'info' : 'neutral';
+
+// ── Быстрая смена статуса из таблицы ──
+const STATUSES = ['Ожидает отправки', 'В пути', 'Завершено'] as const;
+const statusMenuFor = ref<number | null>(null);
+function toggleStatusMenu(id: number, e: Event) {
+    e.stopPropagation();
+    statusMenuFor.value = statusMenuFor.value === id ? null : id;
+}
+function setStatus(s: Row, st: string, e: Event) {
+    e.stopPropagation();
+    statusMenuFor.value = null;
+    if (st !== s.status) router.post(`/shipments/${s.id}/status`, { status: st }, { preserveScroll: true });
+}
+onMounted(() => document.addEventListener('click', () => { statusMenuFor.value = null; }));
+
+// ── Приёмка части товара ──
+const recvOpen = ref(false);
+const recvRows = ref<{ item_id: number; name: string; qty: number; received: number; now: number | null }[]>([]);
+function openReceive() {
+    const row = currentShip.value;
+    if (!row) return;
+    recvRows.value = row.items
+        .filter((i) => (Number(i.qty) || 0) - (Number(i.qty_received) || 0) > 0.0005)
+        .map((i) => ({
+            item_id: i.id ?? 0, name: i.name ?? goodName(i.nomenclature_id),
+            qty: Number(i.qty) || 0, received: Number(i.qty_received) || 0,
+            now: null,
+        }));
+    recvOpen.value = true;
+}
+const recvCanSubmit = computed(() => recvRows.value.some((r) => (r.now ?? 0) > 0)
+    && recvRows.value.every((r) => (r.now ?? 0) <= r.qty - r.received + 0.0005));
+function submitReceive() {
+    if (!editingId.value) return;
+    router.post(`/shipments/${editingId.value}/receive`, {
+        items: recvRows.value.filter((r) => (r.now ?? 0) > 0).map((r) => ({ item_id: r.item_id, qty: r.now })),
+    }, { preserveScroll: true, onSuccess: () => { recvOpen.value = false; } });
+}
 const payText = (s: Row) => s.paid >= s.sum && s.sum > 0 ? 'Оплачено' : s.paid > 0 ? 'Частично' : 'Не оплачено';
 const payVariant = (s: Row) => s.paid >= s.sum && s.sum > 0 ? 'ok' : s.paid > 0 ? 'warn' : 'bad';
 
@@ -242,7 +282,16 @@ async function destroy() {
                                 <Icon v-else-if="payVariant(s) === 'warn'" name="minus" :size="16" style="color:var(--warn)" />
                                 <Icon v-else name="x" :size="16" style="color:var(--expense)" />
                             </td>
-                            <td><StatusPill :text="s.status" :variant="statusVariant(s.status)" /></td>
+                            <td style="position:relative">
+                                <button type="button" class="st-btn pressable" @click="toggleStatusMenu(s.id, $event)">
+                                    <StatusPill :text="s.status" :variant="statusVariant(s.status)" />
+                                    <span v-if="s.status === 'В пути' && s.received_qty > 0" class="recv-mini">{{ num(s.received_qty) }} из {{ num(s.total_qty) }}</span>
+                                    <Icon name="chevron-down" :size="12" class="text-ink-3" />
+                                </button>
+                                <div v-if="statusMenuFor === s.id" class="st-menu" @click.stop>
+                                    <button v-for="st in STATUSES" :key="st" type="button" class="st-menu-item pressable" :class="{ on: st === s.status }" @click="setStatus(s, st, $event)">{{ st }}</button>
+                                </div>
+                            </td>
                             <td class="text-ink-2">
                                 {{ fdate(s.eta) }}
                                 <span v-if="s.eta_shift > 0" class="eta-shift eta-shift--late">+{{ s.eta_shift }} дн</span>
@@ -391,6 +440,15 @@ async function destroy() {
                     </div>
                 </div>
 
+                <!-- Приёмка: что уже приехало -->
+                <div v-if="currentShip && currentShip.receipts.length" class="eta-hist">
+                    <div class="items-h"><span class="h2">Приёмки товара</span></div>
+                    <div v-for="(rc, i) in currentShip.receipts" :key="i" class="eta-hist-row">
+                        <span>{{ rc.name }} · {{ num(rc.qty) }}</span>
+                        <span class="text-ink-3">{{ fdate(rc.date) }}</span>
+                    </div>
+                </div>
+
                 <div class="modal-total">
                     <span class="text-ink-2 text-[14px]">Итого (товары + доставка)</span>
                     <span class="tnum text-[18px] font-bold">{{ money(formTotal) }}</span>
@@ -403,13 +461,47 @@ async function destroy() {
                     <Icon v-if="form.processing" name="loader" :size="16" style="animation:spin 1s linear infinite" />
                     {{ form.processing ? 'Сохранение…' : (form.status === 'Ожидает отправки' ? 'Сохранить' : 'Сохранить и оприходовать') }}
                 </button>
+                <button v-if="editingId && currentShip?.status === 'В пути'" class="btn-ghost pressable" @click="openReceive"><Icon name="package" :size="15" /> Принять товар</button>
                 <button v-if="editingId" class="btn-ghost pressable" @click="destroy">Удалить</button>
+            </template>
+        </AppModal>
+
+        <!-- Приёмка части товара -->
+        <AppModal :open="recvOpen" title="Принять товар" :subtitle="currentShip ? currentShip.number + ' · приехало ' + num(currentShip.received_qty) + ' из ' + num(currentShip.total_qty) : ''" @close="recvOpen = false">
+            <div v-for="r in recvRows" :key="r.item_id" class="recv-row">
+                <div class="recv-info">
+                    <b>{{ r.name }}</b>
+                    <i>принято {{ num(r.received) }} из {{ num(r.qty) }} · осталось {{ num(r.qty - r.received) }}</i>
+                </div>
+                <input v-model.number="r.now" type="number" step="0.001" min="0" :max="r.qty - r.received" placeholder="0" class="recv-inp tnum" />
+                <button type="button" class="link-btn" @click="r.now = r.qty - r.received">всё</button>
+            </div>
+            <div v-if="!recvRows.length" class="text-ink-3" style="font-size:13px">Все позиции уже приняты.</div>
+            <div class="text-ink-3" style="font-size:12px">Принятая часть перейдёт на складе из «В пути» в «Остаток». Когда приедет всё — поставка сама станет «Завершено».</div>
+            <div v-if="srvError" class="ship-err">{{ srvError }}</div>
+            <template #footer>
+                <button class="btn-primary pressable" style="flex:1;justify-content:center" :disabled="!recvCanSubmit" @click="submitReceive">Принять</button>
+                <button class="btn-ghost pressable" @click="recvOpen = false">Отмена</button>
             </template>
         </AppModal>
     </AppShell>
 </template>
 
 <style scoped>
+/* Быстрая смена статуса из таблицы */
+.st-btn { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: 0; padding: 0; cursor: pointer; font: inherit; }
+.recv-mini { font-size: 11px; font-weight: 700; color: var(--info); white-space: nowrap; }
+.st-menu { position: absolute; z-index: 25; top: calc(100% - 4px); left: 8px; min-width: 170px; padding: 5px; border-radius: 13px; background: var(--glass-solid); border: 1px solid var(--glass-border); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; gap: 2px; }
+.st-menu-item { text-align: left; padding: 8px 11px; border: 0; border-radius: 9px; background: transparent; color: var(--ink); font-size: 13.5px; font-weight: 500; cursor: pointer; }
+.st-menu-item:hover { background: var(--glass-fill); }
+.st-menu-item.on { font-weight: 700; color: var(--info); }
+/* Приёмка */
+.recv-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--glass-border); }
+.recv-row:last-of-type { border-bottom: 0; }
+.recv-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.recv-info b { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recv-info i { font-style: normal; font-size: 12px; color: var(--ink-2); }
+.recv-inp { width: 96px; height: 36px; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 10px; padding: 0 10px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; text-align: right; }
 .eta-shift { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 5px; white-space: nowrap; }
 .eta-shift--late { background: rgba(255, 159, 10, .16); color: var(--warn); }
 .eta-shift--early { background: rgba(52, 199, 89, .16); color: var(--income); }

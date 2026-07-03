@@ -119,7 +119,7 @@ class DashboardController extends Controller
 
         // Трекер поставок (кроме завершённых): маршрут с грузовиком, остаток дней,
         // цвет-статус для свечения карточки (ok / warn ≤2 дн до ETA / bad / wait).
-        $shipments = Shipment::with(['counterparty:id,name', 'etaChanges'])->where('status', '!=', 'Завершено')
+        $shipments = Shipment::with(['counterparty:id,name', 'etaChanges', 'items', 'receipts'])->where('status', '!=', 'Завершено')
             ->orderBy('eta')->limit(10)->get()->map(function (Shipment $s) use ($now) {
                 $start = $s->date ? Carbon::parse($s->date) : null;
                 $eta = $s->eta ? Carbon::parse($s->eta) : null;
@@ -144,10 +144,18 @@ class DashboardController extends Controller
                     $shiftPct = (int) min(99, max(0, round($start->diffInDays($firstEta, false) / $start->diffInDays($eta) * 100)));
                 }
 
+                // Частичная приёмка: сколько уже приехало и когда была последняя приёмка
+                $totalQty = (float) $s->items->sum('qty');
+                $receivedQty = (float) $s->items->sum('qty_received');
+                $lastReceipt = optional($s->receipts->sortByDesc('id')->first())->date;
+
                 return [
+                    'id' => $s->id, 'status' => $s->status,
                     'cp' => $s->counterparty?->name ?? '—', 'name' => $s->name ?? $s->number,
                     'kind' => $kind, 'pct' => $pct, 'glow' => $glow, 'days' => $days,
                     'shift' => $shift, 'shiftPct' => $shiftPct,
+                    'received' => $receivedQty, 'totalQty' => $totalQty,
+                    'lastReceipt' => $lastReceipt ? $lastReceipt->format('d.m') : null,
                     'start' => $start ? $start->format('d.m') : '—',
                     'eta' => $eta ? $eta->format('d.m') : '—',
                 ];

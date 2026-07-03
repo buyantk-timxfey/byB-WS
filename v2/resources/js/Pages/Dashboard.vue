@@ -55,6 +55,19 @@ const hiddenList = computed(() => hidden.value.map((id) => ({ id, label: labelFo
 
 const go = (url: string) => { if (!editMode.value) router.visit(url); };
 
+// Быстрая смена статуса поставки прямо с карточки трекера
+const SHIP_STATUSES = ['Ожидает отправки', 'В пути', 'Завершено'];
+const shipMenuFor = ref<number | null>(null);
+function toggleShipMenu(id: number, e: Event) {
+    e.stopPropagation();
+    shipMenuFor.value = shipMenuFor.value === id ? null : id;
+}
+function setShipStatus(s: any, st: string) {
+    shipMenuFor.value = null;
+    if (st !== s.status) router.post(`/shipments/${s.id}/status`, { status: st }, { preserveScroll: true });
+}
+onMounted(() => document.addEventListener('click', () => { shipMenuFor.value = null; }));
+
 // Подпись остатка дней на карточке поставки
 function daysLabel(s: { kind: string; days: number | null }): string {
     if (s.kind === 'wait') return 'ожидает отправки';
@@ -130,9 +143,18 @@ onMounted(() => { refreshMail(); });
                 </div>
                 <div class="ships-scroll">
                     <div v-for="s in shipments" :key="s.name" class="glass w-pad shipw pressable" :class="'shipw--' + s.glow" @click="go('/shipments')">
-                        <div class="cp">{{ s.cp }}</div>
+                        <div class="sw-head">
+                            <div class="cp">{{ s.cp }}</div>
+                            <button type="button" class="sw-status pressable" @click.stop="toggleShipMenu(s.id, $event)">
+                                {{ s.status }} <Icon name="chevron-down" :size="11" />
+                            </button>
+                        </div>
                         <div class="nm">{{ s.name }}</div>
                         <div class="sw-days" :class="'sw-days--' + s.glow">{{ daysLabel(s) }}</div>
+                        <div v-if="s.received > 0" class="sw-recv">приехало {{ s.received }} из {{ s.totalQty }}<template v-if="s.lastReceipt"> · {{ s.lastReceipt }}</template></div>
+                        <div v-if="shipMenuFor === s.id" class="sw-menu" @click.stop>
+                            <button v-for="st in SHIP_STATUSES" :key="st" type="button" class="sw-menu-item pressable" :class="{ on: st === s.status }" @click="setShipStatus(s, st)">{{ st }}</button>
+                        </div>
                         <div class="route">
                             <span class="rt-dot"></span>
                             <div class="rt-track">

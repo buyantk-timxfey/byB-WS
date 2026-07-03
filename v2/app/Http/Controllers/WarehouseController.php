@@ -46,8 +46,14 @@ class WarehouseController extends Controller
             $qty = (float) ($qtyByNom[$n->id] ?? 0);
             $reserved = (float) ($reservedByNom[$n->id] ?? 0);
             $batches = ($batchesByNom[$n->id] ?? collect())->map(function (StockBatch $b) {
-                $ship = $b->shipmentItem?->shipment;
+                $item = $b->shipmentItem;
+                $ship = $item?->shipment;
                 $extra = $ship ? ($ship->name ?: $ship->counterparty?->name) : null;
+                // Едущая часть партии: непринятый остаток позиции (частичная приёмка).
+                // Считаем, что продажи в первую очередь съедают уже приехавшее.
+                $transitQty = ($ship?->status === 'В пути' && $item)
+                    ? max(0.0, min((float) $b->qty_left, (float) $item->qty - (float) $item->qty_received))
+                    : 0.0;
 
                 return [
                     // Номер + название поставки/поставщик — просто «№» ни о чём не говорил
@@ -56,15 +62,14 @@ class WarehouseController extends Controller
                     'qty' => (float) $b->qty_left,
                     'cost' => (float) $b->unit_cost,
                     'days' => $b->daysOnStock(),
-                    // Партия из поставки «В пути» — физически товара ещё нет
-                    'transit' => $ship?->status === 'В пути',
+                    'transit_qty' => $transitQty,
+                    'transit' => $transitQty >= (float) $b->qty_left - 0.0005,   // едет целиком
                 ];
             })->values();
             $value = $batches->sum(fn ($b) => $b['qty'] * $b['cost']);
-            // «В пути» — непроданный остаток партий из ещё едущих поставок
-            $transit = $batches->where('transit', true)->sum('qty');
-            $transitValue = $batches->where('transit', true)->sum(fn ($b) => $b['qty'] * $b['cost']);
-            $oldest = $batches->where('transit', false)->max('days') ?? 0;
+            $transit = $batches->sum('transit_qty');
+            $transitValue = $batches->sum(fn ($b) => $b['transit_qty'] * $b['cost']);
+            $oldest = $batches->filter(fn ($b) => $b['qty'] - $b['transit_qty'] > 0.0005)->max('days') ?? 0;
 
             return [
                 'id' => $n->id, 'name' => $n->name, 'group' => $n->group?->name ?? '—', 'unit' => $n->unit,

@@ -8,7 +8,7 @@ import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
 import { money, money0, num, date as fdate } from '@/lib/format';
 
-type Batch = { ship: string; date: string; qty: number; cost: number; days: number; transit: boolean };
+type Batch = { ship: string; date: string; qty: number; cost: number; days: number; transit: boolean; transit_qty: number };
 type Row = { id: number; name: string; group: string; unit: string; qty: number; transit: number; reserved: number; available: number; value: number; transit_value: number; days: number; stale: boolean; negative: boolean; batches: Batch[] };
 type Good = { id: number; name: string; unit: string; qty: number };
 
@@ -137,7 +137,7 @@ const canSubmit = computed(() => {
                                             <span class="num">Дней</span>
                                         </div>
                                         <div v-for="(b, i) in p.batches" :key="i" class="batch-row" :class="{ stale: !b.transit && b.days >= staleDays }">
-                                            <span class="bship" :title="b.ship">{{ b.ship }} <span v-if="b.transit" class="b-transit">в пути</span></span>
+                                            <span class="bship" :title="b.ship">{{ b.ship }} <span v-if="b.transit" class="b-transit">в пути</span><span v-else-if="b.transit_qty > 0" class="b-transit">в пути {{ num(b.transit_qty) }}</span></span>
                                             <span class="text-ink-2">{{ fdate(b.date) }}</span>
                                             <span class="num">{{ num(b.qty) }}</span>
                                             <span class="num">{{ money(b.cost) }}</span>
