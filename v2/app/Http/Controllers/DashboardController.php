@@ -119,7 +119,7 @@ class DashboardController extends Controller
 
         // Трекер поставок (кроме завершённых): маршрут с грузовиком, остаток дней,
         // цвет-статус для свечения карточки (ok / warn ≤2 дн до ETA / bad / wait).
-        $shipments = Shipment::with('counterparty:id,name')->where('status', '!=', 'Завершено')
+        $shipments = Shipment::with(['counterparty:id,name', 'etaChanges'])->where('status', '!=', 'Завершено')
             ->orderBy('eta')->limit(10)->get()->map(function (Shipment $s) use ($now) {
                 $start = $s->date ? Carbon::parse($s->date) : null;
                 $eta = $s->eta ? Carbon::parse($s->eta) : null;
@@ -136,9 +136,18 @@ class DashboardController extends Controller
                 $days = $eta ? (int) $now->copy()->startOfDay()->diffInDays($eta->copy()->startOfDay(), false) : null;
                 $glow = $overdue ? 'bad' : ($wait ? 'wait' : (($days !== null && $days <= 2) ? 'warn' : 'ok'));
 
+                // Перенос ETA: участок маршрута от первоначального срока до нового — пунктиром
+                $firstEta = optional($s->etaChanges->sortBy('id')->first())->old_eta;
+                $shift = ($firstEta && $eta) ? (int) $firstEta->copy()->startOfDay()->diffInDays($eta->copy()->startOfDay(), false) : 0;
+                $shiftPct = null;
+                if ($shift > 0 && $start && $eta && $eta->gt($start)) {
+                    $shiftPct = (int) min(99, max(0, round($start->diffInDays($firstEta, false) / $start->diffInDays($eta) * 100)));
+                }
+
                 return [
                     'cp' => $s->counterparty?->name ?? '—', 'name' => $s->name ?? $s->number,
                     'kind' => $kind, 'pct' => $pct, 'glow' => $glow, 'days' => $days,
+                    'shift' => $shift, 'shiftPct' => $shiftPct,
                     'start' => $start ? $start->format('d.m') : '—',
                     'eta' => $eta ? $eta->format('d.m') : '—',
                 ];

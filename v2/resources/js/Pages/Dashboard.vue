@@ -136,12 +136,17 @@ onMounted(() => { refreshMail(); });
                         <div class="route">
                             <span class="rt-dot"></span>
                             <div class="rt-track">
+                                <!-- Перенос ETA: добавленный участок пути (старый срок → новый) пунктиром -->
+                                <span v-if="s.shiftPct !== null" class="rt-dash" :style="{ left: s.shiftPct + '%', width: (100 - s.shiftPct) + '%' }"></span>
                                 <div class="rt-fill" :class="'rt-fill--' + s.glow" :style="{ width: s.pct + '%' }"></div>
                                 <span class="rt-truck" :class="'rt-truck--' + s.glow" :style="{ left: s.pct + '%' }"><Icon name="truck" :size="17" /></span>
                             </div>
                             <span class="rt-end" :class="{ 'rt-end--bad': s.glow === 'bad' }"></span>
                         </div>
-                        <div class="sw-dates"><span>{{ s.start }}</span><span>{{ s.eta }}</span></div>
+                        <div class="sw-dates">
+                            <span>{{ s.start }}</span>
+                            <span>{{ s.eta }}<em v-if="s.shift > 0" class="sw-shift">+{{ s.shift }} дн</em></span>
+                        </div>
                     </div>
                 </div>
             </div>

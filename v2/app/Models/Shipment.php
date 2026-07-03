@@ -10,6 +10,7 @@ class Shipment extends Model
     public function counterparty(): BelongsTo { return $this->belongsTo(Counterparty::class); }
     public function carrier(): BelongsTo { return $this->belongsTo(Carrier::class); }
     public function items(): HasMany { return $this->hasMany(ShipmentItem::class); }
+    public function etaChanges(): HasMany { return $this->hasMany(ShipmentEtaChange::class); }
     public function goodsTotal(): float { return (float) $this->items->sum(fn ($i) => $i->qty * $i->price); }
     public function total(): float { return $this->goodsTotal() + (float) $this->delivery_cost; }
     public function isPosted(): bool { return $this->posted_at !== null; }

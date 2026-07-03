@@ -16,6 +16,7 @@ type Payment = { match_id: number; bank_line_id: number; date: string | null; pa
 type Row = {
     id: number; number: string; date: string; supplier: string; counterparty_id: number | null;
     name: string | null; status: string; eta: string | null; carrier_id: number | null;
+    eta_first: string | null; eta_shift: number; eta_changes: { old: string | null; new: string | null; at: string }[];
     tracking: string | null; delivery: number; problem: boolean; sum: number; paid: number;
     posted: boolean; items: Item[]; payments: Payment[];
 };
@@ -98,6 +99,7 @@ function addItem() { form.items.push({ nomenclature_id: null, qty: null, price: 
 function removeItem(i: number) { form.items.splice(i, 1); }
 
 // ── Оплата — привязка операций из выписки прямо здесь (то же, что и разнесение на странице Банк) ──
+const currentShip = computed(() => props.rows.find((r) => r.id === editingId.value) ?? null);
 const currentRow = computed(() => props.rows.find((r) => r.id === editingId.value) ?? null);
 const currentDebt = computed(() => currentRow.value ? Math.max(currentRow.value.sum - currentRow.value.paid, 0) : 0);
 // Сортируем по близости остатка операции к долгу поставки — самое вероятное совпадение сверху,
@@ -241,7 +243,11 @@ async function destroy() {
                                 <Icon v-else name="x" :size="16" style="color:var(--expense)" />
                             </td>
                             <td><StatusPill :text="s.status" :variant="statusVariant(s.status)" /></td>
-                            <td class="text-ink-2">{{ fdate(s.eta) }}</td>
+                            <td class="text-ink-2">
+                                {{ fdate(s.eta) }}
+                                <span v-if="s.eta_shift > 0" class="eta-shift eta-shift--late">+{{ s.eta_shift }} дн</span>
+                                <span v-else-if="s.eta_shift < 0" class="eta-shift eta-shift--early">−{{ -s.eta_shift }} дн</span>
+                            </td>
                         </tr>
                         <tr v-if="!filtered.length"><td colspan="8">
                             <div class="empty-big">
@@ -289,7 +295,11 @@ async function destroy() {
                 </div>
                 <div class="fld-row" style="margin-top:12px">
                     <div class="fld"><label>Дата заказа</label><DatePicker v-model="form.date" placeholder="дд.мм.гггг" /></div>
-                    <div class="fld"><label>ETA</label><DatePicker v-model="form.eta" placeholder="дд.мм.гггг" /></div>
+                    <div class="fld"><label>ETA</label><DatePicker v-model="form.eta" placeholder="дд.мм.гггг" />
+                        <div v-if="currentShip && currentShip.eta_shift !== 0" class="eta-note" :style="{ color: currentShip.eta_shift > 0 ? 'var(--warn)' : 'var(--income)' }">
+                            {{ currentShip.eta_shift > 0 ? `задерживается на ${currentShip.eta_shift} дн` : `раньше срока на ${-currentShip.eta_shift} дн` }} · первоначально {{ fdate(currentShip.eta_first) }}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -372,6 +382,15 @@ async function destroy() {
                 </div>
                 <div v-if="!form.items.length" class="text-ink-3" style="padding:12px 0;font-size:14px">Добавьте позиции: выберите товар, количество и цену</div>
 
+                <!-- История переносов ETA -->
+                <div v-if="currentShip && currentShip.eta_changes.length" class="eta-hist">
+                    <div class="items-h"><span class="h2">Переносы ETA</span></div>
+                    <div v-for="(c, i) in currentShip.eta_changes" :key="i" class="eta-hist-row">
+                        <span class="tnum">{{ fdate(c.old) }} → {{ fdate(c.new) }}</span>
+                        <span class="text-ink-3">перенесено {{ c.at }}</span>
+                    </div>
+                </div>
+
                 <div class="modal-total">
                     <span class="text-ink-2 text-[14px]">Итого (товары + доставка)</span>
                     <span class="tnum text-[18px] font-bold">{{ money(formTotal) }}</span>
@@ -391,6 +410,12 @@ async function destroy() {
 </template>
 
 <style scoped>
+.eta-shift { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 5px; white-space: nowrap; }
+.eta-shift--late { background: rgba(255, 159, 10, .16); color: var(--warn); }
+.eta-shift--early { background: rgba(52, 199, 89, .16); color: var(--income); }
+.eta-note { font-size: 12px; font-weight: 600; margin-top: 5px; }
+.eta-hist { padding: 12px 14px; border: 1px solid var(--glass-border); border-radius: 14px; background: var(--glass-fill); }
+.eta-hist-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 5px 0; }
 .ship-err { margin-top: 10px; padding: 10px 14px; border-radius: 12px; background: rgba(255,69,58,.12); border: 1px solid rgba(255,69,58,.35); color: var(--expense); font-size: 13px; font-weight: 600; }
 /* Секции модалки — сгруппированные поля с заголовком, разделены тонкой линией */
 .modal-sec { padding: 18px 0; border-top: 1px solid var(--glass-border); }

@@ -24,11 +24,14 @@ class ShipmentController extends Controller
         $matchesByShipment = BankMatch::where('target_type', 'shipment')->with('line:id,date,counterparty_name,purpose')->get()->groupBy('target_id');
         $paidByShipment = $matchesByShipment->map(fn ($ms) => $ms->sum('amount'));
 
-        $rows = Shipment::with(['counterparty:id,name', 'carrier:id,name', 'items'])
+        $rows = Shipment::with(['counterparty:id,name', 'carrier:id,name', 'items', 'etaChanges'])
             ->orderByDesc('date')->orderByDesc('id')->get()
             ->map(function (Shipment $s) use ($paidByShipment, $matchesByShipment) {
                 $total = $s->total();
                 $paid = (float) ($paidByShipment[$s->id] ?? 0);
+                // Задержка: от первого обещанного ETA до текущего (в днях)
+                $firstEta = optional($s->etaChanges->sortBy('id')->first())->old_eta ?? $s->eta;
+                $etaShift = ($firstEta && $s->eta) ? (int) $firstEta->copy()->startOfDay()->diffInDays($s->eta->copy()->startOfDay(), false) : 0;
 
                 return [
                     'id' => $s->id,
@@ -39,6 +42,13 @@ class ShipmentController extends Controller
                     'name' => $s->name,
                     'status' => $s->status,
                     'eta' => optional($s->eta)->toDateString(),
+                    'eta_first' => optional($firstEta)->toDateString(),
+                    'eta_shift' => $etaShift,
+                    'eta_changes' => $s->etaChanges->sortByDesc('id')->values()->map(fn ($c) => [
+                        'old' => optional($c->old_eta)->toDateString(),
+                        'new' => optional($c->new_eta)->toDateString(),
+                        'at' => optional($c->created_at)->format('d.m.Y'),
+                    ]),
                     'carrier' => $s->carrier?->name,
                     'carrier_id' => $s->carrier_id,
                     'tracking' => $s->tracking,
@@ -122,6 +132,13 @@ class ShipmentController extends Controller
         $data = $this->validateData($r);
         try {
             DB::transaction(function () use ($shipment, $data) {
+                // Перенос ETA фиксируется автоматически: дата уже была и меняется
+                // на другую — пишем в историю (первичный ввод переносом не считается).
+                $oldEta = optional($shipment->eta)->toDateString();
+                $newEta = $data['eta'] ?? null;
+                if ($oldEta && $newEta && $oldEta !== $newEta) {
+                    $shipment->etaChanges()->create(['old_eta' => $oldEta, 'new_eta' => $newEta]);
+                }
                 // Перепроводим щадяще: уже проданный товар не блокирует правку —
                 // потребление запоминается и списывается из новых партий заново.
                 $consumed = $shipment->isPosted() ? ShipmentPosting::unpostPreservingSales($shipment) : [];

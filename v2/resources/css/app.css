@@ -318,6 +318,10 @@
 .rt-fill--warn { background: var(--warn); }
 .rt-fill--bad { background: var(--expense); }
 .rt-fill--wait { background: transparent; }
+/* Перенос ETA: добавленный отрезок пути — пунктиром поверх трека */
+.rt-dash { position: absolute; top: 0; height: 100%; border-radius: 999px;
+    background: repeating-linear-gradient(90deg, var(--warn) 0 5px, transparent 5px 10px); opacity: .8; }
+.sw-shift { font-style: normal; font-weight: 700; color: var(--warn); margin-left: 4px; }
 .rt-truck { position: absolute; top: 50%; transform: translate(-50%, -58%); color: var(--income); background: var(--bg, #fff); border-radius: 50%; padding: 3px; box-shadow: 0 2px 8px rgba(0,0,0,.18); line-height: 0; transition: left .5s cubic-bezier(.22,1,.36,1); }
 .rt-truck--warn { color: var(--warn); }
 .rt-truck--bad { color: var(--expense); }
