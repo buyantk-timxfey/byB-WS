@@ -33,7 +33,7 @@ class WarehouseController extends Controller
             ->select('sale_items.nomenclature_id', DB::raw('SUM(sale_items.qty) as q'))
             ->groupBy('sale_items.nomenclature_id')->pluck('q', 'sale_items.nomenclature_id');
 
-        $batchesByNom = StockBatch::with('shipmentItem.shipment:id,number,name,counterparty_id', 'shipmentItem.shipment.counterparty:id,name')
+        $batchesByNom = StockBatch::with('shipmentItem.shipment:id,number,name,status,counterparty_id', 'shipmentItem.shipment.counterparty:id,name')
             ->where('qty_left', '>', 0)->orderBy('received_date')->orderBy('id')
             ->get()->groupBy('nomenclature_id');
 
@@ -56,16 +56,24 @@ class WarehouseController extends Controller
                     'qty' => (float) $b->qty_left,
                     'cost' => (float) $b->unit_cost,
                     'days' => $b->daysOnStock(),
+                    // Партия из поставки «В пути» — физически товара ещё нет
+                    'transit' => $ship?->status === 'В пути',
                 ];
             })->values();
             $value = $batches->sum(fn ($b) => $b['qty'] * $b['cost']);
-            $oldest = $batches->max('days') ?? 0;
+            // «В пути» — непроданный остаток партий из ещё едущих поставок
+            $transit = $batches->where('transit', true)->sum('qty');
+            $transitValue = $batches->where('transit', true)->sum(fn ($b) => $b['qty'] * $b['cost']);
+            $oldest = $batches->where('transit', false)->max('days') ?? 0;
 
             return [
                 'id' => $n->id, 'name' => $n->name, 'group' => $n->group?->name ?? '—', 'unit' => $n->unit,
-                'qty' => $qty, 'reserved' => $reserved, 'available' => $qty - $reserved,
-                'value' => round($value, 2), 'days' => $oldest,
-                'stale' => $oldest >= $staleDays, 'negative' => $qty < 0,
+                // Остаток — только физический; едущее — отдельной колонкой
+                'qty' => $qty - $transit, 'transit' => $transit,
+                'reserved' => $reserved, 'available' => $qty - $reserved,
+                'value' => round($value - $transitValue, 2), 'transit_value' => round($transitValue, 2),
+                'days' => $oldest,
+                'stale' => $oldest >= $staleDays, 'negative' => ($qty - $transit) < 0,
                 'batches' => $batches,
             ];
         })->values();
@@ -74,6 +82,7 @@ class WarehouseController extends Controller
             'rows' => $rows,
             'staleDays' => $staleDays,
             'frozen' => round($rows->sum(fn ($r) => max(0, $r['value'])), 2),
+            'transitMoney' => round($rows->sum('transit_value'), 2),
             'staleMoney' => round($rows->where('stale', true)->sum('value'), 2),
             'posCount' => $rows->where('qty', '>', 0)->count(),
             'negCount' => $rows->where('negative', true)->count(),

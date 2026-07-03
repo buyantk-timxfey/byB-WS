@@ -8,19 +8,19 @@ import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
 import { money, money0, num, date as fdate } from '@/lib/format';
 
-type Batch = { ship: string; date: string; qty: number; cost: number; days: number };
-type Row = { id: number; name: string; group: string; unit: string; qty: number; reserved: number; available: number; value: number; days: number; stale: boolean; negative: boolean; batches: Batch[] };
+type Batch = { ship: string; date: string; qty: number; cost: number; days: number; transit: boolean };
+type Row = { id: number; name: string; group: string; unit: string; qty: number; transit: number; reserved: number; available: number; value: number; transit_value: number; days: number; stale: boolean; negative: boolean; batches: Batch[] };
 type Good = { id: number; name: string; unit: string; qty: number };
 
 const props = defineProps<{
-    rows: Row[]; staleDays: number; frozen: number; staleMoney: number; posCount: number; negCount: number; reservedCount?: number;
+    rows: Row[]; staleDays: number; frozen: number; transitMoney: number; staleMoney: number; posCount: number; negCount: number; reservedCount?: number;
     goods: Good[];
 }>();
 
 const seg = ref<'all' | 'stock' | 'stale' | 'neg'>('all');
 const q = ref('');
 const rows = computed(() => props.rows.filter((p) => {
-    if (seg.value === 'stock' && p.qty === 0) return false;
+    if (seg.value === 'stock' && p.qty === 0 && p.transit === 0) return false;
     if (seg.value === 'stale' && !p.stale) return false;
     if (seg.value === 'neg' && !p.negative) return false;
     if (q.value && !(`${p.name} ${p.group}`.toLowerCase().includes(q.value.toLowerCase()))) return false;
@@ -86,7 +86,7 @@ const canSubmit = computed(() => {
             <div class="fk glass">
                 <div class="fk-l">Замороженные деньги</div>
                 <div class="fk-v tnum">{{ money0(frozen) }}</div>
-                <div class="fk-s">стоимость остатков по себестоимости</div>
+                <div class="fk-s"><span v-if="transitMoney > 0" :style="{ color: 'var(--info)' }">ещё {{ money0(transitMoney) }} едет</span><span v-else>стоимость остатков по себестоимости</span></div>
             </div>
             <div class="fk glass">
                 <div class="fk-l">Зависло (старше {{ staleDays }} дн.)</div>
@@ -106,7 +106,7 @@ const canSubmit = computed(() => {
                     <thead>
                         <tr>
                             <th style="width:34px"></th><th>Товар</th><th>Группа</th><th>Ед.</th>
-                            <th class="num">Остаток</th><th class="num">Резерв</th><th class="num">Доступно</th><th class="num">Стоимость</th><th class="num">Дней</th>
+                            <th class="num">Остаток</th><th class="num">В пути</th><th class="num">Резерв</th><th class="num">Доступно</th><th class="num">Стоимость</th><th class="num">Дней</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -121,6 +121,7 @@ const canSubmit = computed(() => {
                                 <td class="text-ink-2">{{ p.group }}</td>
                                 <td class="text-ink-2">{{ p.unit }}</td>
                                 <td class="num" :style="p.negative ? { color: 'var(--expense)' } : {}">{{ num(p.qty) }}</td>
+                                <td class="num" :style="p.transit > 0 ? { color: 'var(--info)', fontWeight: 600 } : { color: 'var(--ink-3)' }">{{ p.transit > 0 ? num(p.transit) : '—' }}</td>
                                 <td class="num" :style="p.reserved > 0 ? { color: 'var(--warn)' } : { color: 'var(--ink-3)' }">{{ p.reserved > 0 ? num(p.reserved) : '—' }}</td>
                                 <td class="num" :style="p.available < 0 ? { color: 'var(--expense)' } : {}">{{ num(p.available) }}</td>
                                 <td class="num">{{ money(p.value) }}</td>
@@ -128,19 +129,19 @@ const canSubmit = computed(() => {
                             </tr>
                             <tr v-if="expanded === p.id" class="batch-tr">
                                 <td></td>
-                                <td colspan="8">
+                                <td colspan="9">
                                     <div v-if="p.batches.length" class="batches">
                                         <div class="batch-head">
                                             <span>Поступление</span><span>Дата прихода</span>
                                             <span class="num">Кол-во</span><span class="num">Себест. ед.</span>
                                             <span class="num">Дней</span>
                                         </div>
-                                        <div v-for="(b, i) in p.batches" :key="i" class="batch-row" :class="{ stale: b.days >= staleDays }">
-                                            <span class="bship" :title="b.ship">{{ b.ship }}</span>
+                                        <div v-for="(b, i) in p.batches" :key="i" class="batch-row" :class="{ stale: !b.transit && b.days >= staleDays }">
+                                            <span class="bship" :title="b.ship">{{ b.ship }} <span v-if="b.transit" class="b-transit">в пути</span></span>
                                             <span class="text-ink-2">{{ fdate(b.date) }}</span>
                                             <span class="num">{{ num(b.qty) }}</span>
                                             <span class="num">{{ money(b.cost) }}</span>
-                                            <span class="num text-ink-2">{{ b.days }}</span>
+                                            <span class="num text-ink-2">{{ b.transit ? '—' : b.days }}</span>
                                         </div>
                                     </div>
                                     <div v-else class="text-ink-3" style="padding:8px 0;font-size:13px">
@@ -154,7 +155,7 @@ const canSubmit = computed(() => {
                                 </td>
                             </tr>
                         </template>
-                        <tr v-if="!rows.length"><td colspan="9"><div class="j-empty">На складе пусто — оприходуйте поставку</div></td></tr>
+                        <tr v-if="!rows.length"><td colspan="10"><div class="j-empty">На складе пусто — оприходуйте поставку</div></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -203,6 +204,7 @@ const canSubmit = computed(() => {
 </template>
 
 <style scoped>
+.b-transit { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: rgba(10,132,255,.14); color: var(--info); margin-left: 5px; white-space: nowrap; }
 .batch-actions { display: flex; gap: 16px; padding: 8px 0 2px; border-top: 1px solid var(--glass-border); margin-top: 8px; }
 .wh-err { padding: 10px 14px; border-radius: 12px; background: rgba(255,69,58,.12); border: 1px solid rgba(255,69,58,.35); color: var(--expense); font-size: 13px; font-weight: 600; }
 </style>
