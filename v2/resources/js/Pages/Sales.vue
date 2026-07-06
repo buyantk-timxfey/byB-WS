@@ -9,6 +9,7 @@ import SearchSelect from '@/Components/SearchSelect.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import { money, date as fdate } from '@/lib/format';
 import { confirmDlg } from '@/lib/confirm';
+import { useRowHighlight } from '@/lib/highlight';
 
 type Item = { nomenclature_id: number | null; name?: string | null; qty: number | null; price: number | null; cost?: number };
 type Payment = { match_id: number; bank_line_id: number; date: string | null; party: string; amount: number };
@@ -30,6 +31,7 @@ const props = defineProps<{
     bankCandidates: BankCandidate[];
 }>();
 
+const hl = useRowHighlight();
 const seg = ref<'all' | 'Выставлен' | 'Оплачен' | 'Отменён'>('all');
 const q = ref('');
 const filtered = computed(() => props.rows.filter((s) => {
@@ -185,7 +187,7 @@ function payNow() {
 
         <!-- Телефон: карточный список вместо таблицы -->
         <div class="sale-cards">
-            <div v-for="s in filtered" :key="'m' + s.id" class="glass sale-card pressable" @click="openDoc(s)">
+            <div v-for="s in filtered" :key="'m' + s.id" :data-hl="s.id" class="glass sale-card pressable" :class="{ 'row-hl': hl === s.id }" @click="openDoc(s)">
                 <div class="sc-top">
                     <span class="sc-num">{{ s.number }} <span class="text-ink-3">· {{ fdate(s.date) }}</span></span>
                     <StatusPill :text="s.status" :variant="statusVariant(s.status)" />
@@ -211,7 +213,7 @@ function payNow() {
                     </thead>
                     <tbody>
                         <template v-for="s in filtered" :key="s.id">
-                            <tr @click="openDoc(s)" :class="{ 'tr-open': expanded === s.id }">
+                            <tr :data-hl="s.id" @click="openDoc(s)" :class="{ 'tr-open': expanded === s.id, 'row-hl': hl === s.id }">
                                 <td class="cell-chev" @click.stop="toggleExp(s.id)"><Icon name="chevron-right" :size="16" class="chev" :class="{ 'chev-open': expanded === s.id }" /></td>
                                 <td>{{ s.number }}</td>
                                 <td class="text-ink-2">{{ fdate(s.date) }}</td>

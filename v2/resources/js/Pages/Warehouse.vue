@@ -7,6 +7,7 @@ import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
 import { money, money0, num, date as fdate } from '@/lib/format';
+import { useRowHighlight } from '@/lib/highlight';
 
 type Batch = { ship: string; date: string; qty: number; cost: number; days: number; transit: boolean; transit_qty: number };
 type Row = { id: number; name: string; group: string; unit: string; qty: number; transit: number; reserved: number; available: number; value: number; transit_value: number; days: number; stale: boolean; negative: boolean; batches: Batch[] };
@@ -17,6 +18,7 @@ const props = defineProps<{
     goods: Good[];
 }>();
 
+const hl = useRowHighlight();
 const seg = ref<'all' | 'stock' | 'stale' | 'neg'>('all');
 const q = ref('');
 const rows = computed(() => props.rows.filter((p) => {
@@ -111,7 +113,7 @@ const canSubmit = computed(() => {
                     </thead>
                     <tbody>
                         <template v-for="p in rows" :key="p.id">
-                            <tr @click="toggle(p.id)" :class="{ 'tr-open': expanded === p.id }">
+                            <tr :data-hl="p.id" @click="toggle(p.id)" :class="{ 'tr-open': expanded === p.id, 'row-hl': hl === p.id }">
                                 <td class="cell-chev"><Icon name="chevron-right" :size="16" class="chev" :class="{ 'chev-open': expanded === p.id }" /></td>
                                 <td>
                                     {{ p.name }}

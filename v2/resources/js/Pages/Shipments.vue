@@ -10,6 +10,7 @@ import SearchSelect from '@/Components/SearchSelect.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import { money, num, date as fdate } from '@/lib/format';
 import { confirmDlg } from '@/lib/confirm';
+import { useRowHighlight } from '@/lib/highlight';
 
 type Item = { id?: number; nomenclature_id: number | null; name?: string | null; qty: number | null; qty_received?: number; price: number | null; vat_rate: number | null; vat_amount: number | null };
 type Payment = { match_id: number; bank_line_id: number; date: string | null; party: string; amount: number };
@@ -48,6 +49,7 @@ const totalSum = computed(() => filtered.value.reduce((a, s) => a + s.sum, 0));
 const totalDebt = computed(() => filtered.value.reduce((a, s) => a + (s.sum - s.paid), 0));
 
 const goodName = (id: number | null) => props.goods.find((g) => g.id === id)?.name ?? '';
+const hl = useRowHighlight();
 const statusVariant = (s: string) => s === 'Завершено' ? 'ok' : s === 'В пути' ? 'info' : 'neutral';
 
 // ── Быстрая смена статуса из таблицы ──
@@ -268,7 +270,7 @@ async function destroy() {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="s in filtered" :key="s.id" @click="openDoc(s)">
+                        <tr v-for="s in filtered" :key="s.id" :data-hl="s.id" :class="{ 'row-hl': hl === s.id }" @click="openDoc(s)">
                             <td>{{ s.number }}</td>
                             <td class="text-ink-2">{{ fdate(s.date) }}</td>
                             <td>{{ s.supplier }}</td>

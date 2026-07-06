@@ -549,6 +549,14 @@ button.unrec-card { cursor: pointer; }
 .bc-badge { font-size: 10px; font-weight: 600; background: rgba(0,0,0,.28); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .bc-ok { font-size: 10px; font-weight: 600; opacity: .85; white-space: nowrap; }
 
+/* Строка, найденная через глобальный поиск: мигает и гаснет */
+.row-hl { animation: row-hl 2.6s ease; border-radius: 10px; }
+@keyframes row-hl {
+    0%, 55% { background: rgba(10, 132, 255, 0.16); box-shadow: inset 3px 0 0 var(--info, #0a84ff); }
+    100% { background: transparent; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) { .row-hl { animation: none; background: rgba(10, 132, 255, 0.12); } }
+
 /* Пустые состояния: иконка + подсказка + действие */
 .empty-big { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 44px 20px; text-align: center; }
 .empty-big .eb-ic { width: 58px; height: 58px; border-radius: 18px; display: flex; align-items: center; justify-content: center; background: var(--glass-fill-strong); color: var(--ink-3); margin-bottom: 4px; }

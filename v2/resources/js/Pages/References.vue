@@ -8,13 +8,19 @@ import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
 import { money, num } from '@/lib/format';
 import { confirmDlg } from '@/lib/confirm';
+import { useRowHighlight } from '@/lib/highlight';
 
 const props = defineProps<{
     counterparties: any[]; nomenclature: any[]; carriers: any[];
     accounts: any[]; articles: any[]; groups: any[];
 }>();
 
-const dir = ref<'counterparties' | 'nomenclature' | 'carriers' | 'accounts' | 'articles'>('counterparties');
+// Вкладка может приходить из глобального поиска (?dir=counterparties&hl=ID)
+const dirFromUrl = new URLSearchParams(window.location.search).get('dir');
+const dir = ref<'counterparties' | 'nomenclature' | 'carriers' | 'accounts' | 'articles'>(
+    (['counterparties', 'nomenclature', 'carriers', 'accounts', 'articles'].includes(dirFromUrl ?? '') ? dirFromUrl : 'counterparties') as any,
+);
+const hl = useRowHighlight();
 const q = ref('');
 const tabs = [
     { id: 'counterparties', label: 'Контрагенты' }, { id: 'nomenclature', label: 'Номенклатура' },
@@ -114,7 +120,7 @@ async function destroy() {
                 <table v-if="dir === 'counterparties'" class="jtable">
                     <thead><tr><th>Тип</th><th>Наименование</th><th>ИНН</th><th>Контакт</th><th class="num">Сальдо</th></tr></thead>
                     <tbody>
-                        <tr v-for="x in list" :key="x.id" @click="edit(x)">
+                        <tr v-for="x in list" :key="x.id" :data-hl="x.id" :class="{ 'row-hl': hl === x.id }" @click="edit(x)">
                             <td><StatusPill :text="x.type" :variant="cpVariant(x.type)" /></td>
                             <td>{{ x.name }}</td><td class="text-ink-2 tnum">{{ x.inn }}</td><td class="text-ink-2">{{ x.contact }}</td>
                             <td class="num" :style="x.debt > 0 ? { color: 'var(--income)' } : (x.debt < 0 ? { color: 'var(--expense)' } : {})">{{ debtText(x.debt) }}</td>

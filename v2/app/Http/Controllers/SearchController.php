@@ -21,25 +21,25 @@ class SearchController extends Controller
         $groups = [];
 
         $cps = Counterparty::where('name', 'like', $like)->orWhere('inn', 'like', $like)->limit(6)->get()
-            ->map(fn ($c) => ['icon' => 'building', 't' => $c->name, 's' => $c->type.($c->inn ? ' · ИНН '.$c->inn : ''), 'url' => '/references']);
+            ->map(fn ($c) => ['icon' => 'building', 't' => $c->name, 's' => $c->type.($c->inn ? ' · ИНН '.$c->inn : ''), 'url' => '/references?dir=counterparties&hl='.$c->id]);
         if ($cps->count()) {
             $groups[] = ['title' => 'Контрагенты', 'items' => $cps];
         }
 
         $noms = Nomenclature::where('name', 'like', $like)->orWhere('article', 'like', $like)->limit(6)->get()
-            ->map(fn ($n) => ['icon' => 'package', 't' => $n->name, 's' => trim(($n->article ?: '').' · '.$n->unit, ' ·'), 'url' => '/warehouse']);
+            ->map(fn ($n) => ['icon' => 'package', 't' => $n->name, 's' => trim(($n->article ?: '').' · '.$n->unit, ' ·'), 'url' => '/warehouse?hl='.$n->id]);
         if ($noms->count()) {
             $groups[] = ['title' => 'Товары', 'items' => $noms];
         }
 
         $ships = Shipment::with('counterparty:id,name')->where('number', 'like', $like)->orWhere('name', 'like', $like)->limit(6)->get()
-            ->map(fn ($s) => ['icon' => 'package', 't' => $s->number.($s->name ? ' · '.$s->name : ''), 's' => 'Поставка · '.($s->counterparty?->name ?? '—'), 'url' => '/shipments']);
+            ->map(fn ($s) => ['icon' => 'package', 't' => $s->number.($s->name ? ' · '.$s->name : ''), 's' => 'Поставка · '.($s->counterparty?->name ?? '—'), 'url' => '/shipments?hl='.$s->id]);
         if ($ships->count()) {
             $groups[] = ['title' => 'Поставки', 'items' => $ships];
         }
 
         $sales = Sale::with('counterparty:id,name')->where('number', 'like', $like)->limit(6)->get()
-            ->map(fn ($s) => ['icon' => 'cart', 't' => $s->number, 's' => 'Продажа · '.($s->counterparty?->name ?? '—'), 'url' => '/sales']);
+            ->map(fn ($s) => ['icon' => 'cart', 't' => $s->number, 's' => 'Продажа · '.($s->counterparty?->name ?? '—'), 'url' => '/sales?hl='.$s->id]);
         if ($sales->count()) {
             $groups[] = ['title' => 'Продажи', 'items' => $sales];
         }

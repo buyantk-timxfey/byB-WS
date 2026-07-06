@@ -14,16 +14,18 @@ const props = defineProps<{
     shipments: any[]; warehouse: any; mailboxes: any[]; reminders: any[]; tx: any[]; calendarData?: any;
 }>();
 
-const kpis = props.kpis;
-const accounts = props.accounts;
-const totalBalance = props.totalBalance;
-const monthIn = props.monthIn;
-const monthOut = props.monthOut;
-const shipments = props.shipments;
-const warehouse = props.warehouse;
-const mailboxes = props.mailboxes;
-const reminders = props.reminders;
-const tx = props.tx;
+// computed, а не одноразовые копии: после действий (смена статуса поставки и т.п.)
+// Inertia обновляет props, и виджеты должны перерисоваться сразу.
+const kpis = computed(() => props.kpis);
+const accounts = computed(() => props.accounts);
+const totalBalance = computed(() => props.totalBalance);
+const monthIn = computed(() => props.monthIn);
+const monthOut = computed(() => props.monthOut);
+const shipments = computed(() => props.shipments);
+const warehouse = computed(() => props.warehouse);
+const mailboxes = computed(() => props.mailboxes);
+const reminders = computed(() => props.reminders);
+const tx = computed(() => props.tx);
 
 // ── Настройка виджетов: скрыть/показать + порядок (localStorage) ──
 const editMode = ref(false);
@@ -80,9 +82,9 @@ function daysLabel(s: { kind: string; days: number | null }): string {
 // Обновление почты: используется и кнопкой в виджете, и автоматически при заходе на главную
 const refreshingMail = ref(false);
 async function refreshMail() {
-    if (refreshingMail.value || !mailboxes.length) return;
+    if (refreshingMail.value || !mailboxes.value.length) return;
     refreshingMail.value = true;
-    for (const mb of mailboxes) {
+    for (const mb of mailboxes.value) {
         if (!mb.id) continue;
         await new Promise<void>((resolve) => {
             router.post(`/mail/accounts/${mb.id}/sync`, { folder: 'INBOX' }, {
