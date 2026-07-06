@@ -45,6 +45,27 @@ const filtered = computed(() => props.rows.filter((s) => {
     if (q.value && !(`${s.number} ${s.supplier} ${s.name ?? ''}`.toLowerCase().includes(q.value.toLowerCase()))) return false;
     return true;
 }));
+// ── Сортировка кликом по заголовку ──
+type SortKey = 'date' | 'sum' | 'eta';
+const sortKey = ref<SortKey | null>(null);
+const sortDir = ref<'asc' | 'desc'>('asc');
+function toggleSort(key: SortKey) {
+    if (sortKey.value === key) sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+    else { sortKey.value = key; sortDir.value = key === 'sum' ? 'desc' : 'asc'; }
+}
+const sorted = computed(() => {
+    if (!sortKey.value) return filtered.value;
+    const dir = sortDir.value === 'asc' ? 1 : -1;
+    const key = sortKey.value;
+    return [...filtered.value].sort((a, b) => {
+        let av: string | number, bv: string | number;
+        if (key === 'sum') { av = a.sum; bv = b.sum; }
+        else if (key === 'date') { av = a.date || ''; bv = b.date || ''; }
+        else { av = a.eta || '9999-99-99'; bv = b.eta || '9999-99-99'; } // без ETA — в конец
+        return av < bv ? -dir : av > bv ? dir : 0;
+    });
+});
+
 const totalSum = computed(() => filtered.value.reduce((a, s) => a + s.sum, 0));
 const totalDebt = computed(() => filtered.value.reduce((a, s) => a + (s.sum - s.paid), 0));
 
@@ -260,47 +281,60 @@ async function destroy() {
             <button class="btn-primary pressable" @click="create"><Icon name="plus" :size="17" /> Создать</button>
         </div>
 
-        <div class="jcard glass">
+        <!-- Десктоп/планшет: таблица -->
+        <div class="jcard glass ship-desk">
             <div class="jscroll">
-                <table class="jtable">
+                <table class="jtable ship-table">
                     <thead>
                         <tr>
-                            <th>№</th><th>Дата</th><th>Поставщик</th><th>Название</th>
-                            <th class="num">Сумма</th><th class="pay-col"><Icon name="link" :size="14" /></th><th>Статус</th><th>ETA</th>
+                            <th class="col-num">№</th>
+                            <th class="col-date sortable" @click="toggleSort('date')">
+                                <span>Дата</span><Icon v-if="sortKey === 'date'" :name="sortDir === 'asc' ? 'chevron-up' : 'chevron-down'" :size="13" />
+                            </th>
+                            <th>Поставка</th>
+                            <th class="num sortable" @click="toggleSort('sum')">
+                                <span>Сумма</span><Icon v-if="sortKey === 'sum'" :name="sortDir === 'asc' ? 'chevron-up' : 'chevron-down'" :size="13" />
+                            </th>
+                            <th class="sortable" @click="toggleSort('eta')">
+                                <span>Статус · ETA</span><Icon v-if="sortKey === 'eta'" :name="sortDir === 'asc' ? 'chevron-up' : 'chevron-down'" :size="13" />
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="s in filtered" :key="s.id" :data-hl="s.id" :class="{ 'row-hl': hl === s.id }" @click="openDoc(s)">
-                            <td>{{ s.number }}</td>
-                            <td class="text-ink-2">{{ fdate(s.date) }}</td>
-                            <td>{{ s.supplier }}</td>
-                            <td>
-                                {{ s.name }}
-                                <StatusPill v-if="s.problem" text="Проблема" variant="bad" class="ml-2" />
+                        <tr v-for="s in sorted" :key="s.id" :data-hl="s.id" :class="{ 'row-hl': hl === s.id }" @click="openDoc(s)">
+                            <td class="col-num text-ink-3">{{ s.number }}</td>
+                            <td class="text-ink-2 col-date">{{ fdate(s.date) }}</td>
+                            <td class="col-ship">
+                                <div class="ship-name">
+                                    <span class="sn-t">{{ s.name || s.supplier }}</span>
+                                    <StatusPill v-if="s.problem" text="Проблема" variant="bad" />
+                                </div>
+                                <div class="ship-sup">{{ s.name ? s.supplier : '—' }}</div>
                             </td>
-                            <td class="num">{{ money(s.sum) }}</td>
-                            <td class="pay-col" :title="payText(s)">
-                                <Icon v-if="payVariant(s) === 'ok'" name="check" :size="16" style="color:var(--income)" />
-                                <Icon v-else-if="payVariant(s) === 'warn'" name="minus" :size="16" style="color:var(--warn)" />
-                                <Icon v-else name="x" :size="16" style="color:var(--expense)" />
+                            <td class="num col-sum">
+                                <div class="sum-v tnum">{{ money(s.sum) }}</div>
+                                <div class="pay-chip" :class="'pay-chip--' + payVariant(s)"><i></i>{{ payText(s) }}</div>
                             </td>
-                            <td style="position:relative">
+                            <td class="col-track" style="position:relative">
                                 <button type="button" class="st-btn pressable" @click="toggleStatusMenu(s.id, $event)">
                                     <StatusPill :text="s.status" :variant="statusVariant(s.status)" />
-                                    <span v-if="s.status === 'В пути' && s.received_qty > 0" class="recv-mini">{{ num(s.received_qty) }} из {{ num(s.total_qty) }}</span>
                                     <Icon name="chevron-down" :size="12" class="text-ink-3" />
                                 </button>
+                                <div class="track-sub">
+                                    <span v-if="s.eta" class="ts-eta text-ink-3">{{ s.status === 'Завершено' ? 'прибыло ' : 'до ' }}{{ fdate(s.eta) }}</span>
+                                    <span v-if="s.eta_shift > 0" class="eta-shift eta-shift--late">+{{ s.eta_shift }} дн</span>
+                                    <span v-else-if="s.eta_shift < 0" class="eta-shift eta-shift--early">−{{ -s.eta_shift }} дн</span>
+                                </div>
+                                <div v-if="s.status === 'В пути' && s.received_qty > 0" class="recv-line">
+                                    <span class="recv-bar"><i :style="{ width: Math.min(100, s.received_qty / (s.total_qty || 1) * 100) + '%' }"></i></span>
+                                    <span class="recv-mini">{{ num(s.received_qty) }} из {{ num(s.total_qty) }}</span>
+                                </div>
                                 <div v-if="statusMenuFor === s.id" class="st-menu" @click.stop>
                                     <button v-for="st in STATUSES" :key="st" type="button" class="st-menu-item pressable" :class="{ on: st === s.status }" @click="setStatus(s, st, $event)">{{ st }}</button>
                                 </div>
                             </td>
-                            <td class="text-ink-2">
-                                {{ fdate(s.eta) }}
-                                <span v-if="s.eta_shift > 0" class="eta-shift eta-shift--late">+{{ s.eta_shift }} дн</span>
-                                <span v-else-if="s.eta_shift < 0" class="eta-shift eta-shift--early">−{{ -s.eta_shift }} дн</span>
-                            </td>
                         </tr>
-                        <tr v-if="!filtered.length"><td colspan="8">
+                        <tr v-if="!filtered.length"><td colspan="5">
                             <div class="empty-big">
                                 <span class="eb-ic"><Icon name="package" :size="30" /></span>
                                 <b>Поставок пока нет</b>
@@ -311,12 +345,50 @@ async function destroy() {
                     </tbody>
                     <tfoot v-if="filtered.length">
                         <tr>
-                            <td colspan="4">Итого: {{ filtered.length }}</td>
+                            <td colspan="3">Итого: {{ filtered.length }}</td>
                             <td class="num">{{ money(totalSum) }}</td>
-                            <td colspan="3">Долг поставщикам: {{ money(totalDebt) }}</td>
+                            <td>Долг поставщикам: {{ money(totalDebt) }}</td>
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+        </div>
+
+        <!-- Телефон: карточки -->
+        <div class="ship-cards">
+            <div v-for="s in sorted" :key="s.id" class="ship-card pressable" :data-hl="s.id" :class="{ 'row-hl': hl === s.id }" @click="openDoc(s)">
+                <div class="sc-top">
+                    <div class="sc-title">
+                        <span class="sc-name">{{ s.name || s.supplier }}</span>
+                        <span class="sc-sup">{{ s.name ? s.supplier : ('№ ' + s.number) }}</span>
+                    </div>
+                    <div class="sc-status" style="position:relative">
+                        <button type="button" class="st-btn pressable" @click="toggleStatusMenu(s.id, $event)">
+                            <StatusPill :text="s.status" :variant="statusVariant(s.status)" />
+                            <Icon name="chevron-down" :size="12" class="text-ink-3" />
+                        </button>
+                        <div v-if="statusMenuFor === s.id" class="st-menu st-menu--r" @click.stop>
+                            <button v-for="st in STATUSES" :key="st" type="button" class="st-menu-item pressable" :class="{ on: st === s.status }" @click="setStatus(s, st, $event)">{{ st }}</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="sc-mid">
+                    <span class="sc-sum tnum">{{ money(s.sum) }}</span>
+                    <span class="pay-chip" :class="'pay-chip--' + payVariant(s)"><i></i>{{ payText(s) }}</span>
+                    <StatusPill v-if="s.problem" text="Проблема" variant="bad" />
+                </div>
+                <div class="sc-bot">
+                    <span v-if="s.eta" class="text-ink-3">{{ s.status === 'Завершено' ? 'прибыло ' : 'до ' }}{{ fdate(s.eta) }}</span>
+                    <span v-else class="text-ink-3">{{ fdate(s.date) }}</span>
+                    <span v-if="s.eta_shift > 0" class="eta-shift eta-shift--late">+{{ s.eta_shift }} дн</span>
+                    <span v-else-if="s.eta_shift < 0" class="eta-shift eta-shift--early">−{{ -s.eta_shift }} дн</span>
+                    <span v-if="s.status === 'В пути' && s.received_qty > 0" class="recv-mini" style="margin-left:auto">приехало {{ num(s.received_qty) }} из {{ num(s.total_qty) }}</span>
+                </div>
+            </div>
+            <div v-if="!filtered.length" class="empty-big">
+                <span class="eb-ic"><Icon name="package" :size="30" /></span>
+                <b>Поставок пока нет</b>
+                <button class="btn-primary pressable" @click="create"><Icon name="plus" :size="16" /> Новая поставка</button>
             </div>
         </div>
 
@@ -493,6 +565,64 @@ async function destroy() {
 /* Быстрая смена статуса из таблицы */
 .st-btn { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: 0; padding: 0; cursor: pointer; font: inherit; }
 .recv-mini { font-size: 11px; font-weight: 700; color: var(--info); white-space: nowrap; }
+
+/* ── Читабельная таблица поставок ── */
+.ship-table th, .ship-table td { vertical-align: middle; }
+.ship-table tbody tr { transition: background .15s ease; }
+.col-num { width: 52px; }
+.col-date { width: 110px; white-space: nowrap; }
+.col-sum { width: 150px; }
+.col-track { width: 210px; }
+
+/* Кликабельные заголовки для сортировки */
+.sortable { cursor: pointer; user-select: none; }
+.sortable > span { display: inline-flex; align-items: center; gap: 3px; }
+.sortable:hover { color: var(--ink); }
+.num.sortable { justify-content: flex-end; }
+.num.sortable > span { flex-direction: row; }
+
+/* Ячейка «Поставка»: название крупно, поставщик мелким серым */
+.col-ship { min-width: 200px; }
+.ship-name { display: flex; align-items: center; gap: 8px; }
+.sn-t { font-weight: 600; font-size: 14.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+.ship-sup { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+/* Сумма + чип оплаты */
+.sum-v { font-weight: 600; }
+.pay-chip { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.pay-chip i { width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0; }
+.pay-chip--ok i { background: var(--income); }
+.pay-chip--ok { color: var(--income); }
+.pay-chip--warn i { background: var(--warn); }
+.pay-chip--warn { color: var(--warn); }
+.pay-chip--bad i { background: var(--expense); }
+.pay-chip--bad { color: var(--expense); }
+.col-sum .pay-chip { justify-content: flex-end; }
+
+/* Трек-ячейка: статус + ETA + перенос + прогресс приёмки */
+.track-sub { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+.ts-eta { font-size: 12px; white-space: nowrap; }
+.recv-line { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
+.recv-bar { flex: 1; max-width: 88px; height: 5px; border-radius: 999px; background: var(--glass-border); overflow: hidden; }
+.recv-bar i { display: block; height: 100%; border-radius: 999px; background: var(--info); transition: width .3s ease; }
+
+/* Карточки для телефона */
+.ship-cards { display: none; flex-direction: column; gap: 10px; }
+.ship-card { border-radius: 16px; padding: 13px 15px; background: var(--glass-fill); border: 1px solid var(--glass-border); cursor: pointer; }
+.sc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.sc-title { min-width: 0; }
+.sc-name { display: block; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-sup { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.sc-mid { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.sc-sum { font-weight: 700; font-size: 17px; }
+.sc-mid .pay-chip { margin-top: 0; }
+.sc-bot { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; }
+.st-menu--r { left: auto; right: 0; }
+
+@media (max-width: 640px) {
+    .ship-desk { display: none; }
+    .ship-cards { display: flex; }
+}
 .st-menu { position: absolute; z-index: 25; top: calc(100% - 4px); left: 8px; min-width: 170px; padding: 5px; border-radius: 13px; background: var(--glass-solid); border: 1px solid var(--glass-border); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; gap: 2px; }
 .st-menu-item { text-align: left; padding: 8px 11px; border: 0; border-radius: 9px; background: transparent; color: var(--ink); font-size: 13.5px; font-weight: 500; cursor: pointer; }
 .st-menu-item:hover { background: var(--glass-fill); }
