@@ -50,8 +50,10 @@ type SortKey = 'date' | 'sum' | 'eta';
 const sortKey = ref<SortKey | null>(null);
 const sortDir = ref<'asc' | 'desc'>('asc');
 function toggleSort(key: SortKey) {
-    if (sortKey.value === key) sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
-    else { sortKey.value = key; sortDir.value = key === 'sum' ? 'desc' : 'asc'; }
+    const firstDir = key === 'sum' ? 'desc' : 'asc'; // суммы удобнее сначала по убыванию
+    if (sortKey.value !== key) { sortKey.value = key; sortDir.value = firstDir; }
+    else if (sortDir.value === firstDir) sortDir.value = firstDir === 'asc' ? 'desc' : 'asc';
+    else { sortKey.value = null; sortDir.value = 'asc'; } // третий клик — сброс к обычному порядку
 }
 const sorted = computed(() => {
     if (!sortKey.value) return filtered.value;
@@ -288,14 +290,14 @@ async function destroy() {
                     <thead>
                         <tr>
                             <th class="col-num">№</th>
-                            <th class="col-date sortable" @click="toggleSort('date')">
+                            <th class="col-date sortable" title="Сортировка. Третий клик — сброс" @click="toggleSort('date')">
                                 <span class="ths">Дата<Icon name="chevron-up" :size="13" class="sort-ar" :class="{ 'sort-ar--on': sortKey === 'date', 'sort-ar--desc': sortKey === 'date' && sortDir === 'desc' }" /></span>
                             </th>
                             <th>Поставка</th>
-                            <th class="num sortable" @click="toggleSort('sum')">
+                            <th class="num sortable" title="Сортировка. Третий клик — сброс" @click="toggleSort('sum')">
                                 <span class="ths">Сумма<Icon name="chevron-up" :size="13" class="sort-ar" :class="{ 'sort-ar--on': sortKey === 'sum', 'sort-ar--desc': sortKey === 'sum' && sortDir === 'desc' }" /></span>
                             </th>
-                            <th class="sortable" @click="toggleSort('eta')">
+                            <th class="sortable" title="Сортировка. Третий клик — сброс" @click="toggleSort('eta')">
                                 <span class="ths">Статус · ETA<Icon name="chevron-up" :size="13" class="sort-ar" :class="{ 'sort-ar--on': sortKey === 'eta', 'sort-ar--desc': sortKey === 'eta' && sortDir === 'desc' }" /></span>
                             </th>
                         </tr>
