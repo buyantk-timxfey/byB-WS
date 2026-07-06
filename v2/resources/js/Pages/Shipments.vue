@@ -289,14 +289,14 @@ async function destroy() {
                         <tr>
                             <th class="col-num">№</th>
                             <th class="col-date sortable" @click="toggleSort('date')">
-                                <span>Дата</span><Icon v-if="sortKey === 'date'" :name="sortDir === 'asc' ? 'chevron-up' : 'chevron-down'" :size="13" />
+                                <span class="ths">Дата<Icon name="chevron-up" :size="13" class="sort-ar" :class="{ 'sort-ar--on': sortKey === 'date', 'sort-ar--desc': sortKey === 'date' && sortDir === 'desc' }" /></span>
                             </th>
                             <th>Поставка</th>
                             <th class="num sortable" @click="toggleSort('sum')">
-                                <span>Сумма</span><Icon v-if="sortKey === 'sum'" :name="sortDir === 'asc' ? 'chevron-up' : 'chevron-down'" :size="13" />
+                                <span class="ths">Сумма<Icon name="chevron-up" :size="13" class="sort-ar" :class="{ 'sort-ar--on': sortKey === 'sum', 'sort-ar--desc': sortKey === 'sum' && sortDir === 'desc' }" /></span>
                             </th>
                             <th class="sortable" @click="toggleSort('eta')">
-                                <span>Статус · ETA</span><Icon v-if="sortKey === 'eta'" :name="sortDir === 'asc' ? 'chevron-up' : 'chevron-down'" :size="13" />
+                                <span class="ths">Статус · ETA<Icon name="chevron-up" :size="13" class="sort-ar" :class="{ 'sort-ar--on': sortKey === 'eta', 'sort-ar--desc': sortKey === 'eta' && sortDir === 'desc' }" /></span>
                             </th>
                         </tr>
                     </thead>
@@ -574,12 +574,14 @@ async function destroy() {
 .col-sum { width: 150px; }
 .col-track { width: 210px; }
 
-/* Кликабельные заголовки для сортировки */
+/* Кликабельные заголовки для сортировки — стрелка сразу после текста, место под неё зарезервировано, поэтому колонка не дёргается */
 .sortable { cursor: pointer; user-select: none; }
-.sortable > span { display: inline-flex; align-items: center; gap: 3px; }
+.ths { display: inline-flex; align-items: center; gap: 4px; }
 .sortable:hover { color: var(--ink); }
-.num.sortable { justify-content: flex-end; }
-.num.sortable > span { flex-direction: row; }
+.sort-ar { flex-shrink: 0; opacity: 0; transition: opacity .15s ease, transform .15s ease; }
+.sortable:hover .sort-ar { opacity: .35; }
+.sort-ar--on { opacity: 1 !important; color: var(--ink); }
+.sort-ar--desc { transform: rotate(180deg); }
 
 /* Ячейка «Поставка»: название крупно, поставщик мелким серым */
 .col-ship { min-width: 200px; }
