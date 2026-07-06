@@ -274,11 +274,15 @@
 .jtable tbody tr td { transition: background .15s ease; }
 .op-row, .seg button, .ssel-item, .um-item, .link-btn, .btn-ghost { transition: background .15s ease, color .15s ease; }
 
+/* Каскадное появление (v-stagger): строки/карточки/виджеты «протягиваются» сверху вниз */
+@keyframes stagger-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.stagger-in { animation: stagger-in .42s cubic-bezier(.22, 1, .36, 1) both; animation-delay: var(--st-d, 0ms); }
+
 @media (prefers-reduced-motion: reduce) {
     .pressable {
         transition: none;
     }
-    .page-anim, .batches {
+    .page-anim, .batches, .stagger-in {
         animation: none;
     }
 }

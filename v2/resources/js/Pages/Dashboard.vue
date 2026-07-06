@@ -6,6 +6,7 @@ import AppShell from '@/Layouts/AppShell.vue';
 import Icon from '@/Components/Icon.vue';
 import Sparkline from '@/Components/Sparkline.vue';
 import Calendar from '@/Components/Calendar.vue';
+import CountUp from '@/Components/CountUp.vue';
 
 const money = (n: number) => new Intl.NumberFormat('ru-RU').format(Math.round(n)) + ' ₽';
 
@@ -119,7 +120,7 @@ onMounted(() => { refreshMail(); });
             </div>
 
             <!-- Ряд 1: KPI (S) — на телефоне горизонтальная карусель, как поставки -->
-            <div class="sec kpi-sec">
+            <div class="sec kpi-sec" v-stagger>
                 <template v-for="k in kpis" :key="k.label">
                     <div v-if="isVis('kpi:' + k.label)" class="wwrap">
                         <button v-if="editMode" class="whide" @click.stop="hide('kpi:' + k.label)">×</button>
@@ -128,7 +129,7 @@ onMounted(() => { refreshMail(); });
                                 <span class="h2">{{ k.label }}</span>
                                 <span v-if="k.delta" class="pill" :class="{ 'pill-down': k.down }" :style="k.down ? '' : 'background:rgba(52,199,89,.16);color:var(--income)'">{{ k.delta }}</span>
                             </div>
-                            <div class="kpinum tnum">{{ k.value }}</div>
+                            <div class="kpinum tnum"><CountUp :value="k.value" /></div>
                             <div v-if="k.sub" class="kpi-sub">{{ k.sub }}</div>
                             <Sparkline :data="k.spark" :color="k.color" class="kpi-spark" />
                         </div>

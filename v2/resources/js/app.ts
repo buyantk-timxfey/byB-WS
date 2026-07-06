@@ -35,10 +35,20 @@ createInertiaApp({
             import.meta.glob<DefineComponent>('./Pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
-            .use(plugin)
-            .use(ZiggyVue)
-            .mount(el);
+        const app = createApp({ render: () => h(App, props) });
+        // v-stagger: дети появляются каскадом (как список в iOS) — один раз при монтировании.
+        // Не перезапускается при фильтрации/сортировке, чтобы строки не мигали на каждый ввод.
+        // Уважает «Уменьшить движение».
+        app.directive('stagger', {
+            mounted(el: HTMLElement) {
+                if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+                Array.from(el.children).forEach((k, i) => {
+                    (k as HTMLElement).style.setProperty('--st-d', Math.min(i, 14) * 26 + 'ms');
+                    k.classList.add('stagger-in');
+                });
+            },
+        });
+        app.use(plugin).use(ZiggyVue).mount(el);
     },
     progress: {
         color: '#4B5563',

@@ -186,7 +186,7 @@ function payNow() {
         </div>
 
         <!-- Телефон: карточный список вместо таблицы -->
-        <div class="sale-cards">
+        <div class="sale-cards" v-stagger>
             <div v-for="s in filtered" :key="'m' + s.id" :data-hl="s.id" class="glass sale-card pressable" :class="{ 'row-hl': hl === s.id }" @click="openDoc(s)">
                 <div class="sc-top">
                     <span class="sc-num">{{ s.number }} <span class="text-ink-3">· {{ fdate(s.date) }}</span></span>
@@ -211,7 +211,7 @@ function payNow() {
                     <thead>
                         <tr><th style="width:34px"></th><th>№</th><th>Дата</th><th>Покупатель</th><th class="num">Сумма</th><th class="pay-col"><Icon name="link" :size="14" /></th><th class="num">Прибыль</th><th>Статус</th></tr>
                     </thead>
-                    <tbody>
+                    <tbody v-stagger>
                         <template v-for="s in filtered" :key="s.id">
                             <tr :data-hl="s.id" @click="openDoc(s)" :class="{ 'tr-open': expanded === s.id, 'row-hl': hl === s.id }">
                                 <td class="cell-chev" @click.stop="toggleExp(s.id)"><Icon name="chevron-right" :size="16" class="chev" :class="{ 'chev-open': expanded === s.id }" /></td>

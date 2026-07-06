@@ -6,6 +6,7 @@ import Icon from '@/Components/Icon.vue';
 import StatusPill from '@/Components/StatusPill.vue';
 import AppModal from '@/Components/AppModal.vue';
 import SearchSelect from '@/Components/SearchSelect.vue';
+import CountUp from '@/Components/CountUp.vue';
 import { money, money0, num, date as fdate } from '@/lib/format';
 import { useRowHighlight } from '@/lib/highlight';
 
@@ -84,20 +85,20 @@ const canSubmit = computed(() => {
             <button class="btn-primary pressable" @click="openOp('receive')"><Icon name="plus" :size="17" /> Операция</button>
         </div>
 
-        <div class="fin-kpi fin-kpi--3">
+        <div class="fin-kpi fin-kpi--3" v-stagger>
             <div class="fk glass">
                 <div class="fk-l">Замороженные деньги</div>
-                <div class="fk-v tnum">{{ money0(frozen) }}</div>
+                <div class="fk-v tnum"><CountUp :value="money0(frozen)" /></div>
                 <div class="fk-s"><span v-if="transitMoney > 0" :style="{ color: 'var(--info)' }">ещё {{ money0(transitMoney) }} едет</span><span v-else>стоимость остатков по себестоимости</span></div>
             </div>
             <div class="fk glass">
                 <div class="fk-l">Зависло (старше {{ staleDays }} дн.)</div>
-                <div class="fk-v tnum" :style="staleMoney > 0 ? { color: 'var(--warn)' } : {}">{{ money0(staleMoney) }}</div>
+                <div class="fk-v tnum" :style="staleMoney > 0 ? { color: 'var(--warn)' } : {}"><CountUp :value="money0(staleMoney)" /></div>
                 <div class="fk-s">залежалый товар</div>
             </div>
             <div class="fk glass">
                 <div class="fk-l">Позиций на складе</div>
-                <div class="fk-v tnum">{{ posCount }}</div>
+                <div class="fk-v tnum"><CountUp :value="String(posCount)" /></div>
                 <div class="fk-s"><span v-if="negCount" :style="{ color: 'var(--expense)' }">{{ negCount }} под заказ (минус)</span><span v-else>нет отрицательных</span></div>
             </div>
         </div>
@@ -111,7 +112,7 @@ const canSubmit = computed(() => {
                             <th class="num">Остаток</th><th class="num">В пути</th><th class="num">Резерв</th><th class="num">Доступно</th><th class="num">Стоимость</th><th class="num">Дней</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody v-stagger>
                         <template v-for="p in rows" :key="p.id">
                             <tr :data-hl="p.id" @click="toggle(p.id)" :class="{ 'tr-open': expanded === p.id, 'row-hl': hl === p.id }">
                                 <td class="cell-chev"><Icon name="chevron-right" :size="16" class="chev" :class="{ 'chev-open': expanded === p.id }" /></td>

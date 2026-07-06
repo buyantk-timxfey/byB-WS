@@ -302,7 +302,7 @@ async function destroy() {
                             </th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody v-stagger>
                         <tr v-for="s in sorted" :key="s.id" :data-hl="s.id" :class="{ 'row-hl': hl === s.id }" @click="openDoc(s)">
                             <td class="col-num text-ink-3">{{ s.number }}</td>
                             <td class="text-ink-2 col-date">{{ fdate(s.date) }}</td>
@@ -357,7 +357,7 @@ async function destroy() {
         </div>
 
         <!-- Телефон: карточки -->
-        <div class="ship-cards">
+        <div class="ship-cards" v-stagger>
             <div v-for="s in sorted" :key="s.id" class="ship-card pressable" :data-hl="s.id" :class="{ 'row-hl': hl === s.id }" @click="openDoc(s)">
                 <div class="sc-top">
                     <div class="sc-title">

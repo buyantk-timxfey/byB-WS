@@ -4,6 +4,7 @@ import { Head, router } from '@inertiajs/vue3';
 import AppShell from '@/Layouts/AppShell.vue';
 import AppModal from '@/Components/AppModal.vue';
 import Icon from '@/Components/Icon.vue';
+import CountUp from '@/Components/CountUp.vue';
 import { money, money0, pct } from '@/lib/format';
 
 type DrillRow = { doc: string; date: string; sum: number; article_id: number | null; article: string | null };
@@ -75,25 +76,25 @@ function drillArticle(a: { article_id: number | null; name: string }) {
             </div>
         </div>
 
-        <div class="fin-kpi">
+        <div class="fin-kpi" v-stagger>
             <div class="fk glass">
                 <div class="fk-top"><div class="fk-l">Выручка</div><span v-if="deltas.revenue[0]" class="fk-pill" :class="{ 'fk-pill--down': deltas.revenue[1] }">{{ deltas.revenue[0] }}</span></div>
-                <div class="fk-v tnum">{{ money0(pnl.revenue) }}</div>
+                <div class="fk-v tnum"><CountUp :value="money0(pnl.revenue)" /></div>
                 <div class="fk-s">{{ pnl.salesCount }} продаж · ср. чек {{ money0(metrics.avgCheck) }}</div>
             </div>
             <div class="fk glass">
                 <div class="fk-top"><div class="fk-l">Валовая прибыль</div><span v-if="deltas.gross[0]" class="fk-pill" :class="{ 'fk-pill--down': deltas.gross[1] }">{{ deltas.gross[0] }}</span></div>
-                <div class="fk-v tnum" :style="{ color: 'var(--income)' }">{{ money0(pnl.gross) }}</div>
+                <div class="fk-v tnum" :style="{ color: 'var(--income)' }"><CountUp :value="money0(pnl.gross)" /></div>
                 <div class="fk-s">чистая {{ money0(pnl.net) }}</div>
             </div>
             <div class="fk glass">
                 <div class="fk-top"><div class="fk-l">Маржа</div><span v-if="deltas.margin[0]" class="fk-pill" :class="{ 'fk-pill--down': deltas.margin[1] }">{{ deltas.margin[0] }}</span></div>
-                <div class="fk-v tnum">{{ pct(metrics.margin) }}</div>
+                <div class="fk-v tnum"><CountUp :value="pct(metrics.margin)" /></div>
                 <div class="fk-s">валовая / выручка</div>
             </div>
             <div class="fk glass">
                 <div class="fk-top"><div class="fk-l">ROI</div><span v-if="deltas.roi[0]" class="fk-pill" :class="{ 'fk-pill--down': deltas.roi[1] }">{{ deltas.roi[0] }}</span></div>
-                <div class="fk-v tnum">{{ pct(metrics.roi) }}</div>
+                <div class="fk-v tnum"><CountUp :value="pct(metrics.roi)" /></div>
                 <div class="fk-s">прибыль / затраты</div>
             </div>
         </div>
@@ -167,7 +168,7 @@ function drillArticle(a: { article_id: number | null; name: string }) {
             <div class="jscroll">
                 <table class="jtable">
                     <thead><tr><th>Месяц</th><th class="num">Выручка</th><th class="num">Прочие доходы</th><th class="num">Затраты</th><th class="num">Валовая</th><th class="num">Налог</th><th class="num">Чистая</th></tr></thead>
-                    <tbody>
+                    <tbody v-stagger>
                         <tr v-for="m in [...monthRows].reverse()" :key="m.label">
                             <td style="font-weight:600">{{ m.label }}</td>
                             <td class="num">{{ money(m.revenue) }}</td>
