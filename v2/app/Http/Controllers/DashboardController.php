@@ -120,7 +120,7 @@ class DashboardController extends Controller
         // Трекер поставок (кроме завершённых): маршрут с грузовиком, остаток дней,
         // цвет-статус для свечения карточки (ok / warn ≤2 дн до ETA / bad / wait).
         $shipments = Shipment::with(['counterparty:id,name', 'etaChanges', 'items', 'receipts'])->where('status', '!=', 'Завершено')
-            ->orderBy('eta')->limit(10)->get()->map(function (Shipment $s) use ($now) {
+            ->get()->map(function (Shipment $s) use ($now) {
                 $start = $s->date ? Carbon::parse($s->date) : null;
                 $eta = $s->eta ? Carbon::parse($s->eta) : null;
                 $overdue = $eta && $eta->isPast();
@@ -159,7 +159,14 @@ class DashboardController extends Controller
                     'start' => $start ? $start->format('d.m') : '—',
                     'eta' => $eta ? $eta->format('d.m') : '—',
                 ];
-            });
+            })
+            // Сортировка по срочности: сначала просроченные (самые давние сверху),
+            // затем в пути по ближайшему ETA, в конце — без даты («Ожидает»).
+            // Массив-ключ сравнивается поэлементно: [группа, дни].
+            ->sortBy(fn ($r) => [
+                $r['glow'] === 'bad' ? 0 : ($r['days'] === null ? 2 : 1),
+                $r['days'] ?? PHP_INT_MAX,
+            ])->values();
 
         // Склад-сигналы
         $batches = StockBatch::where('qty_left', '>', 0)->with('nomenclature:id,name')->get();

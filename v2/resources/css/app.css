@@ -381,8 +381,10 @@
 .ships-head .ttl { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); }
 .ships-head .cnt { background: var(--glass-fill-strong); color: var(--ink); border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 8px; margin-left: 8px; }
 .ships-head a { font-size: 13px; font-weight: 600; color: var(--ink-2); text-decoration: none; }
-.ships-scroll { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; max-width: 1240px; margin: 0 auto 18px; padding: 2px 2px 8px; }
-.ships-scroll .shipw { scroll-snap-align: start; flex: 0 0 250px; }
+/* Сетка вместо горизонтальной ленты: карточки переносятся по рядам, без бокового скролла.
+   auto-fill + minmax — на широком экране 4-5 в ряд, на телефоне 1 колонка. */
+.ships-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(238px, 1fr)); gap: 16px; max-width: 1240px; margin: 0 auto 18px; padding: 2px; }
+.ships-grid .shipw { width: auto; }
 
 /* ── Глобальный поиск ── */
 .search-ov { position: fixed; inset: 0; z-index: 80; display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; background: rgba(0,0,0,.35); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }

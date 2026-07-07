@@ -144,8 +144,8 @@ onMounted(() => { refreshMail(); });
                     <div><span class="ttl">Поставки в работе</span><span class="cnt">{{ shipments.length }}</span></div>
                     <a href="/shipments">Все →</a>
                 </div>
-                <div class="ships-scroll">
-                    <div v-for="s in shipments" :key="s.name" class="glass w-pad shipw pressable" :class="'shipw--' + s.glow" @click="go('/shipments')">
+                <div class="ships-grid" v-stagger>
+                    <div v-for="s in shipments" :key="s.id" class="glass w-pad shipw pressable" :class="'shipw--' + s.glow" @click="go('/shipments')">
                         <div class="sw-head">
                             <div class="cp">{{ s.cp }}</div>
                             <button type="button" class="sw-status pressable" @click.stop="toggleShipMenu(s.id, $event)">
