@@ -76,6 +76,8 @@ class DashboardController extends Controller
         // ── Операционные показатели дашборда («сейчас» и «за месяц») ──
         $accounts = Account::orderBy('sort_order')->orderBy('name')->get()->map(fn ($a) => ['name' => $a->name, 'balance' => $a->balance()]);
         $totalBalance = $accounts->sum('balance');
+        // Динамика суммарного баланса за 8 мес: баланс на конец месяца = текущий минус операции после него
+        $balanceSpark = $spark(fn ($a, $b) => round(($totalBalance - (float) BankLine::where('date', '>', Carbon::parse($b)->endOfDay())->sum('amount')) / 1000));
 
         // Денег в пути: сумма поставок в статусе «В пути» (товар оплачен/едет)
         $transit = Shipment::where('status', 'В пути')->get();
@@ -110,13 +112,13 @@ class DashboardController extends Controller
 
         $kpis = [
             ['label' => 'Денег в пути', 'value' => $this->m($transitMoney), 'delta' => '', 'down' => false,
-                'sub' => $this->plural($transitCount, 'поставка едет', 'поставки едут', 'поставок едут'), 'spark' => [], 'color' => 'var(--info)', 'href' => '/shipments'],
+                'sub' => $this->plural($transitCount, 'поставка едет', 'поставки едут', 'поставок едут'), 'spark' => $purchSpark, 'color' => 'var(--info)', 'href' => '/shipments'],
             ['label' => 'Долг покупателей', 'value' => $this->m($debtTotal), 'delta' => '', 'down' => false,
-                'sub' => $this->salesWord(count($debtSales)).' с долгом', 'spark' => [], 'color' => 'var(--warn)', 'href' => '/sales'],
+                'sub' => $this->salesWord(count($debtSales)).' с долгом', 'spark' => $salesSpark, 'color' => 'var(--warn)', 'href' => '/sales'],
             ['label' => 'Долг поставщикам', 'value' => $this->m($supplierDebt), 'delta' => '', 'down' => false,
-                'sub' => $this->plural($supDebtCount, 'поставка', 'поставки', 'поставок'), 'spark' => [], 'color' => 'var(--expense)', 'href' => '/shipments'],
+                'sub' => $this->plural($supDebtCount, 'поставка', 'поставки', 'поставок'), 'spark' => $purchSpark, 'color' => 'var(--expense)', 'href' => '/shipments'],
             ['label' => 'На счетах всего', 'value' => $this->m($totalBalance), 'delta' => '', 'down' => false,
-                'sub' => $this->plural($accounts->count(), 'счёт', 'счёта', 'счетов'), 'spark' => [], 'color' => 'var(--income)', 'href' => '/bank'],
+                'sub' => $this->plural($accounts->count(), 'счёт', 'счёта', 'счетов'), 'spark' => $balanceSpark, 'color' => 'var(--income)', 'href' => '/bank'],
             ['label' => 'Продажи за месяц', 'value' => $this->m($salesSum), 'delta' => $salesD, 'down' => $salesDown,
                 'sub' => $this->salesWord($salesCount).' · оплачено '.$salesPaid, 'spark' => $salesSpark, 'color' => 'var(--income)', 'href' => '/sales'],
             ['label' => 'Закупки за месяц', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true,

@@ -290,20 +290,23 @@
 /* ── Дашборд: виджеты фиксированных размеров (как iOS) ── */
 .sec { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; max-width: 1240px; margin: 0 auto 16px; }
 
-/* ── KPI-блок: резиновая сетка 6 → 3 → 2, карточки тянутся по ширине ── */
-.kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; max-width: 1240px; margin: 0 auto 16px; }
-.kpi-grid .wwrap { width: 100%; }
-.kpi-card { position: relative; overflow: hidden; min-height: 132px; padding: 14px 15px; border-radius: 20px; display: flex; flex-direction: column; }
+/* ── KPI-блок: резиновая сетка 6 → 3 → 2, карточки тянутся по ширине.
+   minmax(0,1fr) + min-width:0 — чтобы длинные подписи не раздували колонки,
+   height:100% — чтобы карточки в ряду были одинаковой высоты (не «плясали»). ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; max-width: 1240px; margin: 0 auto 16px; }
+.kpi-grid .wwrap { width: 100%; min-width: 0; }
+.kpi-card { position: relative; overflow: hidden; min-height: 132px; height: 100%; padding: 14px 15px; border-radius: 20px; display: flex; flex-direction: column; }
 .kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-@media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 560px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .kpi-card { min-height: 116px; padding: 12px 13px; } }
+@media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .kpi-card { min-height: 116px; padding: 12px 13px; } }
 
-/* ── Крупные виджеты: резиновая сетка 3 → 2 → 1 (адаптив) ── */
-.wgt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; align-items: start; }
-.wgt-grid .wwrap { width: 100%; }
-.wgt-grid .wgt-l { width: 100%; }
-@media (max-width: 1024px) { .wgt-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) { .wgt-grid { grid-template-columns: 1fr; } }
+/* ── Крупные виджеты: резиновая сетка 3 → 2 → 1. minmax(0,1fr) + min-width:0 —
+   лечит «разъезд» колонок из-за длинного текста (названия товаров, темы писем). ── */
+.wgt-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-width: 1200px; margin: 0 auto; align-items: start; }
+.wgt-grid .wwrap { width: 100%; min-width: 0; }
+.wgt-grid .wgt-l { width: 100%; min-width: 0; }
+@media (max-width: 1024px) { .wgt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .wgt-grid { grid-template-columns: minmax(0, 1fr); } }
 
 .wgt-s { width: 168px; height: 168px; }
 .wgt-m { width: 352px; height: 168px; }
