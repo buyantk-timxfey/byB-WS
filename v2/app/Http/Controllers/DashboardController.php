@@ -41,7 +41,7 @@ class DashboardController extends Controller
         })->all();
         // Спарклайны для месячных операционных KPI (8 месяцев). Финансовые метрики
         // (выручка/прибыль/маржа/ROI) переехали в раздел «Финансы» — здесь их нет.
-        $salesSpark = $spark(fn ($a, $b) => round(Sale::whereBetween('date', [$a, $b])->get()->sum(fn ($s) => $s->total()) / 1000));
+        $salesSpark = $spark(fn ($a, $b) => round((float) Turnover::where('type', 'income')->whereBetween('date', [$a, $b])->sum('amount') / 1000));
         $purchSpark = $spark(fn ($a, $b) => round((float) Shipment::whereNotNull('posted_at')
             ->whereBetween('date', [$a, $b])->get()->sum(fn ($s) => $s->total()) / 1000));
 
@@ -97,12 +97,12 @@ class DashboardController extends Controller
             }
         }
 
-        // Продажи за месяц: сумма, количество, сколько уже оплачено покупателем
-        $salesMonth = Sale::whereBetween('date', [$from, $to])->get();
-        $salesSum = $salesMonth->sum(fn ($s) => $s->total());
-        $salesCount = $salesMonth->count();
-        $salesPaid = $salesMonth->where('status', 'Оплачен')->count();
-        $salesPrev = (float) Sale::whereBetween('date', [$pa, $pb])->get()->sum(fn ($s) => $s->total());
+        // Продажи за месяц = деньги, реально полученные от покупателей (доходы в обороте —
+        // тот же источник, что «Выручка» в Финансах). Считать по дате продажи неправильно:
+        // деньги приходят не в день оформления, и неоплаченные продажи — это не выручка.
+        $salesSum = (float) Turnover::where('type', 'income')->whereBetween('date', [$from, $to])->sum('amount');
+        $salesCount = Turnover::where('type', 'income')->whereBetween('date', [$from, $to])->count();
+        $salesPrev = (float) Turnover::where('type', 'income')->whereBetween('date', [$pa, $pb])->sum('amount');
         [$salesD, $salesDown] = $dPct($salesSum, $salesPrev);
 
         // Поставки за месяц: количество заведённых и сколько уже завершено (сумма закупок — $purchases)
@@ -120,7 +120,7 @@ class DashboardController extends Controller
             ['label' => 'На счетах всего', 'value' => $this->m($totalBalance), 'delta' => '', 'down' => false,
                 'sub' => $this->plural($accounts->count(), 'счёт', 'счёта', 'счетов'), 'spark' => $balanceSpark, 'color' => 'var(--income)', 'href' => '/bank'],
             ['label' => 'Продажи за месяц', 'value' => $this->m($salesSum), 'delta' => $salesD, 'down' => $salesDown,
-                'sub' => $this->salesWord($salesCount).' · оплачено '.$salesPaid, 'spark' => $salesSpark, 'color' => 'var(--income)', 'href' => '/sales'],
+                'sub' => $this->plural($salesCount, 'оплата', 'оплаты', 'оплат').' от покупателей', 'spark' => $salesSpark, 'color' => 'var(--income)', 'href' => '/sales'],
             ['label' => 'Закупки за месяц', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true,
                 'sub' => $this->plural($shipCount, 'поставка', 'поставки', 'поставок').' · завершено '.$shipDone, 'spark' => $purchSpark, 'color' => 'var(--expense)', 'href' => '/shipments'],
         ];
