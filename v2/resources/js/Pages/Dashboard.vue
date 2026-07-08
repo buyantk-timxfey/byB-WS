@@ -119,13 +119,13 @@ onMounted(() => { refreshMail(); });
                 </button>
             </div>
 
-            <!-- Ряд 1: KPI (S) — на телефоне горизонтальная карусель, как поставки -->
-            <div class="sec kpi-sec" v-stagger>
+            <!-- Ряд 1: KPI — резиновая сетка 6 → 3 → 2 (карточки тянутся по ширине) -->
+            <div class="kpi-grid" v-stagger>
                 <template v-for="k in kpis" :key="k.label">
                     <div v-if="isVis('kpi:' + k.label)" class="wwrap">
                         <button v-if="editMode" class="whide" @click.stop="hide('kpi:' + k.label)">×</button>
-                        <div class="glass w-pad wgt-s pressable kpi-card" @click="go(k.href ?? '/finances')">
-                            <div class="flex items-center justify-between">
+                        <div class="glass kpi-card pressable" @click="go(k.href ?? '/finances')">
+                            <div class="kpi-top">
                                 <span class="h2">{{ k.label }}</span>
                                 <span v-if="k.delta" class="pill" :class="{ 'pill-down': k.down }" :style="k.down ? '' : 'background:rgba(52,199,89,.16);color:var(--income)'">{{ k.delta }}</span>
                             </div>
@@ -176,8 +176,8 @@ onMounted(() => { refreshMail(); });
                 </div>
             </div>
 
-            <!-- Крупные виджеты (L): перетаскивание + скрытие -->
-            <draggable v-model="lorder" item-key="id" :disabled="!editMode" class="sec" style="max-width:1120px" :animation="180" @end="persist">
+            <!-- Крупные виджеты (L): резиновая сетка 3→2→1, перетаскивание + скрытие -->
+            <draggable v-model="lorder" item-key="id" :disabled="!editMode" class="wgt-grid" :animation="180" @end="persist">
                 <template #item="{ element }">
                     <div v-show="isVis(element.id)" class="wwrap">
                         <button v-if="editMode" class="whide" @click.stop="hide(element.id)">×</button>

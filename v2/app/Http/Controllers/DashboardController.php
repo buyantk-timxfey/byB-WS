@@ -27,14 +27,11 @@ class DashboardController extends Controller
         // месяца (1–2 июля сравниваются с 1–2 июня), иначе в начале месяца все
         // стрелки красные просто потому, что месяц только начался.
         $from = $now->copy()->startOfMonth()->toDateString();
-        $to = $now->copy()->toDateString();
+        // Верхняя граница — конец сегодняшнего дня: колонка date хранится как
+        // «Y-m-d 00:00:00», и с date-only границей записи за сегодня выпадали из whereBetween.
+        $to = $now->copy()->endOfDay()->toDateTimeString();
         $staleDays = (int) Setting::get('stale_days', 60);
 
-        $sum = fn ($t) => (float) Turnover::where('type', $t)->whereBetween('date', [$from, $to])->sum('amount');
-        $revenue = $sum('income');
-        $cogs = $sum('cogs');
-        $exp = $sum('expense');
-        $gross = $revenue - $cogs - $exp + $sum('income_other');
         $purchases = (float) Shipment::whereNotNull('posted_at')->whereBetween('date', [$from, $to])->get()->sum(fn ($s) => $s->total());
 
         // спарклайны: 8 мес
@@ -42,38 +39,17 @@ class DashboardController extends Controller
             $m = $now->copy()->subMonths($i);
             return $f($m->copy()->startOfMonth()->toDateString(), $m->copy()->endOfMonth()->toDateString());
         })->all();
-        $incSpark = $spark(fn ($a, $b) => round((float) Turnover::where('type', 'income')->whereBetween('date', [$a, $b])->sum('amount') / 1000));
-        $profSpark = $spark(fn ($a, $b) => round((
-            (float) Turnover::whereIn('type', ['income', 'income_other'])->whereBetween('date', [$a, $b])->sum('amount')
-            - (float) Turnover::whereIn('type', ['cogs', 'expense'])->whereBetween('date', [$a, $b])->sum('amount')) / 1000));
-        // Маржа/ROI/Закупки раньше показывали чужой спарклайн (profSpark/incSpark на всех карточках) —
-        // у каждой метрики теперь свой ряд по тем же 8 месяцам.
-        $marginSpark = $spark(function ($a, $b) {
-            $inc = (float) Turnover::where('type', 'income')->whereBetween('date', [$a, $b])->sum('amount');
-            $costs = (float) Turnover::whereIn('type', ['cogs', 'expense'])->whereBetween('date', [$a, $b])->sum('amount');
-
-            return $inc > 0 ? round(($inc - $costs) / $inc * 100, 1) : 0;
-        });
-        $roiSpark = $spark(function ($a, $b) {
-            $inc = (float) Turnover::where('type', 'income')->whereBetween('date', [$a, $b])->sum('amount');
-            $costs = (float) Turnover::whereIn('type', ['cogs', 'expense'])->whereBetween('date', [$a, $b])->sum('amount');
-
-            return $costs > 0 ? round(($inc - $costs) / $costs * 100) : 0;
-        });
+        // Спарклайны для месячных операционных KPI (8 месяцев). Финансовые метрики
+        // (выручка/прибыль/маржа/ROI) переехали в раздел «Финансы» — здесь их нет.
+        $salesSpark = $spark(fn ($a, $b) => round(Sale::whereBetween('date', [$a, $b])->get()->sum(fn ($s) => $s->total()) / 1000));
         $purchSpark = $spark(fn ($a, $b) => round((float) Shipment::whereNotNull('posted_at')
             ->whereBetween('date', [$a, $b])->get()->sum(fn ($s) => $s->total()) / 1000));
 
         // Тот же отрезок прошлого месяца — для динамики KPI
         $prev = $now->copy()->subMonthNoOverflow();
         $pa = $prev->copy()->startOfMonth()->toDateString();
-        $pb = $prev->toDateString();
-        $prevName = $prev->locale('ru')->monthName;
-        $sumP = fn ($t) => (float) Turnover::where('type', $t)->whereBetween('date', [$pa, $pb])->sum('amount');
-        $revP = $sumP('income');
-        $grossP = $revP - $sumP('cogs') - $sumP('expense') + $sumP('income_other');
+        $pb = $prev->copy()->endOfDay()->toDateTimeString();
         $purchP = (float) Shipment::whereNotNull('posted_at')->whereBetween('date', [$pa, $pb])->get()->sum(fn ($s) => $s->total());
-        $marginP = $revP > 0 ? $grossP / $revP * 100 : 0;
-        $margin = $revenue > 0 ? $gross / $revenue * 100 : 0;
 
         // Все дельты — в процентах к прошлому значению («пп» не используем)
         $dPct = function (float $cur, float $prev): array {
@@ -83,9 +59,6 @@ class DashboardController extends Controller
             $d = round(($cur - $prev) / $prev * 100);
             return [($d >= 0 ? '+' : '−').abs($d).'%', $d < 0];
         };
-        [$revD, $revDown] = $dPct($revenue, $revP);
-        [$grD, $grDown] = $dPct($gross, $grossP);
-        [$mD, $mDown] = $dPct($margin, $marginP);
         [$pD, $pDownRaw] = $dPct($purchases, $purchP);
 
         // Долг покупателей: выставленные и недоплаченные продажи (живые деньги в пути)
@@ -100,18 +73,55 @@ class DashboardController extends Controller
             }
         }
 
-        // Подпись «июнь 1–2: …» — честно показывает, что сравниваем тот же отрезок
-        $prevSub = $prevName.($prev->day > 1 ? ' 1–'.$prev->day : ' 1');
-        $kpis = [
-            ['label' => 'Выручка', 'value' => $this->m($revenue), 'delta' => $revD, 'down' => $revDown, 'sub' => $prevSub.': '.$this->m($revP), 'spark' => $incSpark, 'color' => 'var(--income)'],
-            ['label' => 'Прибыль', 'value' => $this->m($gross), 'delta' => $grD, 'down' => $grDown, 'sub' => $prevSub.': '.$this->m($grossP), 'spark' => $profSpark, 'color' => 'var(--income)'],
-            ['label' => 'Маржа', 'value' => round($margin, 1).'%', 'delta' => $mD, 'down' => $mDown, 'sub' => $prevSub.': '.round($marginP, 1).'%', 'spark' => $marginSpark, 'color' => 'var(--income)'],
-            ['label' => 'ROI', 'value' => (($cogs + $exp) > 0 ? round($gross / ($cogs + $exp) * 100) : 0).'%', 'delta' => '', 'down' => false, 'sub' => 'прибыль / затраты', 'spark' => $roiSpark, 'color' => 'var(--income)'],
-            ['label' => 'Закупки', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true, 'sub' => $prevSub.': '.$this->m($purchP), 'spark' => $purchSpark, 'color' => 'var(--expense)'],
-            ['label' => 'Долг покупателей', 'value' => $this->m($debtTotal), 'delta' => '', 'down' => false, 'sub' => $this->salesWord(count($debtSales)).' с долгом', 'spark' => [], 'color' => 'var(--warn)', 'href' => '/sales'],
-        ];
-
+        // ── Операционные показатели дашборда («сейчас» и «за месяц») ──
         $accounts = Account::orderBy('sort_order')->orderBy('name')->get()->map(fn ($a) => ['name' => $a->name, 'balance' => $a->balance()]);
+        $totalBalance = $accounts->sum('balance');
+
+        // Денег в пути: сумма поставок в статусе «В пути» (товар оплачен/едет)
+        $transit = Shipment::where('status', 'В пути')->get();
+        $transitMoney = $transit->sum(fn ($s) => $s->total());
+        $transitCount = $transit->count();
+
+        // Долг поставщикам: неоплаченный остаток по всем поставкам
+        $paidShip = DB::table('bank_matches')->where('target_type', 'shipment')
+            ->select('target_id', DB::raw('SUM(amount) p'))->groupBy('target_id')->pluck('p', 'target_id');
+        $supplierDebt = 0.0;
+        $supDebtCount = 0;
+        foreach (Shipment::all() as $s) {
+            $d = $s->total() - (float) ($paidShip[$s->id] ?? 0);
+            if ($d > 0.01) {
+                $supplierDebt += $d;
+                $supDebtCount++;
+            }
+        }
+
+        // Продажи за месяц: сумма, количество, сколько уже оплачено покупателем
+        $salesMonth = Sale::whereBetween('date', [$from, $to])->get();
+        $salesSum = $salesMonth->sum(fn ($s) => $s->total());
+        $salesCount = $salesMonth->count();
+        $salesPaid = $salesMonth->where('status', 'Оплачен')->count();
+        $salesPrev = (float) Sale::whereBetween('date', [$pa, $pb])->get()->sum(fn ($s) => $s->total());
+        [$salesD, $salesDown] = $dPct($salesSum, $salesPrev);
+
+        // Поставки за месяц: количество заведённых и сколько уже завершено (сумма закупок — $purchases)
+        $shipMonth = Shipment::whereBetween('date', [$from, $to])->get();
+        $shipCount = $shipMonth->count();
+        $shipDone = $shipMonth->where('status', 'Завершено')->count();
+
+        $kpis = [
+            ['label' => 'Денег в пути', 'value' => $this->m($transitMoney), 'delta' => '', 'down' => false,
+                'sub' => $this->plural($transitCount, 'поставка едет', 'поставки едут', 'поставок едут'), 'spark' => [], 'color' => 'var(--info)', 'href' => '/shipments'],
+            ['label' => 'Долг покупателей', 'value' => $this->m($debtTotal), 'delta' => '', 'down' => false,
+                'sub' => $this->salesWord(count($debtSales)).' с долгом', 'spark' => [], 'color' => 'var(--warn)', 'href' => '/sales'],
+            ['label' => 'Долг поставщикам', 'value' => $this->m($supplierDebt), 'delta' => '', 'down' => false,
+                'sub' => $this->plural($supDebtCount, 'поставка', 'поставки', 'поставок'), 'spark' => [], 'color' => 'var(--expense)', 'href' => '/shipments'],
+            ['label' => 'На счетах всего', 'value' => $this->m($totalBalance), 'delta' => '', 'down' => false,
+                'sub' => $this->plural($accounts->count(), 'счёт', 'счёта', 'счетов'), 'spark' => [], 'color' => 'var(--income)', 'href' => '/bank'],
+            ['label' => 'Продажи за месяц', 'value' => $this->m($salesSum), 'delta' => $salesD, 'down' => $salesDown,
+                'sub' => $this->salesWord($salesCount).' · оплачено '.$salesPaid, 'spark' => $salesSpark, 'color' => 'var(--income)', 'href' => '/sales'],
+            ['label' => 'Закупки за месяц', 'value' => $this->m($purchases), 'delta' => $pD, 'down' => true,
+                'sub' => $this->plural($shipCount, 'поставка', 'поставки', 'поставок').' · завершено '.$shipDone, 'spark' => $purchSpark, 'color' => 'var(--expense)', 'href' => '/shipments'],
+        ];
         $unrecLines = BankLine::whereIn('status', ['unmatched', 'partial'])->get();
         // Приход/расход за месяц (по строкам выписки)
         $monthIn = (float) BankLine::whereBetween('date', [$from, $to])->where('amount', '>', 0)->sum('amount');
@@ -250,6 +260,17 @@ class DashboardController extends Controller
         $m100 = $n % 100;
         $word = ($m10 === 1 && $m100 !== 11) ? 'продажа'
             : (($m10 >= 2 && $m10 <= 4 && ($m100 < 12 || $m100 > 14)) ? 'продажи' : 'продаж');
+
+        return $n.' '.$word;
+    }
+
+    // Универсальное склонение: plural(3, 'поставка', 'поставки', 'поставок') → «3 поставки»
+    private function plural(int $n, string $one, string $few, string $many): string
+    {
+        $m10 = $n % 10;
+        $m100 = $n % 100;
+        $word = ($m10 === 1 && $m100 !== 11) ? $one
+            : (($m10 >= 2 && $m10 <= 4 && ($m100 < 12 || $m100 > 14)) ? $few : $many);
 
         return $n.' '.$word;
     }
