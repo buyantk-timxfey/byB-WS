@@ -114,13 +114,6 @@
         color-scheme: light dark;
     }
 
-    /* Фон задаём и на html: иначе на длинных страницах (и при iOS-оверскролле)
-       снизу проступал дефолтный фон браузера — «фон не доходил до конца». */
-    html {
-        min-height: 100%;
-        background: var(--bg);
-    }
-
     body {
         min-height: 100dvh;
         background: var(--bg);
