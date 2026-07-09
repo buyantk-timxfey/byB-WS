@@ -12,7 +12,7 @@ const money = (n: number) => new Intl.NumberFormat('ru-RU').format(Math.round(n)
 
 const props = defineProps<{
     kpis: any[]; accounts: any[]; totalBalance: number; monthIn: number; monthOut: number; unrec: { count: number; amount: number };
-    shipments: any[]; warehouse: any; mailboxes: any[]; reminders: any[]; tx: any[]; calendarData?: any;
+    shipments: any[]; drafts: any[]; mailboxes: any[]; reminders: any[]; tx: any[]; calendarData?: any;
 }>();
 
 // computed, а не одноразовые копии: после действий (смена статуса поставки и т.п.)
@@ -23,7 +23,7 @@ const totalBalance = computed(() => props.totalBalance);
 const monthIn = computed(() => props.monthIn);
 const monthOut = computed(() => props.monthOut);
 const shipments = computed(() => props.shipments);
-const warehouse = computed(() => props.warehouse);
+const drafts = computed(() => props.drafts);
 const mailboxes = computed(() => props.mailboxes);
 const reminders = computed(() => props.reminders);
 const tx = computed(() => props.tx);
@@ -31,11 +31,14 @@ const tx = computed(() => props.tx);
 // ── Настройка виджетов: скрыть/показать + порядок (localStorage) ──
 const editMode = ref(false);
 const hidden = ref<string[]>([]);
-const lorder = ref([{ id: 'money' }, { id: 'calendar' }, { id: 'tx' }, { id: 'warehouse' }, { id: 'mail' }, { id: 'notes' }]);
+// Порядок виджетов по умолчанию. «Склад» удалён, добавлен «Нужно заказать» (drafts):
+// он встаёт на место «Операций», а «Операции» — туда, где был «Склад».
+const CANON = ['money', 'calendar', 'drafts', 'tx', 'mail', 'notes'];
+const lorder = ref(CANON.map((id) => ({ id })));
 
 const labels: Record<string, string> = {
     signal: 'Сверка', ships: 'Поставки', money: 'Деньги', calendar: 'Календарь',
-    tx: 'Операции', warehouse: 'Склад', mail: 'Почта', notes: 'Заметки',
+    drafts: 'Нужно заказать', tx: 'Операции', mail: 'Почта', notes: 'Заметки',
 };
 const labelFor = (id: string) => id.startsWith('kpi:') ? id.slice(4) : (labels[id] ?? id);
 
@@ -44,7 +47,14 @@ onMounted(() => {
         const h = JSON.parse(localStorage.getItem('dash.hidden') || '[]');
         if (Array.isArray(h)) hidden.value = h;
         const o = JSON.parse(localStorage.getItem('dash.lorder') || 'null');
-        if (Array.isArray(o) && o.length) lorder.value = o.map((id: string) => ({ id }));
+        let ids: string[] = (Array.isArray(o) && o.length) ? o : [...CANON];
+        // Миграция сохранённого порядка: убрать удалённый «Склад», добавить новый «drafts»
+        // (у существующих пользователей его нет в localStorage) на позицию «Операций».
+        ids = ids.filter((id) => id !== 'warehouse' && CANON.includes(id));
+        for (const id of CANON) {
+            if (!ids.includes(id)) id === 'drafts' ? ids.splice(2, 0, 'drafts') : ids.push(id);
+        }
+        lorder.value = ids.map((id) => ({ id }));
     } catch { /* ignore */ }
 });
 const persist = () => {
@@ -57,6 +67,14 @@ const restore = (id: string) => { hidden.value = hidden.value.filter((x) => x !=
 const hiddenList = computed(() => hidden.value.map((id) => ({ id, label: labelFor(id) })));
 
 const go = (url: string) => { if (!editMode.value) router.visit(url); };
+
+// Быстрое создание «голой» поставки-черновика: только название («что заказать»)
+const newDraft = ref('');
+function addDraft() {
+    const name = newDraft.value.trim();
+    if (!name) return;
+    router.post('/shipments/draft', { name }, { preserveScroll: true, onSuccess: () => { newDraft.value = ''; } });
+}
 
 // Быстрая смена статуса поставки прямо с карточки трекера
 const SHIP_STATUSES = ['Ожидает отправки', 'В пути', 'Завершено'];
@@ -221,21 +239,25 @@ onMounted(() => { refreshMail(); });
                             </div>
                         </div>
 
-                        <!-- Склад -->
-                        <div v-else-if="element.id === 'warehouse'" class="glass w-pad wgt-l pressable" @click="go('/warehouse')">
-                            <span class="h2">Склад</span>
-                            <div class="text-[12px] text-ink-2" style="margin-top:8px">Замороженные деньги</div>
-                            <div class="tnum" style="font-size:24px;font-weight:700">{{ money(warehouse.frozen) }}</div>
-                            <div class="text-[12px] text-ink-3" style="margin-top:2px">{{ warehouse.positions }} позиций на складе</div>
-                            <div class="h2" style="margin:14px 0 4px">Залежалое · 30+ дней</div>
+                        <!-- Нужно заказать (черновики поставок) -->
+                        <div v-else-if="element.id === 'drafts'" class="glass w-pad wgt-l">
+                            <div class="flex items-center justify-between">
+                                <span class="h2">Нужно заказать</span>
+                                <span v-if="drafts.length" class="draft-count">{{ drafts.length }}</span>
+                            </div>
+                            <div class="draft-add">
+                                <input v-model="newDraft" placeholder="Что заказать…" @keyup.enter="addDraft" @click.stop />
+                                <button type="button" class="draft-add-btn pressable" :disabled="!newDraft.trim()" @click.stop="addDraft"><Icon name="plus" :size="16" /></button>
+                            </div>
                             <div class="txw" style="flex:1;overflow-y:auto">
-                                <div v-for="p in warehouse.stale" :key="p.name" class="t">
+                                <div v-for="d in drafts" :key="d.id" class="t draft-row" @click="go('/shipments?hl=' + d.id)">
                                     <div class="left">
-                                        <span class="av" :style="p.warn ? 'color:var(--warn)' : 'color:var(--ink-2)'">{{ p.days }}</span>
-                                        <div style="min-width:0"><div class="nm">{{ p.name }}</div><div class="cat">дней на складе</div></div>
+                                        <span class="rdot" style="background:var(--warn)"></span>
+                                        <div style="min-width:0"><div class="nm">{{ d.name }}</div><div class="cat">{{ d.cp || 'поставщик не указан' }}</div></div>
                                     </div>
-                                    <span class="text-[14px] font-semibold tnum">{{ money(p.cost) }}</span>
+                                    <Icon name="chevron-right" :size="16" class="text-ink-3" />
                                 </div>
+                                <div v-if="!drafts.length" class="draft-empty">Пока пусто. Добавьте, что нужно заказать — поставщика и товары навесите позже.</div>
                             </div>
                         </div>
 

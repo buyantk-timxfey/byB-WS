@@ -114,6 +114,13 @@
         color-scheme: light dark;
     }
 
+    /* Фон задаём и на html: иначе на длинных страницах (и при iOS-оверскролле)
+       снизу проступал дефолтный фон браузера — «фон не доходил до конца». */
+    html {
+        min-height: 100%;
+        background: var(--bg);
+    }
+
     body {
         min-height: 100dvh;
         background: var(--bg);
@@ -384,6 +391,15 @@
 .addnote { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 13px; background: var(--glass-fill); color: var(--ink-3); font-size: 13px; margin: 8px 0 4px; cursor: text; }
 .rdot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .chk { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ink-3); flex: none; }
+
+/* Виджет «Нужно заказать» (черновики поставок) */
+.draft-count { background: rgba(255, 159, 10, .18); color: var(--warn); border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 9px; }
+.draft-add { display: flex; gap: 8px; margin: 10px 0 6px; }
+.draft-add input { flex: 1; min-width: 0; height: 38px; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 11px; padding: 0 12px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
+.draft-add-btn { flex: none; width: 38px; height: 38px; border-radius: 11px; border: 0; background: var(--info); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.draft-add-btn:disabled { opacity: .4; cursor: default; }
+.draft-row { cursor: pointer; }
+.draft-empty { font-size: 13px; color: var(--ink-3); padding: 10px 2px; line-height: 1.4; }
 
 /* ── Сигнал-баннер ── */
 .banner { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; }

@@ -37,7 +37,7 @@ const props = defineProps<{
 const suppliers = ref([...props.suppliers]);
 const goods = ref([...props.goods]);
 
-const seg = ref<'all' | 'Ожидает отправки' | 'В пути' | 'Завершено'>('all');
+const seg = ref<'all' | 'Черновик' | 'Ожидает отправки' | 'В пути' | 'Завершено'>('all');
 const q = ref('');
 
 const filtered = computed(() => props.rows.filter((s) => {
@@ -76,7 +76,16 @@ const hl = useRowHighlight();
 const statusVariant = (s: string) => s === 'Завершено' ? 'ok' : s === 'В пути' ? 'info' : 'neutral';
 
 // ── Быстрая смена статуса из таблицы ──
-const STATUSES = ['Ожидает отправки', 'В пути', 'Завершено'] as const;
+const STATUSES = ['Черновик', 'Ожидает отправки', 'В пути', 'Завершено'] as const;
+
+// Быстрое создание черновика («в заказы») — только название
+const draftName = ref('');
+const draftOpen = ref(false);
+function addDraft() {
+    const name = draftName.value.trim();
+    if (!name) return;
+    router.post('/shipments/draft', { name }, { preserveScroll: true, onSuccess: () => { draftName.value = ''; draftOpen.value = false; } });
+}
 const statusMenuFor = ref<number | null>(null);
 function toggleStatusMenu(id: number, e: Event) {
     e.stopPropagation();
@@ -276,11 +285,20 @@ async function destroy() {
             </div>
             <div class="seg">
                 <button :class="{ on: seg === 'all' }" @click="seg = 'all'">Все</button>
+                <button :class="{ on: seg === 'Черновик' }" @click="seg = 'Черновик'">Заказать</button>
                 <button :class="{ on: seg === 'Ожидает отправки' }" @click="seg = 'Ожидает отправки'">Ожидает</button>
                 <button :class="{ on: seg === 'В пути' }" @click="seg = 'В пути'">В пути</button>
                 <button :class="{ on: seg === 'Завершено' }" @click="seg = 'Завершено'">Завершено</button>
             </div>
+            <button class="btn-ghost pressable" @click="draftOpen = !draftOpen" :class="{ 'on-ghost': draftOpen }"><Icon name="doc" :size="16" /> В заказы</button>
             <button class="btn-primary pressable" @click="create"><Icon name="plus" :size="17" /> Создать</button>
+        </div>
+
+        <!-- Быстрое добавление черновика: только название, детали навесишь позже -->
+        <div v-if="draftOpen" class="draft-quick jcard glass">
+            <Icon name="doc" :size="18" class="text-ink-3" />
+            <input v-model="draftName" placeholder="Что нужно заказать? (напр. «Салфетки ZEISS 200шт»)" @keyup.enter="addDraft" autofocus />
+            <button class="btn-primary pressable" :disabled="!draftName.trim()" @click="addDraft">Добавить</button>
         </div>
 
         <!-- Десктоп/планшет: таблица -->
@@ -303,7 +321,7 @@ async function destroy() {
                         </tr>
                     </thead>
                     <tbody v-stagger>
-                        <tr v-for="s in sorted" :key="s.id" :data-hl="s.id" :class="{ 'row-hl': hl === s.id }" @click="openDoc(s)">
+                        <tr v-for="s in sorted" :key="s.id" :data-hl="s.id" :class="{ 'row-hl': hl === s.id, 'ship-draft': s.status === 'Черновик' }" @click="openDoc(s)">
                             <td class="col-num text-ink-3">{{ s.number }}</td>
                             <td class="text-ink-2 col-date">{{ fdate(s.date) }}</td>
                             <td class="col-ship">
@@ -358,7 +376,7 @@ async function destroy() {
 
         <!-- Телефон: карточки -->
         <div class="ship-cards" v-stagger>
-            <div v-for="s in sorted" :key="s.id" class="ship-card pressable" :data-hl="s.id" :class="{ 'row-hl': hl === s.id }" @click="openDoc(s)">
+            <div v-for="s in sorted" :key="s.id" class="ship-card pressable" :data-hl="s.id" :class="{ 'row-hl': hl === s.id, 'ship-draft': s.status === 'Черновик' }" @click="openDoc(s)">
                 <div class="sc-top">
                     <div class="sc-title">
                         <span class="sc-name">{{ s.name || s.supplier }}</span>
@@ -416,7 +434,7 @@ async function destroy() {
             <div class="modal-sec">
                 <div class="modal-sec-h"><Icon name="calendar" :size="14" /> Статус и сроки</div>
                 <div class="fld"><label>Статус</label>
-                    <select v-model="form.status"><option>Ожидает отправки</option><option>В пути</option><option>Завершено</option></select>
+                    <select v-model="form.status"><option>Черновик</option><option>Ожидает отправки</option><option>В пути</option><option>Завершено</option></select>
                 </div>
                 <div class="fld-row" style="margin-top:12px">
                     <div class="fld"><label>Дата заказа</label><DatePicker v-model="form.date" placeholder="дд.мм.гггг" /></div>
@@ -564,6 +582,16 @@ async function destroy() {
 </template>
 
 <style scoped>
+/* Быстрое добавление черновика («В заказы») */
+.draft-quick { display: flex; align-items: center; gap: 10px; padding: 12px 16px; margin-bottom: 14px; }
+.draft-quick input { flex: 1; min-width: 0; height: 40px; border: 1px solid var(--glass-border); background: var(--glass-fill); border-radius: 11px; padding: 0 14px; color: var(--ink); font-size: 14px; font-family: inherit; outline: none; }
+.on-ghost { background: var(--ink) !important; color: var(--bg) !important; }
+
+/* Пометка черновиков: тёплая полоса слева (таблица) и пунктир (карточка на телефоне) */
+.ship-table tbody tr.ship-draft { background: rgba(255, 159, 10, .05); }
+.ship-table tbody tr.ship-draft td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+.ship-card.ship-draft { border-style: dashed; border-color: rgba(255, 159, 10, .5); }
+
 /* Быстрая смена статуса из таблицы */
 .st-btn { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: 0; padding: 0; cursor: pointer; font: inherit; }
 .recv-mini { font-size: 11px; font-weight: 700; color: var(--info); white-space: nowrap; }

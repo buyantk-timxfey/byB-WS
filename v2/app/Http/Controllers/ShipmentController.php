@@ -128,11 +128,26 @@ class ShipmentController extends Controller
                 'problem' => $data['problem'] ?? false,
             ]);
             $this->syncItems($shipment, $data['items'] ?? []);
-            // Оприходование при «В пути»/«Завершено»
-            if ($data['status'] !== 'Ожидает отправки') {
+            // Оприходование при «В пути»/«Завершено» (черновик и «Ожидает» не приходуются)
+            if (in_array($data['status'], ['В пути', 'Завершено'], true)) {
                 ShipmentPosting::post($shipment->fresh()->load('items'));
             }
         });
+
+        return back();
+    }
+
+    // «Голая» поставка-черновик: только название, чтобы не забыть что заказать.
+    // Поставщик, товары, цены и даты навешиваются позже сменой на реальный статус.
+    public function draft(Request $r)
+    {
+        $data = $r->validate(['name' => 'required|string|max:255']);
+        Shipment::create([
+            'number' => DocNumber::next('shipment', now()->toDateString()),
+            'date' => now()->toDateString(),
+            'name' => $data['name'],
+            'status' => 'Черновик',
+        ]);
 
         return back();
     }
@@ -164,12 +179,12 @@ class ShipmentController extends Controller
                     'problem' => $data['problem'] ?? false,
                 ]);
                 $this->syncItems($shipment, $data['items'] ?? []);
-                if ($data['status'] !== 'Ожидает отправки') {
+                if (in_array($data['status'], ['В пути', 'Завершено'], true)) {
                     $fresh = $shipment->fresh()->load('items');
                     ShipmentPosting::post($fresh);
                     ShipmentPosting::reapplyConsumption($fresh, $consumed);
                 } elseif ($consumed) {
-                    throw new \RuntimeException('Товар из поставки уже продан — нельзя вернуть её в «Ожидает отправки».');
+                    throw new \RuntimeException('Товар из поставки уже продан — нельзя вернуть её в «'.$data['status'].'».');
                 }
             });
         } catch (\RuntimeException $e) {
@@ -298,17 +313,18 @@ class ShipmentController extends Controller
     // Быстрая смена статуса из таблицы или виджета на дашборде
     public function setStatus(Request $r, Shipment $shipment)
     {
-        $data = $r->validate(['status' => 'required|in:Ожидает отправки,В пути,Завершено']);
+        $data = $r->validate(['status' => 'required|in:Черновик,Ожидает отправки,В пути,Завершено']);
         $new = $data['status'];
         try {
             DB::transaction(function () use ($shipment, $new) {
-                if ($new === 'Ожидает отправки' && $shipment->isPosted()) {
+                // Возврат в «Черновик»/«Ожидает» — распроведение (если товар не продан)
+                if (in_array($new, ['Черновик', 'Ожидает отправки'], true) && $shipment->isPosted()) {
                     ShipmentPosting::unpost($shipment);   // бросит понятную ошибку, если товар уже продан
                     $shipment->items()->update(['qty_received' => 0]);
                     $shipment->receipts()->delete();
                 }
                 $shipment->update(['status' => $new]);
-                if ($new !== 'Ожидает отправки' && ! $shipment->isPosted()) {
+                if (in_array($new, ['В пути', 'Завершено'], true) && ! $shipment->isPosted()) {
                     ShipmentPosting::post($shipment->fresh()->load('items'));
                 }
                 // «Завершено» = приехало всё: допринимаем остаток одной записью
@@ -340,7 +356,7 @@ class ShipmentController extends Controller
             'date' => 'required|date',
             'counterparty_id' => 'nullable|exists:counterparties,id',
             'name' => 'nullable|string|max:255',
-            'status' => 'required|in:Ожидает отправки,В пути,Завершено',
+            'status' => 'required|in:Черновик,Ожидает отправки,В пути,Завершено',
             'eta' => 'nullable|date',
             'carrier_id' => 'nullable|exists:carriers,id',
             'tracking' => 'nullable|string|max:64',

@@ -25,6 +25,7 @@ Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'ind
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments');
     Route::post('/shipments', [ShipmentController::class, 'store']);
+    Route::post('/shipments/draft', [ShipmentController::class, 'draft']);
     Route::put('/shipments/{shipment}', [ShipmentController::class, 'update']);
     Route::delete('/shipments/{shipment}', [ShipmentController::class, 'destroy']);
     Route::post('/shipments/{shipment}/receive', [ShipmentController::class, 'receive']);

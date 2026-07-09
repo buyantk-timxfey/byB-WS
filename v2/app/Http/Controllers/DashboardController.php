@@ -30,7 +30,6 @@ class DashboardController extends Controller
         // Верхняя граница — конец сегодняшнего дня: колонка date хранится как
         // «Y-m-d 00:00:00», и с date-only границей записи за сегодня выпадали из whereBetween.
         $to = $now->copy()->endOfDay()->toDateTimeString();
-        $staleDays = (int) Setting::get('stale_days', 60);
 
         $purchases = (float) Shipment::whereNotNull('posted_at')->whereBetween('date', [$from, $to])->get()->sum(fn ($s) => $s->total());
 
@@ -89,7 +88,7 @@ class DashboardController extends Controller
             ->select('target_id', DB::raw('SUM(amount) p'))->groupBy('target_id')->pluck('p', 'target_id');
         $supplierDebt = 0.0;
         $supDebtCount = 0;
-        foreach (Shipment::all() as $s) {
+        foreach (Shipment::where('status', '!=', 'Черновик')->get() as $s) {
             $d = $s->total() - (float) ($paidShip[$s->id] ?? 0);
             if ($d > 0.01) {
                 $supplierDebt += $d;
@@ -106,7 +105,7 @@ class DashboardController extends Controller
         [$salesD, $salesDown] = $dPct($salesSum, $salesPrev);
 
         // Поставки за месяц: количество заведённых и сколько уже завершено (сумма закупок — $purchases)
-        $shipMonth = Shipment::whereBetween('date', [$from, $to])->get();
+        $shipMonth = Shipment::where('status', '!=', 'Черновик')->whereBetween('date', [$from, $to])->get();
         $shipCount = $shipMonth->count();
         $shipDone = $shipMonth->where('status', 'Завершено')->count();
 
@@ -131,7 +130,8 @@ class DashboardController extends Controller
 
         // Трекер поставок (кроме завершённых): маршрут с грузовиком, остаток дней,
         // цвет-статус для свечения карточки (ok / warn ≤2 дн до ETA / bad / wait).
-        $shipments = Shipment::with(['counterparty:id,name', 'etaChanges', 'items', 'receipts'])->where('status', '!=', 'Завершено')
+        $shipments = Shipment::with(['counterparty:id,name', 'etaChanges', 'items', 'receipts'])
+            ->whereNotIn('status', ['Завершено', 'Черновик'])
             ->get()->map(function (Shipment $s) use ($now) {
                 $start = $s->date ? Carbon::parse($s->date) : null;
                 $eta = $s->eta ? Carbon::parse($s->eta) : null;
@@ -180,17 +180,13 @@ class DashboardController extends Controller
                 $r['days'] ?? PHP_INT_MAX,
             ])->values();
 
-        // Склад-сигналы
-        $batches = StockBatch::where('qty_left', '>', 0)->with('nomenclature:id,name')->get();
-        $frozen = $batches->sum(fn ($b) => $b->qty_left * $b->unit_cost);
-        $positions = StockMove::select('nomenclature_id')->groupBy('nomenclature_id')
-            ->havingRaw('SUM(qty) > 0')->get()->count();
-        $stale = $batches->filter(fn ($b) => $b->daysOnStock() >= $staleDays)
-            ->groupBy('nomenclature_id')->map(fn ($g) => [
-                'name' => $g->first()->nomenclature?->name ?? '—',
-                'days' => $g->max(fn ($b) => $b->daysOnStock()),
-                'cost' => $g->sum(fn ($b) => $b->qty_left * $b->unit_cost), 'warn' => true,
-            ])->sortByDesc('cost')->take(3)->values();
+        // Черновики поставок («Нужно заказать») — список-напоминание, что нужно заказать
+        $drafts = Shipment::where('status', 'Черновик')->with('counterparty:id,name')
+            ->orderByDesc('id')->get()->map(fn ($s) => [
+                'id' => $s->id,
+                'name' => $s->name ?? $s->number,
+                'cp' => $s->counterparty?->name,
+            ]);
 
         // Авто-напоминания (долги уже посчитаны для KPI «Долг покупателей»)
         $reminders = [];
@@ -231,7 +227,7 @@ class DashboardController extends Controller
             'monthOut' => $monthOut,
             'unrec' => ['count' => $unrecLines->count(), 'amount' => (float) $unrecLines->sum(fn ($l) => abs($l->amount))],
             'shipments' => $shipments,
-            'warehouse' => ['frozen' => round($frozen), 'positions' => $positions, 'stale' => $stale],
+            'drafts' => $drafts,
             'mailboxes' => $mailboxes,
             'reminders' => $reminders,
             'tx' => $tx,
